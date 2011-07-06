@@ -45,11 +45,6 @@
  * AFS readdir vnodeop and bulk stat support.
  */
 
-/* Saber C hates negative inode #s.  We're not going to talk about software
- * that could fail if it sees a negative inode #.
- */
-#define FIXUPSTUPIDINODE(a)	((a) &= 0x7fffffff)
-
 /* BlobScan is supposed to ensure that the blob reference refers to a valid
     directory entry.  It consults the allocation map in the page header
     to determine whether a blob is actually in use or not.
@@ -409,8 +404,8 @@ afs_readdir_move(struct DirEntry *de, struct vcache *vc, struct uio *auio,
 
 	if (use64BitDirent) {
 	    struct min_dirent sdirEntry;
-	    sdirEntry.d_fileno = (Volume << 16) + ntohl(Vnode);
-	    FIXUPSTUPIDINODE(sdirEntry.d_fileno);
+	    sdirEntry.d_fileno = afs_calc_inum(vc->f.fid.Cell,
+	                                       Volume, ntohl(Vnode));
 	    sdirEntry.d_reclen = rlen;
 	    sdirEntry.d_off = (off_t) off;
 	    AFS_UIOMOVE(&sdirEntry, AFS_DIRENT64BASESIZE, UIO_READ, auio,
@@ -432,8 +427,8 @@ afs_readdir_move(struct DirEntry *de, struct vcache *vc, struct uio *auio,
 	    }
 	} else {
 	    struct irix5_min_dirent sdirEntry;
-	    sdirEntry.d_fileno = (Volume << 16) + ntohl(Vnode);
-	    FIXUPSTUPIDINODE(sdirEntry.d_fileno);
+	    sdirEntry.d_fileno = afs_calc_inum(vc->f.fid.Cell,
+	                                       Volume, ntohl(Vnode));
 	    sdirEntry.d_reclen = rlen;
 	    sdirEntry.d_off = (afs_int32) off;
 	    AFS_UIOMOVE(&sdirEntry, AFS_DIRENT32BASESIZE, UIO_READ, auio,
@@ -463,8 +458,7 @@ afs_readdir_move(struct DirEntry *de, struct vcache *vc, struct uio *auio,
 #else
     direntp = (struct dirent *)osi_AllocLargeSpace(AFS_LRALLOCSIZ);
 #endif
-    direntp->d_ino =  (Volume << 16) + ntohl(Vnode);
-    FIXUPSTUPIDINODE(direntp->d_ino);
+    direntp->d_ino = afs_calc_inum(vc->f.fid.Cell, Volume, ntohl(Vnode));
 #if defined(AFS_AIX51_ENV) && defined(AFS_64BIT_KERNEL)
     direntp->d_offset = off;
     direntp->d_namlen = slen;
@@ -477,8 +471,7 @@ afs_readdir_move(struct DirEntry *de, struct vcache *vc, struct uio *auio,
     osi_FreeLargeSpace((char *)direntp);
 #else /* AFS_SUN5_ENV */
     /* Note the odd mechanism for building the inode number */
-    sdirEntry.d_fileno = (Volume << 16) + ntohl(Vnode);
-    FIXUPSTUPIDINODE(sdirEntry.d_fileno);
+    sdirEntry.d_fileno = afs_calc_inum(vc->f.fid.Cell, Volume, ntohl(Vnode));
     sdirEntry.d_reclen = rlen;
 #if !defined(AFS_SGI_ENV)
     sdirEntry.d_namlen = slen;
@@ -504,8 +497,7 @@ afs_readdir_move(struct DirEntry *de, struct vcache *vc, struct uio *auio,
     {
 	struct dirent *dp;
 	dp = (struct dirent *) pool_get(&ufs_direct_pool, PR_WAITOK);
-	dp->d_ino =  (Volume << 16) + ntohl(Vnode);
-	FIXUPSTUPIDINODE(dp->d_ino);
+	dp->d_ino = afs_calc_inum(vc->f.fid.Cell, Volume, ntohl(Vnode));
 	dp->d_reclen = rlen;
 	strcpy(dp->d_name, de->name);
 	AFS_UIOMOVE((char*) dp, sizeof(struct dirent), UIO_READ, auio, code);
@@ -741,9 +733,9 @@ afs_readdir(OSI_VC_DECL(avc), struct uio *auio, afs_ucred_t *acred)
 	    if (len) {
 		/* something to hand over. */
 #ifdef	AFS_HPUX_ENV
-		sdirEntry->d_fileno =
-		    (avc->f.fid.Fid.Volume << 16) + ntohl(ode->fid.vnode);
-		FIXUPSTUPIDINODE(sdirEntry->d_fileno);
+		sdirEntry->d_fileno = afs_calc_inum(avc->f.fid.Cell,
+		                                    avc->f.fid.Fid.Volume,
+		                                    ntohl(ode->fid.vnode));
 		sdirEntry->d_reclen = rlen = AFS_UIO_RESID(auio);
 		sdirEntry->d_namlen = o_slen;
 #if defined(AFS_SUN5_ENV) || defined(AFS_AIX32_ENV) || defined(AFS_HPUX100_ENV)
@@ -809,9 +801,9 @@ afs_readdir(OSI_VC_DECL(avc), struct uio *auio, afs_ucred_t *acred)
 	    DRelease(nde, 0);	/* can't use this one. */
 	    if (len) {
 #ifdef	AFS_HPUX_ENV
-		sdirEntry->d_fileno =
-		    (avc->f.fid.Fid.Volume << 16) + ntohl(ode->fid.vnode);
-		FIXUPSTUPIDINODE(sdirEntry->d_fileno);
+		sdirEntry->d_fileno = afs_calc_inum(avc->f.fid.Cell,
+		                                    avc->f.fid.Fid.Volume,
+		                                    ntohl(ode->fid.vnode));
 		sdirEntry->d_reclen = rlen = AFS_UIO_RESID(auio);
 		sdirEntry->d_namlen = o_slen;
 #if defined(AFS_SUN5_ENV) || defined(AFS_AIX32_ENV) || defined(AFS_HPUX100_ENV)
@@ -864,9 +856,9 @@ afs_readdir(OSI_VC_DECL(avc), struct uio *auio, afs_ucred_t *acred)
 	 */
 	if (len) {
 #ifdef	AFS_HPUX_ENV
-	    sdirEntry->d_fileno =
-		(avc->f.fid.Fid.Volume << 16) + ntohl(ode->fid.vnode);
-	    FIXUPSTUPIDINODE(sdirEntry->d_fileno);
+	    sdirEntry->d_fileno = afs_calc_inum(avc->f.fid.Cell,
+		                                avc->f.fid.Fid.Volume,
+	                                        ntohl(ode->fid.vnode));
 	    sdirEntry->d_reclen = rlen = len;
 	    sdirEntry->d_namlen = o_slen;
 #if defined(AFS_SUN5_ENV) || defined(AFS_AIX32_ENV) || defined(AFS_HPUX100_ENV)
