@@ -266,7 +266,6 @@ static int sawBiod = 0;
 static int sawCacheStatEntries = 0;
 char afsd_cacheMountDir[1024];	/*Mount directory for AFS */
 static char rootVolume[64] = "root.afs";	/*AFS root volume name */
-static afs_int32 cacheSetTime = 0;	/*Keep checking time to avoid drift? */
 #ifdef AFS_XBSD_ENV
 static int createAndTrunc = O_RDWR | O_CREAT | O_TRUNC;	/*Create & truncate on open */
 #else
@@ -1719,8 +1718,7 @@ mainproc(struct cmd_syndesc *as, void *arock)
     }
     if (as->parms[8].items) {
 	/* -nosettime */
-	printf("afsd: -nosettime is deprecated -- ignored\n");
-	cacheSetTime = 0;
+	/* noop */
     }
     if (as->parms[9].items) {
 	/* -verbose */
@@ -1852,8 +1850,10 @@ mainproc(struct cmd_syndesc *as, void *arock)
     }
     if (as->parms[32].items) {
 	/* -settime */
-	printf("afsd: -settime is deprecated\n");
-	cacheSetTime = 1;
+	printf("afsd: -settime ignored\n");
+	printf("afsd: the OpenAFS client no longer sets the system time; "
+	       "please use NTP or\n");
+	printf("afsd: another such system to synchronize client time\n");
     }
 
     /* set rx_extraPackets */
@@ -2268,7 +2268,7 @@ afsd_run(void)
     cparams.cacheDcaches = dCacheSize;
     cparams.cacheVolumes = vCacheSize;
     cparams.chunkSize = chunkSize;
-    cparams.setTimeFlag = cacheSetTime;
+    cparams.setTimeFlag = 0;
     cparams.memCacheFlag = cacheFlags;
     cparams.dynamic_vcaches = afsd_dynamic_vcaches;
     afsd_call_syscall(AFSOP_CACHEINIT, &cparams);
@@ -2535,8 +2535,8 @@ afsd_run(void)
      */
     if (afsd_debug)
 	printf("%s: Calling AFSOP_GO with cacheSetTime = %d\n", rn,
-	       cacheSetTime);
-    afsd_call_syscall(AFSOP_GO, cacheSetTime);
+	       0);
+	afsd_call_syscall(AFSOP_GO, 0);
 
     /*
      * At this point, we have finished passing the kernel all the info
