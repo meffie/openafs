@@ -92,8 +92,6 @@ int fdInUseCount = 0;
 /* Hash table for inode handles */
 IHashBucket_t ihashTable[I_HANDLE_HASH_SIZE];
 
-void *ih_sync_thread(void *);
-
 /* start-time configurable I/O limits */
 ih_init_params vol_io_params;
 
@@ -127,7 +125,7 @@ ih_SetSyncBehavior(const char *behavior)
 	val = IH_SYNC_ALWAYS;
 
     } else if (strcmp(behavior, "delayed") == 0) {
-	val = IH_SYNC_DELAYED;
+	val = IH_SYNC_ONCLOSE; /* "delayed" is no longer supported; treat as onclose. */
 
     } else if (strcmp(behavior, "onclose") == 0) {
 	val = IH_SYNC_ONCLOSE;
@@ -200,23 +198,6 @@ ih_Initialize(void)
     }
 #endif
     fdCacheSize = MIN(fdMaxCacheSize, vol_io_params.fd_initial_cachesize);
-
-    if (vol_io_params.sync_behavior == IH_SYNC_DELAYED) {
-#ifdef AFS_PTHREAD_ENV
-	pthread_t syncer;
-	pthread_attr_t tattr;
-
-	pthread_attr_init(&tattr);
-	pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-
-	pthread_create(&syncer, &tattr, ih_sync_thread, NULL);
-#else /* AFS_PTHREAD_ENV */
-	PROCESS syncer;
-	LWP_CreateProcess(ih_sync_thread, 16*1024, LWP_MAX_PRIORITY - 2,
-	    NULL, "ih_syncer", &syncer);
-#endif /* AFS_PTHREAD_ENV */
-    }
-
 }
 
 /* Make the file descriptor cache as big as possible. Don't this call
@@ -1055,70 +1036,6 @@ ih_condsync(IHandle_t * ihP)
     return code;
 }
 
-void
-ih_sync_all(void) {
-
-    int ihash;
-
-    IH_LOCK;
-    for (ihash = 0; ihash < I_HANDLE_HASH_SIZE; ihash++) {
-	IHandle_t *ihP, *ihPnext;
-
-	ihP = ihashTable[ihash].ihash_head;
-	if (ihP)
-	    ihP->ih_refcnt++;	/* must not disappear over unlock */
-	for (; ihP; ihP = ihPnext) {
-
-	    if (ihP->ih_synced) {
-		FD_t fd;
-
-		ihP->ih_synced = 0;
-		IH_UNLOCK;
-
-		fd = OS_IOPEN(ihP);
-		if (fd != INVALID_FD) {
-		    OS_SYNC(fd);
-		    OS_CLOSE(fd);
-		}
-
-	  	IH_LOCK;
-	    }
-
-	    /* when decrementing the refcount, the ihandle might disappear
-	       and we might not even be able to proceed to the next one.
-	       Hence the gymnastics putting a hold on the next one already */
-	    ihPnext = ihP->ih_next;
-	    if (ihPnext) ihPnext->ih_refcnt++;
-
-	    if (ihP->ih_refcnt > 1) {
-		ihP->ih_refcnt--;
-	    } else {
-		IH_UNLOCK;
-		ih_release(ihP);
-		IH_LOCK;
-	    }
-
-	}
-    }
-    IH_UNLOCK;
-}
-
-void *
-ih_sync_thread(void *dummy) {
-    while(1) {
-
-#ifdef AFS_PTHREAD_ENV
-	sleep(10);
-#else /* AFS_PTHREAD_ENV */
-	IOMGR_Sleep(60);
-#endif /* AFS_PTHREAD_ENV */
-
-        ih_sync_all();
-    }
-    return NULL;
-}
-
-
 /*************************************************************************
  * OS specific support routines.
  *************************************************************************/
@@ -1217,7 +1134,6 @@ ih_fdsync(FdHandle_t *fdP)
     switch (vol_io_params.sync_behavior) {
     case IH_SYNC_ALWAYS:
 	return OS_SYNC(fdP->fd_fd);
-    case IH_SYNC_DELAYED:
     case IH_SYNC_ONCLOSE:
 	if (fdP->fd_ih) {
 	    fdP->fd_ih->ih_synced = 1;

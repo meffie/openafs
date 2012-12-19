@@ -214,12 +214,6 @@ typedef struct StreamHandle_s {
                              * our data hits the disk eventually, depending on
                              * the platform and various OS-specific tuning
                              * parameters. */
-#define IH_SYNC_DELAYED (4) /* This makes FDH_SYNCs set a flag in the ih that
-                             * says "I need to sync". And in a separate thread,
-                             * ih_sync_thread finds all IHs that have this
-                             * flag set, and it syncs them. Such IHs are also
-                             * synced when closed, as in IH_SYNC_ONCLOSE. */
-
 
 /* READ THIS.
  *
