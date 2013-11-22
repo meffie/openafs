@@ -92,10 +92,10 @@ CFLAGS_repair.o = @CFLAGS_NOSTRICT@
 repair.o: repair.c dumpscan_errs.h
 
 ${TOP_LIBDIR}/libxfiles.a: libxfiles.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libdumpscan.a: libdumpscan.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 dest:
 

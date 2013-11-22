@@ -53,58 +53,58 @@ all: gi \
 	${TOP_INCDIR}/afs/vol_prototypes.h
 
 ${TOP_LIBDIR}/vlib.a: vlib.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libvlib.a: vlib.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/nfs.h: nfs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vnode.h: vnode.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vnode_inline.h: vnode_inline.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/viceinode.h: viceinode.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/volume.h: volume.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/volume_inline.h: volume_inline.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/voldefs.h: voldefs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/partition.h: partition.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/fssync.h: fssync.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/salvsync.h: salvsync.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/daemon_com.h: daemon_com.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ihandle.h: ihandle.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/namei_ops.h: namei_ops.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/salvage.h: salvage.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vol-salvage.h: vol-salvage.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vol_prototypes.h: vol_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Installation targets

@@ -32,16 +32,16 @@ all: \
 	xstat_cm_test
 
 ${TOP_INCDIR}/afs/xstat_fs.h: xstat_fs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/xstat_cm.h: xstat_cm.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libxstat_fs.a: libxstat_fs.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libxstat_cm.a: libxstat_cm.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # File Server data collection

@@ -25,10 +25,10 @@ depinstall: \
 	Krxstat.ss.c Krxstat.xdr.c
 
 ${TOP_INCDIR}/rx/rxstat.h: rxstat.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/librxstat.a: librxstat.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets

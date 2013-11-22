@@ -22,7 +22,7 @@ all:  ${TOP_INCDIR}/afs/rfc3961.h liboafs_rfc3961.la libafsrpc_rfc3961.la \
         ${TOP_LIBDIR}/libafsrfc3961.a
 
 ${TOP_INCDIR}/afs/rfc3961.h: rfc3961.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: libafsrfc3961.a
 	${INSTALL_DATA} libafsrfc3961.a ${DESTDIR}${libdir}/libafsrfc3961.a
@@ -44,7 +44,7 @@ LT_deps=
 LT_libs=$(LDFLAGS_hcrypto) $(LIB_hcrypto) $(LDFLAGS_roken) $(LIB_roken)
 
 ${TOP_LIBDIR}/libafsrfc3961.a: libafsrfc3961.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 CFLAGS_crypto-arcfour.lo=@CFLAGS_NOERROR@
 CFLAGS_crypto-des-common.lo=@CFLAGS_NOERROR@

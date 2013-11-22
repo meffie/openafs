@@ -34,10 +34,10 @@ ${TOP_LIBDIR}/${LIBKOPENAFS}: ${LIBKOPENAFS}
 		-l libkopenafs -M ${MAJOR} -m ${MINOR}
 
 ${TOP_LIBDIR}/libkopenafs.a: libkopenafs.a
-	${INSTALL_DATA} libkopenafs.a $@
+	${EXPORT} libkopenafs.a $@
 
 ${TOP_INCDIR}/kopenafs.h: kopenafs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 glue.o: ${SYS}/glue.c ${SYS}/afssyscalls.h
 	$(AFS_CCRULE) $(SYS)/glue.c

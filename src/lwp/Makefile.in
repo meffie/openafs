@@ -28,19 +28,19 @@ all: liboafs_lwpcompat.la libafsrpc_lwpcompat.la \
 depinstall: ${TOP_INCDIR}/lock.h ${TOP_INCDIR}/lwp.h ${TOP_INCDIR}/preempt.h ${TOP_INCDIR}/timer.h
 
 ${TOP_LIBDIR}/liblwp.a: liblwp.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/lock.h: lock.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/lwp.h: lwp.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/preempt.h: preempt.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/timer.h: timer.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build rules

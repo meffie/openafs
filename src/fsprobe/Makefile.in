@@ -32,10 +32,10 @@ LIBS=${TOP_LIBDIR}/libvolser.a ${TOP_LIBDIR}/vlib.a ${TOP_LIBDIR}/libacl.a \
 all: ${TOP_INCDIR}/afs/fsprobe.h ${TOP_LIBDIR}/libfsprobe.a fsprobe_test
 
 ${TOP_INCDIR}/afs/fsprobe.h: fsprobe.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libfsprobe.a: libfsprobe.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets

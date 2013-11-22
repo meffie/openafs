@@ -49,28 +49,28 @@ depinstall: afszcm.cat AFS_component_version_number.c \
 	${TOP_INCDIR}/afs/sysctl.h
 
 ${TOP_INCDIR}/afs/afs_consts.h: afs_consts.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afs.h: afs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afs_stats.h: afs_stats.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/exporter.h: exporter.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/nfsclient.h: nfsclient.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/osi_inode.h: ${MKAFS_OSTYPE}/osi_inode.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/sysctl.h: sysctl.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/unified_afs.h: unified_afs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: unified_afs.h
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

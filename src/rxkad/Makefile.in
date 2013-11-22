@@ -52,22 +52,22 @@ depinstall: \
 	${TOP_INCDIR}/rx/rxkad_stats.h
 
 ${TOP_LIBDIR}/librxkad.a: librxkad.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/fcrypt.h: fcrypt.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rxkad.h: rxkad.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rxkad_prototypes.h: rxkad_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rxkad_stats.h: stats.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rxkad_convert.h: rxkad_convert.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets

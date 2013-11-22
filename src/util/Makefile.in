@@ -69,64 +69,64 @@ buildtools_clean: clean
 depinstall: ${includes}
 
 ${TOP_INCDIR}/afs/dirpath.h: dirpath.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/pthread_nosigs.h: ${srcdir}/pthread_nosigs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/errors.h: ${srcdir}/errors.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vice.h: ${srcdir}/vice.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ktime.h: ${srcdir}/ktime.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/fileutil.h: ${srcdir}/fileutil.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afsutil.h: ${srcdir}/afsutil.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afsutil_prototypes.h: ${srcdir}/afsutil_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/pthread_glock.h: ${srcdir}/pthread_glock.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afs_atomlist.h: ${srcdir}/afs_atomlist.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afs_lhash.h: ${srcdir}/afs_lhash.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/softsig.h: ${srcdir}/softsig.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/work_queue.h: ${srcdir}/work_queue.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/work_queue_types.h: ${srcdir}/work_queue_types.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/thread_pool.h: ${srcdir}/thread_pool.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/thread_pool_types.h: ${srcdir}/thread_pool_types.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/tabular_output.h: ${srcdir}/tabular_output.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/util.a: util.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafsutil.a: util.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafsutil_pic.a: libafsutil_pic.la
-	${INSTALL_DATA} .libs/libafsutil_pic.a $@
+	${EXPORT} .libs/libafsutil_pic.a $@
 
 # Use " as the sed boundary character because we lose anyway if that occurs
 # in path names.

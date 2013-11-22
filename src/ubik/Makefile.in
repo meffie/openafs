@@ -49,13 +49,13 @@ depinstall: \
 	${TOP_INCDIR}/ubik_int.h
 
 ${TOP_LIBDIR}/libubik.a: libubik.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/ubik.h: ubik.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/ubik_int.h: ubik_int.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 utst_server: utst_server.o utst_int.ss.o utst_int.xdr.o libubik.a
 	$(AFS_LDRULE) utst_server.o utst_int.ss.o utst_int.xdr.o \

@@ -64,26 +64,52 @@ param.h.new: ${srcdir}/param.${SYS_NAME}.h ${AFS_PARAM_COMMON}
 		cat ${srcdir}/param.${SYS_NAME}.h > param.h.new ; \
 	fi
 
-${DEST}/include/afs/param.h ${DESTDIR}${includedir}/afs/param.h ${TOP_INCDIR}/afs/param.h: param.h.new
+${DEST}/include/afs/param.h ${DESTDIR}${includedir}/afs/param.h: param.h.new
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/afs_sysnames.h ${DESTDIR}${includedir}/afs/afs_sysnames.h ${TOP_INCDIR}/afs/afs_sysnames.h: ${srcdir}/afs_sysnames.h
+${DEST}/include/afs/afs_sysnames.h ${DESTDIR}${includedir}/afs/afs_sysnames.h: ${srcdir}/afs_sysnames.h
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/stds.h ${DESTDIR}${includedir}/afs/stds.h ${TOP_INCDIR}/afs/stds.h: ${srcdir}/stds.h
+${DEST}/include/afs/stds.h ${DESTDIR}${includedir}/afs/stds.h: ${srcdir}/stds.h
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/icl.h ${DESTDIR}${includedir}/afs/icl.h ${TOP_INCDIR}/afs/icl.h: ${srcdir}/icl.h
+${DEST}/include/afs/icl.h ${DESTDIR}${includedir}/afs/icl.h: ${srcdir}/icl.h
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/afs_args.h ${DESTDIR}${includedir}/afs/afs_args.h ${TOP_INCDIR}/afs/afs_args.h: ${srcdir}/afs_args.h
+${DEST}/include/afs/afs_args.h ${DESTDIR}${includedir}/afs/afs_args.h: ${srcdir}/afs_args.h
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/venus.h ${DESTDIR}${includedir}/afs/venus.h ${TOP_INCDIR}/afs/venus.h: ${srcdir}/venus.h
+${DEST}/include/afs/venus.h ${DESTDIR}${includedir}/afs/venus.h: ${srcdir}/venus.h
 	${INSTALL_DATA} $? $@
 
-${DEST}/include/afs/vioc.h ${DESTDIR}${includedir}/afs/vioc.h ${TOP_INCDIR}/afs/vioc.h: ${srcdir}/vioc.h
+${DEST}/include/afs/vioc.h ${DESTDIR}${includedir}/afs/vioc.h: ${srcdir}/vioc.h
 	${INSTALL_DATA} $? $@
+
+#
+# Export dependents
+#
+
+${TOP_INCDIR}/afs/param.h: param.h.new
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/afs_sysnames.h: ${srcdir}/afs_sysnames.h
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/stds.h: ${srcdir}/stds.h
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/icl.h: ${srcdir}/icl.h
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/afs_args.h: ${srcdir}/afs_args.h
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/venus.h: ${srcdir}/venus.h
+	${EXPORT} $? $@
+
+${TOP_INCDIR}/afs/vioc.h: ${srcdir}/vioc.h
+	${EXPORT} $? $@
+
 
 # these are needed to compile the kernel.  Config is necessary to
 # convert the MakefileProto in libafs and the kernel links provide the

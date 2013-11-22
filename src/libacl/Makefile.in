@@ -27,13 +27,13 @@ depinstall: \
 	${TOP_INCDIR}/afs/prs_fs.h
 
 ${TOP_LIBDIR}/libacl.a: libacl.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/acl.h: acl.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/prs_fs.h: prs_fs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 libacl.a: $(LT_objs)
 	$(LT_LDLIB_lwp) $(LT_objs)

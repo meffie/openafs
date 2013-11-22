@@ -123,6 +123,11 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
+EXPORT = EXPORT() { \
+	printf "export: %s %s\n" `pwd` $$2; \
+	@INSTALL_DATA@ $$1 $$2; \
+	}; EXPORT
+
 #
 # Special build targets
 #

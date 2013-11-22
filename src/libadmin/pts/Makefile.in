@@ -24,10 +24,10 @@ LIBOBJS = ${ADMINOBJS} ${PTSERVEROBJS}
 all: ${TOP_INCDIR}/afs/afs_ptsAdmin.h ${TOP_LIBDIR}/libptsadmin.a
 
 ${TOP_INCDIR}/afs/afs_ptsAdmin.h: afs_ptsAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libptsadmin.a: libptsadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: afs_ptsAdmin.h libptsadmin.a
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

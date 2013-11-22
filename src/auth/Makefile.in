@@ -51,27 +51,27 @@ depinstall: ${TOP_INCDIR}/afs/keys.h \
 	token.xdr.c
 
 ${TOP_INCDIR}/afs/token.h: token.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 generated: acfg_errors.c cellconfig.h ktc_errors.c auth.h
 
 ${TOP_INCDIR}/afs/keys.h: keys.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/cellconfig.h: cellconfig.h
-	${INSTALL_DATA} cellconfig.h $@
+	${EXPORT} cellconfig.h $@
 
 ${TOP_INCDIR}/afs/auth.h: auth.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ktc.h: ktc.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libauth.a: libauth.a
-	${INSTALL_DATA} libauth.a $@
+	${EXPORT} libauth.a $@
 
 ${TOP_LIBDIR}/libauth.krb.a: libauth.krb.a
-	${INSTALL_DATA} libauth.krb.a $@
+	${EXPORT} libauth.krb.a $@
 
 cellconfig.lo: cellconfig.c ${INCLS}
 keys.lo: keys.c ${INCLS}

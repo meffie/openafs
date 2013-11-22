@@ -51,13 +51,13 @@ all: bosserver ${TOP_INCDIR}/afs/bosint.h bos ${TOP_LIBDIR}/libbos.a bos_util \
 generated: bosint.ss.c bosint.xdr.c bosint.cs.c bosint.h bnode.h boserr.c
 
 ${TOP_INCDIR}/afs/bosint.h: bosint.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/bnode.h: bnode.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libbos.a: libbos.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 $(OBJS) bosint.xdr.o bosint.cs.o boserr.o: $(INCLS)
 

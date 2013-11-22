@@ -18,10 +18,10 @@ depinstall: \
 	${TOP_INCDIR}/afs/dir.h
 
 ${TOP_INCDIR}/afs/dir.h: dir.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libdir.a: libdir.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 libdir.a: buffer.o dir.o salvage.o AFS_component_version_number.o
 	$(RM) -f $@

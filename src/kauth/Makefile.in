@@ -88,19 +88,19 @@ generated: \
 $(LT_objs): $(INCLS)
 
 ${TOP_LIBDIR}/libkauth.a: libkauth.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libkauth.krb.a: libkauth.krb.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/kautils.h: kautils.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/kauth.h: kauth.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/kaport.h: kaport.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 liboafs_kauth.la: liboafs_kauth.la.sym $(LT_objs) $(LT_deps)
 	$(LT_LDLIB_shlib) $(LT_objs) $(LT_deps) $(LT_libs)

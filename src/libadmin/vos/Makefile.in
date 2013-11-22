@@ -39,10 +39,10 @@ LIBVOSADMIN=${TOP_LIBDIR}/libvosadmin.a
 all: ${TOP_INCDIR}/afs/afs_vosAdmin.h ${TOP_LIBDIR}/libvosadmin.a
 
 ${TOP_INCDIR}/afs/afs_vosAdmin.h: afs_vosAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libvosadmin.a: libvosadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: afs_vosAdmin.h libvosadmin.a
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

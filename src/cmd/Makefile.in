@@ -24,16 +24,16 @@ all64: all ${TOP_LIBDIR}/libcmd64.a
 generated: cmd.h cmd_errors.c
 
 ${TOP_LIBDIR}/libcmd.a: libcmd.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libcmd_pic.a: libcmd_pic.la
-	$(INSTALL_DATA) .libs/libcmd_pic.a $@
+	${EXPORT} .libs/libcmd_pic.a $@
 
 ${TOP_LIBDIR}/libcmd64.a: libcmd64.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/cmd.h: cmd.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 cmd_errors.c cmd.h: cmd_errors.et cmd.p.h
 	$(RM) -f cmd.h cmd_errors.c

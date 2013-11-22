@@ -21,10 +21,10 @@ LIBOBJS = ${ADMINOBJS} ${BOZOOBJS}
 all: ${TOP_INCDIR}/afs/afs_bosAdmin.h ${TOP_LIBDIR}/libbosadmin.a
 
 ${TOP_INCDIR}/afs/afs_bosAdmin.h: afs_bosAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libbosadmin.a: libbosadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: libbosadmin.a afs_bosAdmin.h
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

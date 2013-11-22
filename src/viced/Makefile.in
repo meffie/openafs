@@ -44,7 +44,7 @@ LIBS= \
 all: cbd fsprobe check_sysid fileserver ${TOP_INCDIR}/afs/fs_stats.h
 
 ${TOP_INCDIR}/afs/fs_stats.h: fs_stats.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 check_sysid: check_sysid.c
 	${CC} ${AFS_CFLAGS} ${AFS_LDFLAGS} -o check_sysid \

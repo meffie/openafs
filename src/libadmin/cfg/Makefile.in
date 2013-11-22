@@ -28,10 +28,10 @@ LIBOBJS =\
 all: ${TOP_INCDIR}/afs/afs_cfgAdmin.h ${TOP_LIBDIR}/libcfgadmin.a
 
 ${TOP_INCDIR}/afs/afs_cfgAdmin.h: afs_cfgAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libcfgadmin.a: libcfgadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: libcfgadmin.a afs_cfgAdmin.h
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

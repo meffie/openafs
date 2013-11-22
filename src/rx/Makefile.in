@@ -75,64 +75,64 @@ includes: \
 	${TOP_INCDIR}/rx/xdr_prototypes.h
 
 ${TOP_LIBDIR}/librx.a: librx.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_packet.h: rx_packet.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_prototypes.h: rx_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx.h: rx.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_atomic.h: rx_atomic.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_user.h: rx_user.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_event.h: rx_event.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_queue.h: rx_queue.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_globals.h: rx_globals.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_clock.h: rx_clock.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_multi.h: rx_multi.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_pthread.h: rx_pthread.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_lwp.h: rx_lwp.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_misc.h: rx_misc.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_null.h: rx_null.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_opaque.h: rx_opaque.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_identity.h: rx_identity.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/xdr.h: xdr.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/xdr_prototypes.h: xdr_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/rx/rx_xmit_nt.h: rx_xmit_nt.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: librx.a
 	${INSTALL} -d ${DESTDIR}${libdir}

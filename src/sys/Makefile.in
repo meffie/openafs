@@ -46,31 +46,31 @@ generated: \
 	Krmtsys.cs.c Krmtsys.xdr.c Krmtsys.h
 
 ${TOP_INCDIR}/afs/afssyscalls.h: afssyscalls.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/rmtsys.h: rmtsys.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/afs.exp: afs.exp
 	@set -x; case ${SYS_NAME} in \
 		rs_aix* ) \
-			${INSTALL_DATA} $? $@ ;; \
+			${EXPORT} $? $@ ;; \
 	esac
 
 ${TOP_LIBDIR}/afs.exp: afs.exp
 	@set -x; case ${SYS_NAME} in \
 		rs_aix* ) \
-			${INSTALL_DATA} $? $@ ;; \
+			${EXPORT} $? $@ ;; \
 	esac
 
 ${TOP_INCDIR}/afs/xfsattrs.h: xfsattrs.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/sys_prototypes.h: sys_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libsys.a: libsys.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${UKERNELDIR}/afs/afsl.exp: afsl.exp
 	${INSTALL} -d ${UKERNELDIR}/afs

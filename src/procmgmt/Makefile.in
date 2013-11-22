@@ -15,10 +15,10 @@ all: ${TOP_LIBDIR}/libprocmgmt.a ${TOP_INCDIR}/afs/procmgmt.h
 buildtools: ${TOP_INCDIR}/afs/procmgmt.h
 
 ${TOP_LIBDIR}/libprocmgmt.a: libprocmgmt.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/procmgmt.h: ${srcdir}/procmgmt.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets

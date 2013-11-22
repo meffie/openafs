@@ -63,19 +63,19 @@ depinstall: \
 	${TOP_INCDIR}/afs/cnvldb.h
 
 ${TOP_LIBDIR}/libvldb.a: libvldb.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vl_opcodes.h: vl_opcodes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vlserver.h: vlserver.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/vldbint.h: vldbint.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/cnvldb.h: cnvldb.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 vldb_check: vldb_check.o ${LIBS}
 	$(AFS_LDRULE) vldb_check.o ${LIBS} $(LIB_roken) ${XLIBS}

@@ -23,25 +23,25 @@ generated: \
 OBJS=butc.ss.o butc.cs.o butc.xdr.o bumon.ss.o bumon.cs.o bumon.xdr.o butc_errs.o butm_errs.o butx_errs.o
 
 ${TOP_LIBDIR}/libbubasics.a: libbubasics.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/bumon.h: bumon.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/butc.h: butc.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/bubasics.h: bubasics.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/tcdata.h: tcdata.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/butm.h: butm.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/butx.h: butx.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 libbubasics.a: $(OBJS) AFS_component_version_number.o
 	-$(RM) -f libbubasics.a

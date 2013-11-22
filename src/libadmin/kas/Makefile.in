@@ -24,10 +24,10 @@ LIBOBJS = ${ADMINOBJS} ${KAUTHOBJS}
 all: ${TOP_INCDIR}/afs/afs_kasAdmin.h ${TOP_LIBDIR}/libkasadmin.a
 
 ${TOP_INCDIR}/afs/afs_kasAdmin.h: afs_kasAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libkasadmin.a: libkasadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: afs_kasAdmin.h libkasadmin.a
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

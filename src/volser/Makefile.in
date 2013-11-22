@@ -83,19 +83,19 @@ all: volserver vos restorevol voldump \
 generated: volser.h volerr.c volint.cs.c volint.ss.c volint.xdr.c volint.h
 
 ${TOP_INCDIR}/afs/vsutils_prototypes.h: vsutils_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/volser_prototypes.h: volser_prototypes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/volser.h: volser.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/volint.h: volint.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libvolser.a: libvolser.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 restorevol: restorevol.o
 	$(AFS_LDRULE) restorevol.o ${TOP_LIBDIR}/libcmd.a \

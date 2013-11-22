@@ -17,10 +17,10 @@ LIBOBJS = ${ADMINOBJS}
 all: ${TOP_INCDIR}/afs/afs_clientAdmin.h ${TOP_LIBDIR}/libclientadmin.a
 
 ${TOP_INCDIR}/afs/afs_clientAdmin.h: afs_clientAdmin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libclientadmin.a: libclientadmin.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install: afs_clientAdmin.h libclientadmin.a
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

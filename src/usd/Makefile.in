@@ -16,10 +16,10 @@ LT_deps = $(top_builddir)/src/opr/liboafs_opr.la
 all: liboafs_usd.la ${TOP_LIBDIR}/libusd.a ${TOP_INCDIR}/afs/usd.h
 
 ${TOP_LIBDIR}/libusd.a: libusd.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/usd.h: usd.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets

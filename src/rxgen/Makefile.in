@@ -20,7 +20,7 @@ all: rxgen ${TOP_INCDIR}/afs/rxgen_consts.h
 buildtools: rxgen
 
 ${TOP_INCDIR}/afs/rxgen_consts.h: rxgen_consts.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 rxgen: $(OBJS) AFS_component_version_number.c $(HDRS)
 	$(AFS_LDRULE) $(OBJS) $(XLIBS)

@@ -89,70 +89,70 @@ test_cipher: test_cipher.o libafshcrypto.a
 	$(AFS_LDRULE) test_cipher.o libafshcrypto.a $(LIB_roken)
 
 ${TOP_INCDIR}/hcrypto/aes.h: ${UPSTREAM}/hcrypto/aes.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/bn.h: ${UPSTREAM}/hcrypto/bn.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/des.h: ${UPSTREAM}/hcrypto/des.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/dh.h: ${UPSTREAM}/hcrypto/dh.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/dsa.h: ${UPSTREAM}/hcrypto/dsa.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/engine.h: engine.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/evp.h: ${UPSTREAM}/hcrypto/evp.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/evp-hcrypto.h: ${UPSTREAM}/hcrypto/evp-hcrypto.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/evp-cc.h: ${UPSTREAM}/hcrypto/evp-cc.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/hmac.h: ${UPSTREAM}/hcrypto/hmac.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/md2.h: ${UPSTREAM}/hcrypto/md2.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/md4.h: ${UPSTREAM}/hcrypto/md4.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/md5.h: ${UPSTREAM}/hcrypto/md5.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/pkcs12.h: ${UPSTREAM}/hcrypto/pkcs12.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/rand.h: ${UPSTREAM}/hcrypto/rand.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/rc2.h: ${UPSTREAM}/hcrypto/rc2.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/rc4.h: ${UPSTREAM}/hcrypto/rc4.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/rsa.h: ${UPSTREAM}/hcrypto/rsa.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/sha.h: ${UPSTREAM}/hcrypto/sha.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/hcrypto/ui.h: ${UPSTREAM}/hcrypto/ui.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafshcrypto.a: libafshcrypto.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafshcrypto_lwp.a: libafshcrypto_lwp.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 # Pthread Targets
 

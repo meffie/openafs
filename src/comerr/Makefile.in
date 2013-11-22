@@ -20,16 +20,16 @@ all: compile_et ${TOP_INCDIR}/afs/com_err.h ${TOP_INCDIR}/afs/error_table.h \
 buildtools: compile_et
 
 ${TOP_INCDIR}/afs/com_err.h: com_err.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/error_table.h: error_table.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/mit-sipb-cr.h: mit-sipb-cr.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafscom_err.a: libafscom_err.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 et_lex.lex.c: et_lex.lex.l
 	$(RM) -f et_lex.lex.c

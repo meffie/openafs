@@ -29,41 +29,41 @@ libopr_pic.la: $(LT_objs)
 	$(LT_LDLIB_pic) $(LT_objs)
 
 $(TOP_LIBDIR)/libopr.a: libopr.a
-	$(INSTALL_DATA) libopr.a $@
+	${EXPORT} libopr.a $@
 
 $(TOP_LIBDIR)/libopr_pic.a: libopr_pic.la
-	$(INSTALL_DATA) .libs/libopr_pic.a $@
+	${EXPORT} .libs/libopr_pic.a $@
 
 
 $(TOP_INCDIR)/afs/opr.h: opr.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/afs/opr_assert.h: ${srcdir}/opr_assert.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/dict.h: ${srcdir}/dict.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/jhash.h: ${srcdir}/jhash.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/lockstub.h: ${srcdir}/lockstub.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/queue.h: ${srcdir}/queue.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/rbtree.h: ${srcdir}/rbtree.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/lock.h: ${srcdir}/opr_lock.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/time.h: ${srcdir}/opr_time.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/opr/uuid.h: ${srcdir}/uuid.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 clean:
 	$(LT_CLEAN)

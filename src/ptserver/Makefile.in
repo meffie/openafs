@@ -72,34 +72,34 @@ depinstall: \
 	${TOP_INCDIR}/afs/ptserver.h
 
 ${TOP_LIBDIR}/libprot.a: libprot.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/prclient.h: ptclient.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/prerror.h: pterror.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/print.h: ptint.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/prserver.h: ptserver.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ptclient.h: ptclient.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ptuser.h: ptuser.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/pterror.h: pterror.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ptint.h: ptint.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_INCDIR}/afs/ptserver.h: ptserver.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 #
 # Build targets
@@ -214,7 +214,7 @@ pt_util: pt_util.o ptutils.o ptubik.o utils.o map.o libprot.a $(LIBS)
 ptubik.o: ptubik.c ${INCLS}
 
 prerror.h: pterror.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 	echo '#define ERROR_TABLE_BASE_pr ERROR_TABLE_BASE_PT' >> $@
 
 #

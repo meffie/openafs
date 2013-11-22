@@ -53,10 +53,10 @@ TARGETS=$(AUTHLIBS)
 all: ${TOP_LIBDIR}/afsauthlib.so ${TOP_LIBDIR}/afskauthlib.so
 
 ${TOP_LIBDIR}/afsauthlib.so: afsauthlib.so
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/afskauthlib.so: afskauthlib.so
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install install.noversion: afsauthlib.so afskauthlib.so
 	${INSTALL} -d ${DESTDIR}${libdir}

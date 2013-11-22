@@ -26,7 +26,7 @@ all: \
 # Build targets
 #
 ${TOP_LIBDIR}/libafscp.a: libafscp.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 libafscp.a: ${LIBOBJS} AFS_component_version_number.o
 	$(RM) -f $@
@@ -37,7 +37,7 @@ depinstall: \
 	${TOP_INCDIR}/afs/afscp.h
 
 ${TOP_INCDIR}/afs/afscp.h: afscp.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 CFLAGS_afscp_util.o = $(KRB5CFLAGS)
 CFLAGS_afscp_server.o = $(KRB5CFLAGS)

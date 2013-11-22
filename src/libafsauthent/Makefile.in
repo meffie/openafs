@@ -42,10 +42,10 @@ libafsauthent.a: $(LT_objs) libafsauthent.la
 	$(LT_LDLIB_static) $(LT_objs)
 
 ${TOP_LIBDIR}/libafsauthent.a: libafsauthent.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafsauthent_pic.a: libafsauthent_pic.la
-	${INSTALL_DATA} .libs/libafsauthent_pic.a $@
+	${EXPORT} .libs/libafsauthent_pic.a $@
 
 clean:
 	$(LT_CLEAN)

@@ -13,7 +13,7 @@ include @TOP_OBJDIR@/src/config/Makefile.pthread
 all: ${TOP_INCDIR}/afs/afs_Admin.h
 
 ${TOP_INCDIR}/afs/afs_Admin.h: afs_Admin.h
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 install:
 	${INSTALL} -d ${DESTDIR}${includedir}/afs

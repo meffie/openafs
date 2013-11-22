@@ -35,16 +35,16 @@ all: $(TOPEXP32) $(TOPEXP64) ${TOP_LIBDIR}/extras.exp
 
 ${TOP_LIBDIR}/export.exp: export.exp
 	if [ "x$(AIX32)" = "xyes" ]; then  \
-	  ${INSTALL_DATA} $? $@ ; \
+	  ${EXPORT} $? $@ ; \
 	fi
 
 ${TOP_LIBDIR}/export64.exp: export64.exp
 	if [ "x$(AIX64)" = "xyes" ]; then  \
-	  ${INSTALL_DATA} $? $@ ; \
+	  ${EXPORT} $? $@ ; \
 	fi
 
 ${TOP_LIBDIR}/extras.exp: ${srcdir}/extras.exp
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 noversion system: install
 

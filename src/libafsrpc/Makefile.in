@@ -54,10 +54,10 @@ libafsrpc.a: $(LT_objs) libafsrpc.la
 	esac
 
 ${TOP_LIBDIR}/libafsrpc.a: libafsrpc.a
-	${INSTALL_DATA} $? $@
+	${EXPORT} $? $@
 
 ${TOP_LIBDIR}/libafsrpc_pic.a: libafsrpc_pic.la
-	${INSTALL_DATA} .libs/libafsrpc_pic.a $@
+	${EXPORT} .libs/libafsrpc_pic.a $@
 
 install: libafsrpc.a libafsrpc_pic.la
 	${INSTALL} -d ${DESTDIR}${libdir}

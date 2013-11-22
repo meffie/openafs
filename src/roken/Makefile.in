@@ -51,7 +51,7 @@ $(SHLIBOBJ): $(OBJECTS) librokenafs.map
 		$(OBJECTS) $(MT_LIBS)
 
 $(TOP_LIBDIR)/librokenafs.a: librokenafs.a
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 librokenafs.a: $(OBJECTS)
 	$(RM) -f $@
@@ -59,16 +59,16 @@ librokenafs.a: $(OBJECTS)
 	$(RANLIB) $@
 
 $(TOP_INCDIR)/base64.h: ${UPSTREAM}/base64.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/err.h: ${UPSTREAM}/err.hin
 	cp $? $@
 
 $(TOP_INCDIR)/roken.h: $(UPSTREAM)/roken.h.in
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 $(TOP_INCDIR)/roken-common.h: $(UPSTREAM)/roken-common.h
-	$(INSTALL_DATA) $? $@
+	${EXPORT} $? $@
 
 err.h: ${UPSTREAM}/err.hin
 	cp $? $@
