@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -94,7 +94,7 @@ LIBUAFS_BUILD_PERL: ${TOP_LIBDIR}/perl/ukernel.so ${TOP_LIBDIR}/perl/AFS/ukernel
 
 webinstall: all \
 	${TOP_LIBDIR}/$(LIBAFSWEB) \
-	${TOP_LIBDIR}/$(LIBAFSWEBKRB) 
+	${TOP_LIBDIR}/$(LIBAFSWEBKRB)
 
 linktest: UAFS/$(LIBUAFS)
 	$(CC) $(TEST_CFLAGS) $(TEST_LDFLAGS) \
@@ -1475,7 +1475,7 @@ $(WEBOBJ)/xdr_mem.o: $(TOP_SRC_RX)/xdr_mem.c
 $(WEBOBJ)/xdr_len.o: $(TOP_SRC_RX)/xdr_len.c
 	$(CRULE2)
 
-# These are for libjuafs.a 
+# These are for libjuafs.a
 # Used for linking with libafsauthent and libafsrpc
 
 $(JUAFS)/afs_atomlist.o: $(TOP_SRCDIR)/util/afs_atomlist.c

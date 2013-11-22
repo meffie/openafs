@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -15,10 +15,10 @@ LIBS= ../libauth.a ${TOP_LIBDIR}/librx.a ${TOP_LIBDIR}/libsys.a \
 
 tests all: testcellconf ktctest
 
-testcellconf: testcellconf.o 
+testcellconf: testcellconf.o
 	$(AFS_LDRULE) testcellconf.o  ${LIBS}
 
-ktctest: ktctest.o 
+ktctest: ktctest.o
 	$(AFS_LDRULE) ktctest.o  ${LIBS}
 
 clean:

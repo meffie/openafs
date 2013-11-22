@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -22,7 +22,7 @@ ARFLAGS = -r
 RANLIB = /bin/ranlib
 CC = xlc_r
 DEF_LIBPATH=/usr/lib/threads:/usr/lib:/lib
-EXPFILE=../nsafslib.exp 
+EXPFILE=../nsafslib.exp
 LD_FLAGS=-bM:SRE -bE:$(EXPFILE) -berok -bnoentry -blibpath:$(DEF_LIBPATH)
 
 TEST_CFLAGS=-DAFS_PTHREAD_ENV -Daix -DAFS_AIX_ENV $(XCFLAGS)
@@ -39,7 +39,7 @@ AFS_OS_CLEAN = \
 	*.exp \
 	export.h
 
-# To get __file__ (afs_osi_pag.c) you need to specify language level 
+# To get __file__ (afs_osi_pag.c) you need to specify language level
 # C99 to xlc_r like this:
 OPTF=${OPTMZ} -qlanglvl=stdc99
 WEBOPTS = -I../nsapi -qarch=com -DNETSCAPE_NSAPI -DAIX -DNET_SSL -DXP_UNIX -DMCC_HTTPD
@@ -68,6 +68,6 @@ $(LIBAFSWEB): $(AFSWEBOBJ) ${DES}/libdes.a ${DESTDIR}/lib/afs/libsys.a
 ##
 ## Use Kerberos authentication instead of kaservers
 ##
-$(LIBAFSWEBKRB): $(AFSWEBOBJKRB) ${DES}/libdes.a ${DESTDIR}/lib/afs/libsys.a 
+$(LIBAFSWEBKRB): $(AFSWEBOBJKRB) ${DES}/libdes.a ${DESTDIR}/lib/afs/libsys.a
 	-$(RM) -f $(LIBAFSWEBKRB)
 	ld -o $(LIBAFSWEBKRB) $(LD_FLAGS) $(AFSWEBOBJKRB) ${DES}/libdes.a ${DESTDIR}/lib/afs/libsys.a -lm -lc

@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -63,7 +63,7 @@ AFS_OS_NONFSOBJS = \
 # for 11.23, see the DDK BE/Sample_makefiles/Makefile.bld
 # for mod drivers.
 #
-# 11.23 uses new compiler, with new options. The same compiler is on pa_risc and ia64 
+# 11.23 uses new compiler, with new options. The same compiler is on pa_risc and ia64
 #
 <hp_ux110 hp_ux102 hp_ux11i>
 KDEFS= +ES1.Xindirect_calls +XixdU +Hx0 +ESlit +ESsfc +ESssf -Wp,-H300000 -D_KERNEL -D_KERNEL_BUILD -D_UNSUPPORTED \
@@ -123,7 +123,7 @@ LDOPTS_pa=
 # above from the Makefile.bld example
 
 LDOPTS= ${LDOPTS_${ARCH}}
-KDEFS= $(CCOPTS_common) $(IDENTS_common) $(CPU_KDEFS) 
+KDEFS= $(CCOPTS_common) $(IDENTS_common) $(CPU_KDEFS)
 KDEFS_64= ${CCOPTS_${ARCH}} ${IDENTS_${ARCH}}
 
 MODLINK=/opt/ddk/11.23/BE/bin/modlink
@@ -132,8 +132,8 @@ MODMETA=/opt/ddk/11.23/BE/bin/modmeta
 <all>
 
 DEFINES= -DAFSDEBUG -DKERNEL -DAFS -DVICE -DNFS -DUFS -DINET -DQUOTA -DGETMOUNT -DHPONCPLUS
-OPTF=${OPT} 
-OPTF2=${OPT2} 
+OPTF=${OPT}
+OPTF2=${OPT2}
 CFLAGS=-I. -I.. -I../h -I../nfs -I../conf -I${TOP_OBJDIR}/src/config ${FSINCLUDES} $(DEFINES) $(KDEFS) $(KOPTS) ${DBUG}
 
 # Name of directory to hold object files and libraries.

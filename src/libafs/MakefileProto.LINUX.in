@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -69,7 +69,7 @@ AFS_OS_PAGOBJS = \
 <linux24 linux_24 linux26 linux_26>
 	osi_ioctl.o \
 <all>
-	osi_pag_module.o 
+	osi_pag_module.o
 
 AFS_OS_NFSOBJS =
 
@@ -132,7 +132,7 @@ DEFINES = $(COMMON_DEFINES) -DCPU=586
 
 <amd64_linux22 amd64_linux24>
 CCFLAGS = $(COMMON_KERN_CFLAGS) -mcmodel=kernel -mno-red-zone
-DEFINES = $(COMMON_DEFINES) 
+DEFINES = $(COMMON_DEFINES)
 
 <i386_umlinux22 i386_umlinux24>
 CCFLAGS = $(COMMON_KERN_CFLAGS) @P5PLUS_KOPTS@ -Wno-strict-prototypes -I$(LINUX_KERNEL_PATH)/arch/um/include -I$(LINUX_KERNEL_PATH)/arch/um/kernel/tt/include -I$(LINUX_KERNEL_PATH)/arch/um/kernel/skas/include
@@ -147,11 +147,11 @@ DEFINES = $(COMMON_DEFINES)
 
 <s390_linux22 s390_linux24>
 CCFLAGS = $(COMMON_KERN_CFLAGS) -fsigned-char
-DEFINES = $(COMMON_DEFINES) -D__s390__ 
+DEFINES = $(COMMON_DEFINES) -D__s390__
 
 <s390x_linux22 s390x_linux24>
 CCFLAGS = $(COMMON_KERN_CFLAGS) -fsigned-char
-DEFINES = $(COMMON_DEFINES) -D__s390x__ 
+DEFINES = $(COMMON_DEFINES) -D__s390x__
 
 <sparc_linux22 sparc_linux24>
 LD = ld -m elf32_sparc
@@ -214,7 +214,7 @@ setup:
 		ln -fs ../Makefile $${KDIR}/Makefile.afs ; \
 		ln -fs ../Makefile.common $${KDIR}/Makefile.common; \
 		ln -fs ../config $${KDIR}/config; \
-	done 
+	done
 
 # Compile SP and MP clients as requested
 
@@ -244,9 +244,9 @@ ${INSTDIRS} ${DESTDIRS}: ${COMPDIRS}
 	done
 
 ${COMPDIRS}: setup
-	$(RM) -f h 
+	$(RM) -f h
 	$(RM) -f sys
-	$(RM) -f netinet 
+	$(RM) -f netinet
 	if [ -d ${LINUX_KERNEL_PATH}/include2 ] ; then                  \
 	    ln -fs ${LINUX_KERNEL_PATH}/include2/asm/../linux h       ; \
 	    ln -fs ${LINUX_KERNEL_PATH}/include2/asm/../linux sys     ; \
@@ -256,10 +256,10 @@ ${COMPDIRS}: setup
 	    ln -fs ${LINUX_KERNEL_PATH}/include/linux sys             ; \
 	    ln -fs ${LINUX_KERNEL_PATH}/include/linux netinet         ; \
 	fi
-	$(RM) -f linux 
-	ln -fs ${LINUX_KERNEL_PATH}/include/linux linux 
-	$(RM) -f net 
-	ln -fs ${LINUX_KERNEL_PATH}/include/net net 
+	$(RM) -f linux
+	ln -fs ${LINUX_KERNEL_PATH}/include/linux linux
+	$(RM) -f net
+	ln -fs ${LINUX_KERNEL_PATH}/include/net net
 	$(RM) -f asm-generic
 	ln -fs ${LINUX_KERNEL_PATH}/include/asm-generic asm-generic
 	$(RM) -f asm
@@ -279,9 +279,9 @@ ${COMPDIRS}: setup
 <s390x_linux22 s390x_linux24 s390x_linux26>
 	ln -fs ${LINUX_KERNEL_PATH}/include/asm-s390x asm
 <ppc_linux22 ppc_linux24 ppc_linux26>
-	ln -fs ${LINUX_KERNEL_PATH}/include/asm-ppc asm 
+	ln -fs ${LINUX_KERNEL_PATH}/include/asm-ppc asm
 <ppc64_linux24 ppc64_linux26>
-	ln -s ${LINUX_KERNEL_PATH}/include/asm-ppc64 asm 
+	ln -s ${LINUX_KERNEL_PATH}/include/asm-ppc64 asm
 <sparc_linux22 sparc_linux24 sparc_linux26>
 	ln -fs ${LINUX_KERNEL_PATH}/include/asm-sparc asm
 <sparc64_linux22 sparc64_linux24 sparc64_linux26>
@@ -353,7 +353,7 @@ SYSTEM_LIBAFS = /lib/modules/${CLIENT}/extra/${LINUX_LIBAFS_NAME}/${LINUX_LIBAFS
 INST_SYSTEM = ${DESTDIR}${SYSTEM_LIBAFS}
 DEST_SYSTEM = ${DEST}/root.client${SYSTEM_LIBAFS}
 
-libafs:	$(LIBAFS) 
+libafs:	$(LIBAFS)
 	echo SP Build Complete
 
 libafs.mp: $(LIBAFS_MP)
@@ -401,7 +401,7 @@ ${LIBAFS_BM}: $(AFSAOBJS) $(AFSNONFSOBJS)
 	$(LD) -r -o $@ $(AFSAOBJS) $(AFSNONFSOBJS)
 <all>
 
-install_libafs:	$(LIBAFS) 
+install_libafs:	$(LIBAFS)
 	${INSTALL} -d ${DESTDIR}${afskerneldir}
 	${INSTALL} -m 644 $(LIBAFS) $(INST_LIBAFS)
 	echo SP Install Complete
@@ -426,7 +426,7 @@ install_libafs.bm: $(LIBAFS_BM)
 	${INSTALL} -m 644 $(LIBAFS_BM) $(INST_LIBAFS_BM)
 	echo BM Install Complete
 
-dest_libafs:	$(LIBAFS) 
+dest_libafs:	$(LIBAFS)
 	${INSTALL} -d ${DEST}/root.client/usr/vice/etc/modload
 	${INSTALL} -m 644 $(LIBAFS) $(DEST_LIBAFS)
 	echo SP Install Complete

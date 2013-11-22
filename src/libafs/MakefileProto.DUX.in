@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -23,7 +23,7 @@ AFS_OS_OBJS = \
 	osi_sleep.o \
 	osi_vcache.o \
 	osi_vm.o \
-	osi_vnodeops.o 
+	osi_vnodeops.o
 
 AFS_OS_NFSOBJS = \
 	osi_vfsops_nfs.o
@@ -38,11 +38,11 @@ KDEFS=-DLANGUAGE_C -G 4 -I/usr/sys/include -I../include \
 	 -I/usr/sys/${HEADER_RT} -I/usr/sys/BINARY \
 	-DDEC3000_500 -DSWAPTYPE=1 -DUERF -DOSF -DCOMPAT_43 -DMACH -DUFS \
 	-DRT -DKERNEL -D_KERNEL  -signed  -no_excpt -Wb,-static -Wco,-nofloat \
-	-Olimit 1000 -D__alpha -Umips -UMIPS 
+	-Olimit 1000 -D__alpha -Umips -UMIPS
 DBUG = -O2 -g3
 DEFINES= -DAFSDEBUG -DKERNEL -DAFS -DVICE -DNFS -DUFS -DINET -DQUOTA -DGETMOUNT
-OPTF=${OPT} 
-OPTF2=${OPT2} 
+OPTF=${OPT}
+OPTF2=${OPT2}
 CFLAGS=-I. -I.. -I${TOP_OBJDIR}/src/config ${FSINCLUDES} $(DEFINES) $(KDEFS) $(KOPTS) ${DBUG}
 
 

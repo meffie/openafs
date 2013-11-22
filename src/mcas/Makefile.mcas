@@ -37,7 +37,7 @@ ifeq ($(ARCH),ALPHA)
 CC          := cc
 CFLAGS      := -accept vaxc_keywords -O3 -DALPHA
 CFLAGS      += -fomit-frame-pointer -DWEAK_MEM_ORDER
-LDFLAGS     := -lpthread 
+LDFLAGS     := -lpthread
 endif
 
 CFLAGS      += $(DEBUGGING)

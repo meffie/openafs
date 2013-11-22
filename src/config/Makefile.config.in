@@ -203,7 +203,7 @@ RUN_LD_NOQ=$(RUN_LD_NOQ_V$(V))
 # conditionalise them on that.
 
 COMMON_INCL=$(MODULE_INCLUDE) -I${TOP_OBJDIR}/src/config -I${TOP_INCDIR} \
-	    -I${srcdir} -I. 
+	    -I${srcdir} -I.
 
 COMMON_CFLAGS=$(CFLAGS) ${DBG} ${OPTMZ} $(XCFLAGS) \
 	      ${COMMON_INCL} ${INCLUDE_LIBINTL} \

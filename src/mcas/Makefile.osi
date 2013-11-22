@@ -82,7 +82,7 @@ ifeq ($(ARCH),ALPHA)
 CC          := cc
 MCAS_CFLAGS      := -accept vaxc_keywords -O3 -DALPHA
 MCAS_CFLAGS      += -fomit-frame-pointer -DWEAK_MEM_ORDER
-LDFLAGS     := -lpthread 
+LDFLAGS     := -lpthread
 endif
 
 MCAS_CFLAGS      += $(DEBUGGING)

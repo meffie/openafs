@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -60,7 +60,7 @@ depinstall: \
 	${TOP_INCDIR}/afs/vl_opcodes.h \
 	${TOP_INCDIR}/afs/vlserver.h \
 	${TOP_INCDIR}/afs/vldbint.h \
-	${TOP_INCDIR}/afs/cnvldb.h 
+	${TOP_INCDIR}/afs/cnvldb.h
 
 ${TOP_LIBDIR}/libvldb.a: libvldb.a
 	${INSTALL_DATA} $? $@

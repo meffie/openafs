@@ -36,7 +36,7 @@ AFS_OS_NONFSOBJS = \
 # System specific build commands and flags
 KSRC = @BSD_KERNEL_PATH@
 KBLD = @BSD_KERNEL_BUILD@
-KARCHFLAGS = -Di386 -march=pentiumpro -mtune=pentiumpro 
+KARCHFLAGS = -Di386 -march=pentiumpro -mtune=pentiumpro
 KOPTFLAGS = -D_KERNEL -DLKM -D_LKM -DDEBUG -DLOCKDEBUG
 KDEFS=-Wall -ansi -nostdinc -I/usr/include \
 	${KARCHFLAGS} ${KOPTFLAGS} \
@@ -48,8 +48,8 @@ KDEFS=-Wall -ansi -nostdinc -I/usr/include \
 	-I${KBLD} -I../afs
 DBUG = -O2 -g3
 DEFINES= -DAFSDEBUG -DKERNEL -DAFS -DVICE -DNFS -DUFS -DINET -DQUOTA -DGETMOUNT
-OPTF=${OPT} 
-OPTF2=${OPT2} 
+OPTF=${OPT}
+OPTF2=${OPT2}
 CFLAGS=-I. -I.. -I${TOP_OBJDIR}/src/config ${FSINCLUDES} $(DEFINES) $(KDEFS) $(KOPTS) ${DBUG}
 
 
@@ -100,7 +100,7 @@ DEST_LIBAFSNONFS = ${DEST}/root.client/bin/${LIBAFSNONFS}
 libafs:	$(LIBAFSNONFS)
 # install_libafs:	$(INST_LIBAFS) $(INST_LIBAFSNONFS)
 #install_libafs:	$(INST_LIBAFSNONFS)
-install_libafs:	
+install_libafs:
 # dest_libafs:	$(DEST_LIBAFS) $(DEST_LIBAFSNONFS)
 dest_libafs:	$(DEST_LIBAFSNONFS)
 <all -i386_nbsd40 -i386_nbsd50>

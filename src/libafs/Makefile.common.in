@@ -1,6 +1,6 @@
 # Copyright 2000, International Business Machines Corporation and others.
 # All Rights Reserved.
-# 
+#
 # This software has been released under the terms of the IBM Public
 # License.  For details, see the LICENSE file in the top-level source
 # directory or online at http://www.openafs.org/dl/license10.html
@@ -39,7 +39,7 @@ COMMON_INCLUDE = -I. -I.. -I../nfs \
 	-I${TOP_OBJDIR}/src/vlserver \
 	-I${TOP_OBJDIR}/src/auth \
 	-I${TOP_INCDIR} \
-	-I${TOP_INCDIR}/afs 
+	-I${TOP_INCDIR}/afs
 
 # Build rules - CC and CFLAGS are defined in system specific MakefileProtos.
 .SUFFIXES:	.i
@@ -68,7 +68,7 @@ single_instdir_libafs: install_libafs
 single_destdir_libafs: dest_libafs
 
 # placeholder for any sources that are built prior to compiling libafs
-depsrcs: 
+depsrcs:
 
 AFSAOBJS = \
 	afs_atomlist.o \
