@@ -1,0 +1,269 @@
+#!/usr/bin/perl -w
+#
+# Generate a graphviz dot file of inter-package dependencies.
+#
+# Example usage:
+#
+#   make clean all | build-tools/graph-dep | tred | dot -Tpng -o graph.png
+#
+# Show dependencies of individual packages:
+#
+#   make clean all | build-tools/graph-dep --package=audit --output=report
+#
+# BUGS:
+#
+#    This is all rather hackish and full of work-arounds, so it's not ready
+#    for merging.
+#
+#    Only the unix parts of the code tree are scanned.
+#
+
+use Getopt::Long;
+use Data::Dumper;
+use File::Basename;
+use Cwd;
+
+my $opt_debug = 0;
+my $opt_groups = 0;
+my $opt_topdir = getcwd();
+my $opt_package = "";  # all by default
+my $opt_output = "graph";
+
+my %groups = (
+    "venus" => ["afs", "afsd", "venus", "kopenafs"],
+    "vice" => ["viced", "volser", "vol", "dir", "vfsck"],
+    "rx" => ["rx", "rxdebug", "rxgen", "rxkad", "rxosd", "rxstat"],
+    "bu" => ["bubasics", "bucoord", "budb", "butc", "butm", "bu_utils"],
+    "mon" => ["gtx", "xstat", "fsprobe", "scout", "afsmonitor"],
+);
+
+my @pthreaded_packages = (
+    "tbudb",
+    "tbutc",
+    "tptserver",
+    "tsalvaged",
+    "tubik",
+    "tvlserver",
+    "tvolser",
+);
+
+# hack: avoid apparent cycles
+my @blacklist = (
+    "config/vioc.h",        # includes util headers
+    "config/icl.h",         # includes lwp headers
+    "util/work_queue_impl_types.h",
+    "util/thread_pool_impl_types.h",
+    "util/thread_pool.c",
+    "rxkad/test/stress.c",
+    "rxkad/test/stress_c.c",
+    "rxkad/test/stress_s.c",
+    "rx/DARWIN/rx_kmutex.c",  # afs/afs_stats.h: rx -> afs -> rxkad -> rx
+    "afs/IRIX/osi_inode.c",   # afs/xfsattrs.h: afs -> sys -> afs
+    "bubasics/tcdata.h",      # bu* is a tangled mess
+    "bubasics/tcdata.p.h",
+);
+
+sub read_exports
+{
+    my $exporter = {}; # header => package
+    while (<>) {
+        chomp;
+        next unless /^export:/;
+        my (undef, $from, $to) = split;
+        unless ($from =~ m{^$opt_topdir/src/}) {
+            warn "export does not start with topdir: topdir=$topdir/src/, from=$from\n";
+            next;
+        }
+        unless ($to =~ /^$opt_topdir/) {
+            warn "export does not start with topdir: topdir=$topdir, to=$to\n";
+            next;
+        }
+        $from =~ s{^$opt_topdir/src/}{};
+        # hack: collapse libadmin
+        if ($from =~ m{^libadmin/}) {
+            $from = "libadmin";
+        }
+        $to =~ s{^$opt_topdir/}{};
+        if ($to =~ m{^include/}) {
+            $to =~ s{^include/}{};
+            $exporter->{$to} = $from;
+        }
+    }
+    return $exporter;
+}
+
+sub add_dep
+{
+    my $depends = shift;
+    my $package = shift;
+    my $dep = shift;
+    my $h = shift;
+
+    unless (exists $depends->{$package}) {
+        $depends->{$package} = {};
+    }
+    unless (exists $depends->{$package}->{$dep}) {
+        $depends->{$package}->{$dep} = {};
+    }
+    $depends->{$package}->{$dep}->{$h} = 1;
+}
+
+sub scan_deps
+{
+    my $scan = shift;
+    my $exporter = shift;
+    my $depends = {};
+
+    # make hashes from lists for easier lookups.
+    my %blacklist = map { $opt_topdir ."/src/". $_ => 1 } @blacklist;
+    my %pthreaded_packages = map { $_ => 1 } @pthreaded_packages;
+
+    open(my $find, "find $opt_topdir/src/$scan -type f -name '*.[ch]' |") or die;
+    PACKAGE: while (<$find>) {
+        chomp;
+
+        # check unix only
+        next PACKAGE if m{^$opt_topdir/src/WINNT/};
+        next PACKAGE if m{^$opt_topdir/src/lwp/lwp_nt\.c$};
+        next PACKAGE if m{^$opt_topdir/src/external};
+
+        my $file = $_;
+        my $dir = dirname($file);
+        my $package;
+        if ($dir =~ m{^$opt_topdir/src/crypto/([^/]+)}) {
+            $package = "crypto/$1";
+        }
+        elsif ($dir =~ m{^$opt_topdir/src/libadmin/([^/]+)}) {
+            $package = "libadmin";  # collapse all the sub-dirs to libadmin
+        }
+        elsif ($dir =~ m{^$opt_topdir/src/([^/]+)}) {
+            $package = $1;
+        }
+
+        # hack: skip the special pthreaded packages for now.
+        if ($pthreaded_packages{$package}) {
+            if ($opt_debug) {
+                printf(STDERR "skipping pthreaded package file: %s, %s\n", $package, $file);
+            }
+            next PACKAGE;
+        }
+
+        # hack: skip these special cases for now to workaround nested headers
+        if ($blacklist{$file}) {
+            if ($opt_debug) {
+                printf(STDERR "skipping blacklisted file: %s\n", $file);
+            }
+            next PACKAGE;
+        }
+
+        open($fh, "<", $file) or die;
+        while (<$fh>) {
+            if (/^\s*#\s*include\s*[<"]([^>]+)[>"]/) {
+                my $h = $1;
+                if (exists $exporter->{$h}) {
+                    my $dep = $exporter->{$h};
+                    if ($dep ne $package) {
+                        if ($opt_debug) {
+                            printf(STDERR "package=%s, file=%s, h=%s, dep=%s\n", $package, $file, $h, $dep);
+                        }
+                        add_dep($depends, $package, $dep, $h);
+                    }
+                }
+
+                # hack: implied deps from nested headers
+                unless ($package eq "config") {
+                    if ($h eq "afs/vioc.h") {
+                        add_dep($depends, $package, "util", $h);
+                    }
+                    if ($h eq "afs/icl.h") {
+                        add_dep($depends, $package, "lwp", $h);
+                    }
+                }
+                # hack: implied deps from nested headers.
+                #       tcdata.h has the following nested headers
+                #
+                #   header             exported by
+                #   afs/butc.h     --> bubasics (not butc!)
+                #   afs/budb.h     --> budb
+                #   afs/bubasics.h --> bubasics
+                #   afs/butm.h     --> bubasics (not butm!)
+                #
+                if ($h eq "afs/tcdata.h") {
+                    foreach my $nested (qw(budb bubasics)) {
+                        unless ($package eq $nested) {
+                            if ($opt_debug) {
+                                printf(STDERR "package=%s, file=%s, h=%s, dep=%s (nested)\n", $package, $file, $h, $nested);
+                            }
+                            add_dep($depends, $package, $nested, $h);
+                        }
+                    }
+                }
+            }
+        }
+        close($fh);
+    }
+    close($find);
+    return $depends;
+}
+
+sub print_graph
+{
+    my $depends = shift;
+
+    print "digraph packages {\n";
+    if ($opt_groups) {
+        while (my ($group, $packages) = each(%groups)) {
+            print "  subgraph cluster_$group {\n";
+            print "      label = \"$group\";\n";
+            print "      color = blue;\n";
+            foreach my $package (@{$packages}) {
+                print "      $package;\n";
+            }
+            print "  }\n";
+        }
+    }
+    while (my ($package, $dep) = each(%{$depends})) {
+        for my $d (sort(keys(%{$dep}))) {
+            printf(qq(  "%s" -> "%s";\n), $package, $d);
+        }
+    }
+    print "}\n";
+}
+
+sub print_report
+{
+    my $depends = shift;
+    while (my ($package, $dep) = each(%{$depends})) {
+        printf("package %s\n", $package);
+        for my $d (sort(keys(%{$dep}))) {
+            my $h = join(" ", sort(keys(%{$dep->{$d}})));
+            printf("  %12s : %s\n", $d, $h);
+        }
+    }
+}
+
+
+sub main
+{
+    my $exporter = read_exports();
+    my $depends = scan_deps($opt_package, $exporter);
+    if ($opt_output eq 'list') {
+        foreach my $package (sort(keys(%{$depends}))) {
+            print $package, "\n";
+        }
+    } elsif ($opt_output eq 'graph' || $opt_output eq 'dot') {
+        print_graph($depends);
+    } elsif ($opt_output eq 'report') {
+        print_report($depends);
+    }
+}
+
+GetOptions(
+    "debug|d" => \$opt_debug,
+    "groups|g" => \$opt_groups,
+    "topdir" => \$opt_topdir,
+    "package=s" => \$opt_package,
+    "output=s" => \$opt_output, # list,graph,report
+) or die;
+
+main();
