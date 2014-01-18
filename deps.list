@@ -1,0 +1,652 @@
+
+package opr
+          config : afs/param.h
+  crypto/hcrypto : hcrypto/rand.h
+           roken : roken.h
+
+package tsm41
+            auth : afs/auth.h afs/cellconfig.h afs/ktc.h afs/token.h
+          comerr : afs/com_err.h
+          config : afs/param.h
+        ptserver : afs/ptserver.h
+           rxkad : rx/rxkad.h
+            util : afs/dirpath.h
+
+package procmgmt
+          config : afs/param.h afs/stds.h
+           roken : roken.h
+
+package budb
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h
+        bubasics : afs/bubasics.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+            util : afs/afsutil.h
+
+package rxosd
+          config : afs/param.h afs/stds.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_null.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+
+package gtx
+             cmd : afs/cmd.h
+          config : afs/param.h afs/stds.h
+             lwp : lock.h lwp.h
+           roken : roken.h
+
+package kopenafs
+          config : afs/param.h afs/vioc.h
+           roken : roken.h
+             sys : afs/afssyscalls.h
+            util : afs/vioc.h
+
+package afsd
+            auth : afs/cellconfig.h
+             cmd : afs/cmd.h
+          config : afs/afs_args.h afs/param.h afs/stds.h
+             opr : afs/opr.h afs/opr_assert.h
+           roken : roken.h
+             sys : afs/afssyscalls.h afs/sys_prototypes.h
+            util : afs/afsutil.h
+
+package ptserver
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+             lwp : lock.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+          rxstat : rx/rxstat.h
+            ubik : ubik.h
+            util : afs/afsutil.h
+
+package mcas
+          config : afs/param.h
+            util : afs/afsutil.h
+
+package rxgen
+          config : afs/param.h
+           roken : roken.h
+
+package fsprobe
+            auth : afs/cellconfig.h
+          config : afs/param.h
+           fsint : afs/afscbint.h afs/afsint.h
+             lwp : lwp.h
+           roken : roken.h
+              rx : rx/rx.h
+            util : afs/afsutil.h
+          volser : afs/volint.h afs/volser.h afs/volser_prototypes.h
+
+package volser
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+             dir : afs/dir.h
+           fsint : afs/afsint.h
+          libacl : afs/acl.h afs/prs_fs.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h opr/lock.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_queue.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+          rxstat : rx/rxstat.h
+             sys : afs/afssyscalls.h
+            ubik : ubik.h
+             usd : afs/usd.h
+            util : afs/afsutil.h afs/errors.h
+        vlserver : afs/vlserver.h
+             vol : afs/daemon_com.h afs/fssync.h afs/ihandle.h afs/nfs.h afs/partition.h afs/viceinode.h afs/vnode.h afs/vol_prototypes.h afs/voldefs.h afs/volume.h afs/volume_inline.h
+
+package vlserver
+             afs : afs/afs_consts.h
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h afs/venus.h
+             lwp : lock.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_multi.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+          rxstat : rx/rxstat.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/fileutil.h
+
+package aklog
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h afs/ktc.h afs/token.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h afs/venus.h
+             lwp : lock.h
+        ptserver : afs/ptclient.h afs/pterror.h afs/ptserver.h afs/ptuser.h
+           roken : roken.h
+              rx : rx/xdr.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/dirpath.h afs/vice.h
+
+package export
+          config : afs/param.h
+
+package bucoord
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+        bubasics : afs/bubasics.h afs/butc.h afs/butm.h afs/butx.h afs/tcdata.h
+            budb : afs/budb.h afs/budb_client.h afs/budb_prototypes.h afs/tcdata.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+           fsint : afs/afsint.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/ktime.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+             vol : afs/voldefs.h
+          volser : afs/volint.h afs/volser.h afs/volser_prototypes.h afs/vsutils_prototypes.h
+
+package libacl
+          config : afs/param.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/rx.h rx/xdr.h
+
+package afs
+          comerr : afs/error_table.h
+          config : afs/afs_args.h afs/icl.h afs/param.h afs/stds.h
+  crypto/hcrypto : hcrypto/md5.h
+             dir : afs/dir.h
+           fsint : afs/afscbint.h afs/pagcb.h
+          libacl : afs/prs_fs.h
+             lwp : afs/icl.h
+             opr : afs/opr.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_multi.h rx/xdr.h
+           rxkad : rx/fcrypt.h rx/rxkad.h
+          rxstat : rx/rxstat.h
+            util : afs/afsutil.h afs/vice.h
+
+package cmd
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+           roken : roken.h
+
+package libafscp
+             afs : afs/afs_consts.h afs/unified_afs.h
+            auth : afs/cellconfig.h
+          config : afs/param.h
+  crypto/hcrypto : hcrypto/des.h
+             dir : afs/dir.h
+           fsint : afs/afsint.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_null.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/dirpath.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+          volser : afs/volint.h
+
+package sys
+             afs : afs/afs_consts.h
+          config : afs/afs_args.h afs/param.h afs/stds.h afs/venus.h
+           fsint : afs/afsint.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_null.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+            util : afs/vice.h
+
+package tools
+            auth : afs/auth.h afs/cellconfig.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/param.h afs/stds.h
+             dir : afs/dir.h
+           fsint : afs/afsint.h
+          libacl : afs/acl.h afs/prs_fs.h
+             lwp : lock.h
+        ptserver : afs/pterror.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_null.h rx/rx_packet.h rx/rx_queue.h rx/xdr.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+            util : afs/dirpath.h
+        vlserver : afs/vlserver.h
+             vol : afs/ihandle.h afs/nfs.h afs/vnode.h afs/volume.h
+          volser : afs/volint.h afs/volser.h
+
+package viced
+             afs : afs/unified_afs.h
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/afs_args.h afs/param.h afs/stds.h
+             dir : afs/dir.h
+           fsint : afs/afscbint.h afs/afsint.h
+          libacl : afs/acl.h afs/prs_fs.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h afs/opr_assert.h opr/lock.h
+        procmgmt : afs/procmgmt.h
+        ptserver : afs/ptclient.h afs/ptuser.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_queue.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+          rxstat : rx/rxstat.h
+             sys : afs/afssyscalls.h afs/xfsattrs.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/errors.h afs/fileutil.h afs/softsig.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+             vol : afs/ihandle.h afs/nfs.h afs/partition.h afs/vnode.h afs/volume.h
+
+package sgistuff
+            auth : afs/auth.h afs/cellconfig.h
+          config : afs/param.h
+            util : afs/afsutil.h
+
+package scout
+             cmd : afs/cmd.h
+          config : afs/param.h
+         fsprobe : afs/fsprobe.h
+             gtx : afs/gtxX11win.h afs/gtxcurseswin.h afs/gtxdumbwin.h afs/gtxframe.h afs/gtxinput.h afs/gtxlightobj.h afs/gtxobjects.h afs/gtxtextobj.h afs/gtxwindows.h
+           roken : roken.h
+            util : afs/afsutil.h
+
+package audit
+          config : afs/param.h
+           fsint : afs/afsint.h
+             lwp : lock.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/rx.h
+           rxkad : rx/rxkad.h
+            util : afs/afsutil.h
+
+package bozo
+           audit : afs/audit.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/afs_args.h afs/param.h afs/stds.h
+  crypto/hcrypto : hcrypto/des.h hcrypto/ui.h
+           fsint : afs/afsint.h
+             lwp : lwp.h
+             opr : afs/opr.h opr/lock.h opr/queue.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+          rxstat : rx/rxstat.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/fileutil.h afs/ktime.h
+          volser : afs/volser.h
+
+package libadmin
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+            bozo : afs/bnode.h afs/bosint.h
+        bubasics : afs/bubasics.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h afs/error_table.h
+          config : afs/afs_args.h afs/param.h afs/stds.h afs/venus.h
+           fsint : afs/afscbint.h afs/afsint.h
+             lwp : lock.h
+        ptserver : afs/prerror.h afs/pterror.h afs/ptint.h afs/ptserver.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_null.h rx/xdr.h
+           rxkad : rx/rxkad.h
+          rxstat : rx/rxstat.h
+             sys : afs/afssyscalls.h afs/sys_prototypes.h
+            ubik : ubik.h ubik_int.h
+            util : afs/afsutil.h afs/dirpath.h afs/ktime.h afs/pthread_glock.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+             vol : afs/nfs.h afs/partition.h afs/voldefs.h
+          volser : afs/volint.h afs/volser.h
+
+package pam
+            auth : afs/auth.h
+          config : afs/param.h
+           roken : roken.h
+             sys : afs/sys_prototypes.h
+
+package util
+          config : afs/param.h afs/stds.h
+             lwp : lwp.h
+             opr : afs/opr.h opr/lock.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+
+package butm
+        bubasics : afs/butm.h
+          comerr : afs/com_err.h
+          config : afs/param.h
+             lwp : lwp.h
+           roken : roken.h
+             usd : afs/usd.h
+            util : afs/afsutil.h
+
+package uss
+             afs : afs/afs_consts.h
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/venus.h
+           fsint : afs/afsint.h
+          libacl : afs/prs_fs.h
+        ptserver : afs/ptclient.h afs/pterror.h afs/ptuser.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+             sys : afs/sys_prototypes.h
+            ubik : ubik.h
+            util : afs/afsutil.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+          volser : afs/volint.h afs/volser.h afs/volser_prototypes.h
+
+package butc
+            auth : afs/cellconfig.h afs/keys.h
+        bubasics : afs/bubasics.h afs/butc.h afs/butx.h afs/tcdata.h
+         bucoord : afs/bc.h afs/bucoord_prototypes.h
+            budb : afs/budb.h afs/budb_client.h afs/budb_errs.h afs/budb_prototypes.h afs/tcdata.h
+            butm : afs/butm_prototypes.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/stds.h
+           fsint : afs/afsint.h
+          libacl : afs/acl.h afs/prs_fs.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+             usd : afs/usd.h
+            util : afs/afsutil.h afs/ktime.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+             vol : afs/nfs.h
+          volser : afs/volint.h afs/volser.h afs/volser_prototypes.h
+
+package fsint
+          config : afs/param.h afs/stds.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_multi.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+
+package ubik
+            auth : afs/auth.h afs/cellconfig.h afs/keys.h
+             cmd : afs/cmd.h
+          comerr : afs/error_table.h
+          config : afs/param.h afs/stds.h
+           fsint : afs/afsint.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h opr/lock.h opr/lockstub.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_multi.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+            util : afs/afsutil.h afs/dirpath.h afs/pthread_glock.h
+
+package bubasics
+            auth : afs/auth.h
+          comerr : afs/error_table.h
+          config : afs/param.h afs/stds.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+
+package lwp
+          config : afs/param.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+
+package usd
+          config : afs/param.h
+             opr : afs/opr.h
+           roken : roken.h
+
+package xstat
+             afs : afs/afs_stats.h
+             cmd : afs/cmd.h
+          config : afs/param.h
+           fsint : afs/afscbint.h afs/afsint.h
+             lwp : lwp.h
+           roken : roken.h
+              rx : rx/rx.h
+            util : afs/afsutil.h
+           viced : afs/fs_stats.h
+
+package dir
+          config : afs/param.h afs/stds.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/xdr.h
+
+package auth
+           audit : afs/audit.h
+          comerr : afs/error_table.h
+          config : afs/param.h afs/stds.h afs/venus.h
+  crypto/hcrypto : hcrypto/des.h hcrypto/rand.h
+           fsint : afs/afsint.h
+             opr : afs/opr.h opr/queue.h
+           roken : base64.h roken.h
+              rx : rx/rx.h rx/rx_atomic.h rx/rx_globals.h rx/rx_identity.h rx/rx_opaque.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+             sys : afs/sys_prototypes.h
+            util : afs/afsutil.h afs/dirpath.h afs/fileutil.h afs/pthread_glock.h afs/vice.h
+
+package rxdebug
+             cmd : afs/cmd.h
+          config : afs/param.h afs/stds.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_clock.h rx/rx_globals.h rx/rx_queue.h rx/rx_user.h
+            util : afs/afsutil.h
+
+package vfsck
+             afs : afs/osi_inode.h
+          config : afs/param.h
+           fsint : afs/afsint.h
+           roken : roken.h
+             vol : afs/ihandle.h afs/partition.h
+
+package bu_utils
+             cmd : afs/cmd.h
+          config : afs/param.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+             usd : afs/usd.h
+
+package roken
+          config : afs/param.h
+
+package venus
+             afs : afs/afs.h afs/afs_consts.h afs/afs_stats.h afs/exporter.h afs/nfsclient.h
+            auth : afs/auth.h afs/cellconfig.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/afs_args.h afs/icl.h afs/param.h afs/stds.h afs/venus.h
+  crypto/hcrypto : hcrypto/md5.h
+           fsint : afs/afscbint.h afs/afsint.h
+          libacl : afs/prs_fs.h
+        libafscp : afs/afscp.h
+             lwp : afs/icl.h lock.h
+             opr : afs/opr.h
+        ptserver : afs/ptclient.h afs/ptuser.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/xdr.h
+           rxkad : rx/rxkad.h
+             sys : afs/afssyscalls.h afs/sys_prototypes.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/vice.h
+        vlserver : afs/vldbint.h afs/vlserver.h
+             vol : afs/ihandle.h
+          volser : afs/volser.h
+
+package platform
+             afs : afs/osi_inode.h
+             cmd : afs/cmd.h
+          config : afs/param.h
+           fsint : afs/afsint.h
+              rx : rx/xdr.h
+             vol : afs/ihandle.h afs/nfs.h afs/partition.h
+
+package log
+            auth : afs/auth.h afs/cellconfig.h afs/ktc.h
+             cmd : afs/cmd.h
+          config : afs/param.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/rx.h rx/xdr.h
+           rxkad : rx/rxkad.h
+             sys : afs/sys_prototypes.h
+            util : afs/afsutil.h afs/vice.h
+
+package finale
+            auth : afs/cellconfig.h
+            bozo : afs/bnode.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/stds.h
+           fsint : afs/afsint.h
+        libadmin : afs/afs_Admin.h afs/afs_clientAdmin.h afs/afs_utilAdmin.h
+        ptserver : afs/pterror.h
+           roken : roken.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+        vlserver : afs/vlserver.h
+          volser : afs/volser.h
+
+package vol
+             afs : afs/osi_inode.h
+             cmd : afs/cmd.h
+          config : afs/param.h
+             dir : afs/dir.h
+           fsint : afs/afsint.h
+          libacl : afs/acl.h afs/prs_fs.h
+             lwp : lock.h lwp.h
+             opr : afs/opr.h afs/opr_assert.h opr/lock.h opr/lockstub.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+              rx : rx/rx_queue.h rx/xdr.h
+             sys : afs/afssyscalls.h afs/xfsattrs.h
+            util : afs/afsutil.h afs/errors.h afs/fileutil.h afs/thread_pool.h afs/work_queue.h
+
+package comerr
+          config : afs/param.h
+             opr : afs/opr.h
+           roken : roken.h
+            util : afs/afsutil.h afs/errors.h
+
+package rx
+          config : afs/afs_args.h afs/icl.h afs/param.h
+             lwp : afs/icl.h lwp.h
+             opr : afs/opr.h opr/lock.h opr/queue.h opr/rbtree.h
+           roken : roken.h
+           rxgen : afs/rxgen_consts.h
+            util : afs/afsutil.h afs/errors.h afs/pthread_nosigs.h
+
+package rxkad
+          comerr : afs/error_table.h
+          config : afs/param.h afs/stds.h
+  crypto/hcrypto : hcrypto/des.h hcrypto/hmac.h hcrypto/md4.h hcrypto/md5.h
+  crypto/rfc3961 : afs/rfc3961.h
+             opr : afs/opr.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_packet.h rx/xdr.h
+            util : afs/afsutil.h
+
+package crypto/rfc3961
+          config : afs/param.h afs/stds.h
+  crypto/hcrypto : hcrypto/des.h hcrypto/evp.h hcrypto/md5.h hcrypto/rc4.h hcrypto/sha.h
+           roken : roken.h
+
+package JAVA
+             afs : afs/afs_consts.h
+          comerr : afs/com_err.h
+          config : afs/afs_args.h afs/param.h afs/stds.h afs/venus.h
+          libacl : afs/prs_fs.h
+           rxkad : rx/rxkad.h
+            util : afs/vice.h
+
+package afsmonitor
+             cmd : afs/cmd.h
+          config : afs/param.h
+             gtx : afs/gtxX11win.h afs/gtxcurseswin.h afs/gtxdumbwin.h afs/gtxframe.h afs/gtxinput.h afs/gtxkeymap.h afs/gtxlightobj.h afs/gtxobjects.h afs/gtxtextcb.h afs/gtxtextobj.h afs/gtxwindows.h
+           roken : roken.h
+           xstat : afs/xstat_cm.h afs/xstat_fs.h
+
+package libuafs
+             cmd : afs/cmd.h
+          config : afs/afs_args.h afs/param.h
+              rx : rx/rx.h
+            util : afs/afsutil.h
+
+package afsweb
+             afs : afs/afs_stats.h
+            auth : afs/auth.h afs/cellconfig.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/stds.h afs/venus.h
+             lwp : lock.h
+              rx : rx/xdr.h
+            ubik : ubik.h
+            util : afs/vice.h
+
+package tests
+             afs : afs/afs_consts.h
+            auth : afs/auth.h afs/cellconfig.h
+             cmd : afs/cmd.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/stds.h afs/venus.h
+           fsint : afs/afscbint.h afs/afsint.h
+              rx : rx/rx_null.h rx/rx_prototypes.h
+             sys : afs/sys_prototypes.h
+            util : afs/afsutil.h afs/afsutil_prototypes.h afs/vice.h
+
+package update
+            auth : afs/cellconfig.h
+          comerr : afs/com_err.h
+          config : afs/param.h afs/stds.h
+             opr : afs/opr.h opr/lock.h
+        procmgmt : afs/procmgmt.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_null.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+           rxkad : rx/rxkad.h
+            ubik : ubik.h
+            util : afs/afsutil.h afs/fileutil.h
+
+package rxstat
+          config : afs/param.h afs/stds.h
+             opr : afs/opr.h opr/lock.h
+           roken : roken.h
+              rx : rx/rx.h rx/rx_globals.h rx/rx_multi.h rx/xdr.h
+           rxgen : afs/rxgen_consts.h
+
+package crypto/hcrypto
+          config : afs/param.h afs/stds.h
