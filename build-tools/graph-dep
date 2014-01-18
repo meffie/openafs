@@ -67,7 +67,7 @@ my @blacklist = (
 
 sub read_exports
 {
-    my $exporter = {}; # header => package
+    my $exported = {}; # header => package
     while (<>) {
         chomp;
         next unless /^export:/;
@@ -88,10 +88,32 @@ sub read_exports
         $to =~ s{^$opt_topdir/}{};
         if ($to =~ m{^include/}) {
             $to =~ s{^include/}{};
-            $exporter->{$to} = $from;
+            $exported->{$to} = $from;
         }
     }
-    return $exporter;
+    return $exported;
+}
+
+sub print_exports
+{
+    my $exported = shift;
+    my $exports = {}; # package => [header1, header2, ...]
+    my $package;
+    my $header;
+
+    while (($header, $package) = each($exported)) {
+        if (!exists($exports->{$package})) {
+            $exports->{$package} = [];
+        }
+        push(@{$exports->{$package}}, $header);
+    }
+    foreach $package (sort(keys(%{$exports}))) {
+        print "package $package\n";
+        foreach $header (sort(@{$exports->{$package}})) {
+            print "  $header\n";
+        }
+        print "\n";
+    }
 }
 
 sub add_dep
@@ -113,7 +135,7 @@ sub add_dep
 sub scan_deps
 {
     my $scan = shift;
-    my $exporter = shift;
+    my $exported = shift;
     my $depends = {};
 
     # make hashes from lists for easier lookups.
@@ -182,8 +204,8 @@ sub scan_deps
                 }
 
 
-                if (exists $exporter->{$h}) {
-                    my $dep = $exporter->{$h};
+                if (exists $exported->{$h}) {
+                    my $dep = $exported->{$h};
                     # hack:
                     if ($dep eq "kauth") {
                         next;
@@ -283,9 +305,15 @@ sub print_report
 
 sub main
 {
-    my $exporter = read_exports();
-    my $depends = scan_deps($opt_package, $exporter);
-    if ($opt_output eq 'list') {
+    my $exported = read_exports();
+
+    if ($opt_output eq 'exports') {
+        print_exports($exported);
+        return;
+    }
+
+    my $depends = scan_deps($opt_package, $exported);
+    if ($opt_output eq 'packages') {
         foreach my $package (sort(keys(%{$depends}))) {
             print $package, "\n";
         }
@@ -293,6 +321,8 @@ sub main
         print_graph($depends);
     } elsif ($opt_output eq 'report') {
         print_report($depends);
+    } else {
+        die "unknown --output: valid values are: graph, report, packages, exports\n";
     }
 }
 
