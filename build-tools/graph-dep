@@ -61,6 +61,8 @@ my @blacklist = (
     "afs/IRIX/osi_inode.c",   # afs/xfsattrs.h: afs -> sys -> afs
     "bubasics/tcdata.h",      # bu* is a tangled mess
     "bubasics/tcdata.p.h",
+    "afs/UKERNEL/afs_usrops.c",  # afs/auth cycle
+    "sys/fixit.c",
 );
 
 sub read_exports
@@ -140,6 +142,11 @@ sub scan_deps
             $package = $1;
         }
 
+        # hack:
+        if ($package eq "kauth") {
+            next PACKAGE;
+        }
+
         # hack: skip the special pthreaded packages for now.
         if ($pthreaded_packages{$package}) {
             if ($opt_debug) {
@@ -160,8 +167,39 @@ sub scan_deps
         while (<$fh>) {
             if (/^\s*#\s*include\s*[<"]([^>]+)[>"]/) {
                 my $h = $1;
+
+                # cycle hack: break opr/hcrypto cycle
+                if ($package eq "crypto/hcrypto" && $h eq "afs/opr.h") {
+                    next;
+                }
+                # cycle hack: util/rx cycle (UKERNEL util uses rxi_getaddr)
+                if ($package eq "util" && $h eq "rx/rx_prototypes.h") {
+                    next;
+                }
+                # cycle hack: afs/rxkad
+                if ($package eq "rx" && $h eq "afs/afs_stats.h") {
+                    next;
+                }
+
+
                 if (exists $exporter->{$h}) {
                     my $dep = $exporter->{$h};
+                    # hack:
+                    if ($dep eq "kauth") {
+                        next;
+                    }
+                    # cycle hack: libacl needs ptserver headers, and many things need libacl
+                    #   libacl -> ptserver -> ubik -> auth -> sys -> afs -> vol -> libacl
+                    #  many things depend on libacl
+                    if ($package eq "libacl" && $dep eq "ptserver") {
+                        next;
+                    }
+                    # cycle hack: afs needs a vol header
+                    #   sys -> afs -> vol -> sys
+                    if ($package eq "afs" && $dep eq "vol") {
+                        next;
+                    }
+
                     if ($dep ne $package) {
                         if ($opt_debug) {
                             printf(STDERR "package=%s, file=%s, h=%s, dep=%s\n", $package, $file, $h, $dep);
@@ -234,10 +272,10 @@ sub print_report
 {
     my $depends = shift;
     while (my ($package, $dep) = each(%{$depends})) {
-        printf("package %s\n", $package);
+        printf("\npackage %s\n", $package);
         for my $d (sort(keys(%{$dep}))) {
             my $h = join(" ", sort(keys(%{$dep->{$d}})));
-            printf("  %12s : %s\n", $d, $h);
+            printf("  %14s : %s\n", $d, $h);
         }
     }
 }
