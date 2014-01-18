@@ -1,0 +1,282 @@
+package afs
+  afs/afs.h
+  afs/afs_consts.h
+  afs/afs_stats.h
+  afs/exporter.h
+  afs/nfsclient.h
+  afs/osi_inode.h
+  afs/sysctl.h
+  afs/unified_afs.h
+
+package audit
+  afs/audit.h
+
+package auth
+  afs/auth.h
+  afs/cellconfig.h
+  afs/keys.h
+  afs/ktc.h
+  afs/token.h
+
+package bozo
+  afs/bnode.h
+  afs/bosint.h
+
+package bubasics
+  afs/bubasics.h
+  afs/bumon.h
+  afs/butc.h
+  afs/butm.h
+  afs/butx.h
+  afs/tcdata.h
+
+package bucoord
+  afs/bc.h
+  afs/bucoord_prototypes.h
+
+package budb
+  afs/budb.h
+  afs/budb_client.h
+  afs/budb_errs.h
+  afs/budb_prototypes.h
+
+package butm
+  afs/butm_prototypes.h
+
+package cmd
+  afs/cmd.h
+
+package comerr
+  afs/com_err.h
+  afs/error_table.h
+  afs/mit-sipb-cr.h
+
+package config
+  afs/afs_args.h
+  afs/afs_sysnames.h
+  afs/icl.h
+  afs/param.h
+  afs/stds.h
+  afs/venus.h
+  afs/vioc.h
+
+package crypto/hcrypto
+  hcrypto/aes.h
+  hcrypto/des.h
+  hcrypto/engine.h
+  hcrypto/evp-cc.h
+  hcrypto/evp-hcrypto.h
+  hcrypto/evp.h
+  hcrypto/hmac.h
+  hcrypto/md2.h
+  hcrypto/md4.h
+  hcrypto/md5.h
+  hcrypto/rand.h
+  hcrypto/rc2.h
+  hcrypto/rc4.h
+  hcrypto/sha.h
+  hcrypto/ui.h
+
+package crypto/rfc3961
+  afs/rfc3961.h
+
+package dir
+  afs/dir.h
+
+package fsint
+  afs/afscbint.h
+  afs/afsint.h
+  afs/pagcb.h
+
+package fsprobe
+  afs/fsprobe.h
+
+package gtx
+  afs/gtxX11win.h
+  afs/gtxcurseswin.h
+  afs/gtxdumbwin.h
+  afs/gtxframe.h
+  afs/gtxinput.h
+  afs/gtxkeymap.h
+  afs/gtxlightobj.h
+  afs/gtxobjdict.h
+  afs/gtxobjects.h
+  afs/gtxtextcb.h
+  afs/gtxtextobj.h
+  afs/gtxwindows.h
+
+package kauth
+  afs/kaport.h
+  afs/kauth.h
+  afs/kautils.h
+
+package kopenafs
+  kopenafs.h
+
+package libacl
+  afs/acl.h
+  afs/prs_fs.h
+
+package libadmin
+  afs/afs_Admin.h
+  afs/afs_AdminBosErrors.h
+  afs/afs_AdminCfgErrors.h
+  afs/afs_AdminClientErrors.h
+  afs/afs_AdminCommonErrors.h
+  afs/afs_AdminErrors.h
+  afs/afs_AdminKasErrors.h
+  afs/afs_AdminMiscErrors.h
+  afs/afs_AdminPtsErrors.h
+  afs/afs_AdminUtilErrors.h
+  afs/afs_AdminVosErrors.h
+  afs/afs_bosAdmin.h
+  afs/afs_cfgAdmin.h
+  afs/afs_clientAdmin.h
+  afs/afs_kasAdmin.h
+  afs/afs_ptsAdmin.h
+  afs/afs_utilAdmin.h
+  afs/afs_vosAdmin.h
+
+package libafscp
+  afs/afscp.h
+
+package lwp
+  lock.h
+  lwp.h
+  preempt.h
+  timer.h
+
+package opr
+  afs/opr.h
+  afs/opr_assert.h
+  opr/dict.h
+  opr/jhash.h
+  opr/lock.h
+  opr/lockstub.h
+  opr/queue.h
+  opr/rbtree.h
+  opr/time.h
+  opr/uuid.h
+
+package procmgmt
+  afs/procmgmt.h
+
+package ptserver
+  afs/prclient.h
+  afs/prerror.h
+  afs/print.h
+  afs/prserver.h
+  afs/ptclient.h
+  afs/pterror.h
+  afs/ptint.h
+  afs/ptserver.h
+  afs/ptuser.h
+
+package roken
+  base64.h
+  roken-common.h
+  roken.h
+
+package rx
+  rx/rx.h
+  rx/rx_atomic.h
+  rx/rx_clock.h
+  rx/rx_event.h
+  rx/rx_globals.h
+  rx/rx_identity.h
+  rx/rx_lwp.h
+  rx/rx_misc.h
+  rx/rx_multi.h
+  rx/rx_null.h
+  rx/rx_opaque.h
+  rx/rx_packet.h
+  rx/rx_prototypes.h
+  rx/rx_pthread.h
+  rx/rx_queue.h
+  rx/rx_user.h
+  rx/xdr.h
+  rx/xdr_prototypes.h
+
+package rxgen
+  afs/rxgen_consts.h
+
+package rxkad
+  rx/fcrypt.h
+  rx/rxkad.h
+  rx/rxkad_convert.h
+  rx/rxkad_prototypes.h
+  rx/rxkad_stats.h
+
+package rxosd
+  afs/rxosd.h
+
+package rxstat
+  rx/rxstat.h
+
+package sys
+  afs/afssyscalls.h
+  afs/rmtsys.h
+  afs/sys_prototypes.h
+  afs/xfsattrs.h
+
+package ubik
+  ubik.h
+  ubik_int.h
+
+package usd
+  afs/usd.h
+
+package util
+  afs/afs_atomlist.h
+  afs/afs_lhash.h
+  afs/afsutil.h
+  afs/afsutil_prototypes.h
+  afs/dirpath.h
+  afs/errors.h
+  afs/fileutil.h
+  afs/ktime.h
+  afs/pthread_glock.h
+  afs/pthread_nosigs.h
+  afs/softsig.h
+  afs/tabular_output.h
+  afs/thread_pool.h
+  afs/thread_pool_types.h
+  afs/vice.h
+  afs/work_queue.h
+  afs/work_queue_types.h
+
+package viced
+  afs/fs_stats.h
+
+package vlserver
+  afs/cnvldb.h
+  afs/vl_opcodes.h
+  afs/vldbint.h
+  afs/vlserver.h
+
+package vol
+  afs/daemon_com.h
+  afs/fssync.h
+  afs/ihandle.h
+  afs/namei_ops.h
+  afs/nfs.h
+  afs/partition.h
+  afs/salvsync.h
+  afs/viceinode.h
+  afs/vnode.h
+  afs/vnode_inline.h
+  afs/vol_prototypes.h
+  afs/voldefs.h
+  afs/volume.h
+  afs/volume_inline.h
+
+package volser
+  afs/volint.h
+  afs/volser.h
+  afs/volser_prototypes.h
+  afs/vsutils_prototypes.h
+
+package xstat
+  afs/xstat_cm.h
+  afs/xstat_fs.h
+
