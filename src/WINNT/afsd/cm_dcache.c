@@ -45,7 +45,7 @@ long cm_BufWrite(void *vscp, osi_hyper_t *offsetp, long length, long flags,
      * but the vnode involved may or may not be locked depending on whether
      * or not the CM_BUF_WRITE_SCP_LOCKED flag is set.
      */
-    long code, code1;
+    long code;
     cm_scache_t *scp = vscp;
     afs_int32 nbytes;
     afs_int32 save_nbytes;
@@ -323,18 +323,17 @@ long cm_BufWrite(void *vscp, osi_hyper_t *offsetp, long length, long flags,
             }
         }
 
-        code1 = rx_EndCall(rxcallp, code);
+        /* Prefer rx_EndCall error over StoreData error. Note that this will
+	 * never set 'code' to 0 if we passed in a non-zero code. */
+        code = rx_EndCall(rxcallp, code);
 
-        if ((code == RXGEN_OPCODE || code1 == RXGEN_OPCODE) && SERVERHAS64BIT(connp)) {
+        if (code == RXGEN_OPCODE && SERVERHAS64BIT(connp)) {
             SET_SERVERHASNO64BIT(connp);
             qdp = NULL;
             nbytes = save_nbytes;
             goto retry;
         }
 
-        /* Prefer StoreData error over rx_EndCall error */
-        if (code1 != 0)
-            code = code1;
     } while (cm_Analyze(connp, userp, reqp, &scp->fid, 1, &volSync, NULL, NULL, code));
 
     code = cm_MapRPCError(code, reqp);
@@ -407,7 +406,7 @@ long cm_StoreMini(cm_scache_t *scp, cm_user_t *userp, cm_req_t *reqp)
     AFSStoreStatus inStatus;
     AFSVolSync volSync;
     AFSFid tfid;
-    long code, code1;
+    long code;
     osi_hyper_t truncPos;
     cm_conn_t *connp;
     struct rx_call *rxcallp;
@@ -503,16 +502,13 @@ long cm_StoreMini(cm_scache_t *scp, cm_user_t *userp, cm_req_t *reqp)
 		    osi_Log0(afsd_logp, "EndRXAFS_StoreData SUCCESS");
             }
         }
-        code1 = rx_EndCall(rxcallp, code);
+        code = rx_EndCall(rxcallp, code);
 
-        if ((code == RXGEN_OPCODE || code1 == RXGEN_OPCODE) && SERVERHAS64BIT(connp)) {
+        if (code == RXGEN_OPCODE && SERVERHAS64BIT(connp)) {
             SET_SERVERHASNO64BIT(connp);
             goto retry;
         }
 
-        /* prefer StoreData error over rx_EndCall error */
-        if (code == 0 && code1 != 0)
-            code = code1;
     } while (cm_Analyze(connp, userp, reqp, &scp->fid, 1, &volSync, NULL, NULL, code));
     code = cm_MapRPCError(code, reqp);
 
@@ -1572,7 +1568,7 @@ cm_CloneStatus(cm_scache_t *scp, cm_user_t *userp, int scp_locked,
 long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp,
                   cm_req_t *reqp)
 {
-    long code=0, code1=0;
+    long code=0;
     afs_uint32 nbytes;			/* bytes in transfer */
     afs_uint32 nbytes_hi = 0;            /* high-order 32 bits of bytes in transfer */
     afs_uint64 length_found = 0;
@@ -1775,6 +1771,8 @@ long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp
 
     /* now make the call */
     do {
+	long code1;
+
         code = cm_ConnFromFID(&scp->fid, userp, reqp, &connp);
         if (code)
             continue;
@@ -1799,8 +1797,7 @@ long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp
                     nbytes_hi = ntohl(nbytes_hi);
                 } else {
                     nbytes_hi = 0;
-		    code = rxcallp->error;
-                    code1 = rx_EndCall(rxcallp, code);
+                    code = rx_EndCall(rxcallp, RX_PROTOCOL_ERROR);
                     rxcallp = NULL;
                 }
             }
@@ -2048,6 +2045,7 @@ long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp
                 osi_Log1(afsd_logp, "CALL EndRXAFS_FetchData skipped due to error %d", code);
         }
 
+        code1 = code;
         if (rxcallp)
             code1 = rx_EndCall(rxcallp, code);
 
@@ -2063,9 +2061,10 @@ long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp
                 scp_locked = 0;
             }
             code = 0;
-        /* Prefer the error value from FetchData over rx_EndCall */
-        } else if (code == 0 && code1 != 0)
+        } else {
+	    /* Prefer the error from rx_EndCall over any other error */
             code = code1;
+	}
         osi_Log0(afsd_logp, "CALL FetchData DONE");
 
     } while (cm_Analyze(connp, userp, reqp, &scp->fid, 0, &volSync, NULL, NULL, code));
@@ -2117,7 +2116,7 @@ long cm_GetBuffer(cm_scache_t *scp, cm_buf_t *bufp, int *cpffp, cm_user_t *userp
 long cm_GetData(cm_scache_t *scp, osi_hyper_t *offsetp, char *datap, int data_length,
                 cm_user_t *userp, cm_req_t *reqp)
 {
-    long code=0, code1=0;
+    long code=0;
     afs_uint32 nbytes;			/* bytes in transfer */
     afs_uint32 nbytes_hi = 0;           /* high-order 32 bits of bytes in transfer */
     afs_uint64 length_found = 0;
@@ -2231,6 +2230,8 @@ long cm_GetData(cm_scache_t *scp, osi_hyper_t *offsetp, char *datap, int data_le
 
     /* now make the call */
     do {
+	long code1;
+
         code = cm_ConnFromFID(&scp->fid, userp, reqp, &connp);
         if (code)
             continue;
@@ -2255,8 +2256,7 @@ long cm_GetData(cm_scache_t *scp, osi_hyper_t *offsetp, char *datap, int data_le
                     nbytes_hi = ntohl(nbytes_hi);
                 } else {
                     nbytes_hi = 0;
-		    code = rxcallp->error;
-                    code1 = rx_EndCall(rxcallp, code);
+                    code = rx_EndCall(rxcallp, RX_PROTOCOL_ERROR);
                     rxcallp = NULL;
                 }
             }
@@ -2425,6 +2425,7 @@ long cm_GetData(cm_scache_t *scp, osi_hyper_t *offsetp, char *datap, int data_le
                 osi_Log1(afsd_logp, "CALL EndRXAFS_FetchData skipped due to error %d", code);
         }
 
+	code1 = code;
         if (rxcallp)
             code1 = rx_EndCall(rxcallp, code);
 
@@ -2440,9 +2441,10 @@ long cm_GetData(cm_scache_t *scp, osi_hyper_t *offsetp, char *datap, int data_le
                 scp_locked = 0;
             }
             code = 0;
-        /* Prefer the error value from FetchData over rx_EndCall */
-        } else if (code == 0 && code1 != 0)
+        } else {
+	    /* Prefer the error from rx_EndCall over any other error */
             code = code1;
+	}
         osi_Log0(afsd_logp, "CALL FetchData DONE");
 
     } while (cm_Analyze(connp, userp, reqp, &scp->fid, 0, &volSync, NULL, NULL, code));

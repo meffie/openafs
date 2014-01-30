@@ -44,7 +44,7 @@ afscp_PRead(const struct afscp_venusfid * fid, void *buffer,
     struct afscp_volume *vol;
     struct afscp_server *server;
     struct rx_call *c = NULL;
-    int code, code2 = 0;
+    int code;
     int i, j, bytes, totalbytes = 0;
     int bytesremaining;
     char *p;
@@ -72,7 +72,7 @@ afscp_PRead(const struct afscp_venusfid * fid, void *buffer,
 			rx_Read(c, (char *)&bytesremaining,
 				sizeof(afs_int32));
 		    if (bytes != sizeof(afs_int32)) {
-			code = rx_EndCall(c, bytes);
+			code = rx_EndCall(c, RX_PROTOCOL_ERROR);
 			continue;
 		    }
 		    bytesremaining = ntohl(bytesremaining);
@@ -87,12 +87,12 @@ afscp_PRead(const struct afscp_venusfid * fid, void *buffer,
 		    }
 		    if (bytesremaining == 0) {
 			time(&now);
-			code2 = EndRXAFS_FetchData(c, &fst, &cb, &vs);
-			if (code2 == 0)
+			code = EndRXAFS_FetchData(c, &fst, &cb, &vs);
+			if (code == 0)
 			    afscp_AddCallBack(server, &fid->fid, &fst, &cb,
 					      now);
 		    }
-		    code = rx_EndCall(c, code2);
+		    code = rx_EndCall(c, code);
 		}
 		if (code == 0) {
 		    return totalbytes;
@@ -117,7 +117,7 @@ afscp_PWrite(const struct afscp_venusfid * fid, const void *buffer,
     struct afscp_volume *vol;
     struct afscp_server *server;
     struct rx_call *c = NULL;
-    int code, code2 = 0;
+    int code;
     int i, j, bytes, totalbytes = 0;
     int bytesremaining;
     const char *p;
@@ -183,9 +183,9 @@ afscp_PWrite(const struct afscp_venusfid * fid, const void *buffer,
 			bytesremaining -= bytes;
 		    }
 		    if (bytesremaining == 0) {
-			code2 = EndRXAFS_StoreData(c, &fst, &vs);
+			code = EndRXAFS_StoreData(c, &fst, &vs);
 		    }
-		    code = rx_EndCall(c, code2);
+		    code = rx_EndCall(c, code);
 		}
 		if (code == 0) {
 		    return totalbytes;

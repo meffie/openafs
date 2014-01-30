@@ -449,7 +449,7 @@ urecovery_Initialize(struct ubik_dbase *adbase)
 void *
 urecovery_Interact(void *dummy)
 {
-    afs_int32 code, tcode;
+    afs_int32 code;
     struct ubik_server *bestServer = NULL;
     struct ubik_server *ts;
     int dbok, doingRPC, now;
@@ -677,9 +677,7 @@ urecovery_Interact(void *dummy)
 #endif
 	    code = EndDISK_GetFile(rxcall, &tversion);
 	  FetchEndCall:
-	    tcode = rx_EndCall(rxcall, code);
-	    if (!code)
-		code = tcode;
+	    code = rx_EndCall(rxcall, code);
 	    if (!code) {
 		/* we got a new file, set up its header */
 		urecovery_state |= UBIK_RECHAVEDB;
