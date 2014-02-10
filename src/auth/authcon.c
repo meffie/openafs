@@ -403,6 +403,17 @@ afsconf_BuildServerSecurityObjects(struct afsconf_dir *dir,
 #ifdef USE_RXKAD_KEYTAB
     if (keytab_enable)
 	rxkad_BindKeytabDecrypt((*classes)[2]);
+    else if (logger) {
+	(*logger)("WARNING: rxkad krb5 keytab init failed. We will not be "
+	          "able to process rxkad-k5/rxkad-kdf/rxkad.keytab "
+	          "connections!\n");
+    }
+#else
+    if (logger) {
+	(*logger)("We are not built with rxkad krb5 keytab support. We will "
+	          "not be able to process rxkad-k5/rxkad-kdf/rxkad.keytab "
+	          "connections.\n");
+    }
 #endif
     if (flags & AFSCONF_SEC_OBJS_RXKAD_CRYPT) {
 	(*classes)[3] = rxkad_NewServerSecurityObject(rxkad_crypt, dir,
