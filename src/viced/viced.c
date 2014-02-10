@@ -2082,9 +2082,6 @@ main(int argc, char *argv[])
 	exit(-1);
     }
     LogCommandLine(argc, argv, "starting", "", "File server", FSLog);
-    if (afsconf_GetLatestKey(confDir, NULL, NULL) == 0) {
-	LogDesWarning();
-    }
 
 #if defined(AFS_PTHREAD_ENV) && !defined(AFS_NT40_ENV)
     /* initialize the pthread soft signal handler thread */
@@ -2214,7 +2211,7 @@ main(int argc, char *argv[])
     rx_GetIFInfo();
     rx_SetRxDeadTime(30);
     afsconf_BuildServerSecurityObjects(confDir, AFSCONF_SEC_OBJS_RXKAD_CRYPT,
-				       &securityClasses, &numClasses);
+				       &securityClasses, &numClasses, FSLog);
 
     tservice = rx_NewServiceHost(rx_bindhost,  /* port */ 0, /* service id */
 				 1,	/*service name */

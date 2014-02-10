@@ -166,7 +166,8 @@ extern afs_int32 afsconf_PickClientSecObj(struct afsconf_dir *dir,
 extern void afsconf_BuildServerSecurityObjects(struct afsconf_dir *,
 					       afs_uint32,
 					       struct rx_securityClass ***,
-					       afs_int32 *);
+					       afs_int32 *,
+					       void (*logger)(const char *format, ...));
 
 /* writeconfig.c */
 int afsconf_SetExtendedCellInfo(struct afsconf_dir *adir, const char *apath,

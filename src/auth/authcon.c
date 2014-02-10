@@ -338,16 +338,32 @@ afsconf_ClientAuthToken(struct afsconf_cell *info,
     return code;
 }
 
+#if !defined(UKERNEL)
+static void
+LogDesWarning(void (*logger)(const char *format, ...))
+{
+    if (logger) {
+	/* The blank newlines help this stand out a bit more in the log. */
+	(*logger)("\n");
+	(*logger)("WARNING: You are using single-DES keys in a KeyFile. Using single-DES\n");
+	(*logger)("WARNING: long-term keys is considered insecure, and it is strongly\n");
+	(*logger)("WARNING: recommended that you migrate to stronger encryption. See\n");
+	(*logger)("WARNING: OPENAFS-SA-2013-003 on http://www.openafs.org/security/\n");
+	(*logger)("WARNING: for details.\n");
+	(*logger)("\n");
+    }
+}
+
 /*!
  * Build a set of security classes suitable for a server accepting
  * incoming connections
  */
-#if !defined(UKERNEL)
 void
 afsconf_BuildServerSecurityObjects(struct afsconf_dir *dir,
 				   afs_uint32 flags,
 			           struct rx_securityClass ***classes,
-			           afs_int32 *numClasses)
+			           afs_int32 *numClasses,
+			           void (*logger)(const char *format, ...))
 {
 #ifdef USE_RXKAD_KEYTAB
     int keytab_enable = 0;
@@ -370,6 +386,9 @@ afsconf_BuildServerSecurityObjects(struct afsconf_dir *dir,
     free(csdb_name);
     free(keytab_name);
 #endif
+    if (afsconf_GetLatestKey(dir, NULL, NULL) == 0) {
+	LogDesWarning(logger);
+    }
     if (flags & AFSCONF_SEC_OBJS_RXKAD_CRYPT)
 	*numClasses = 4;
     else

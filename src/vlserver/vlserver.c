@@ -368,7 +368,7 @@ main(int argc, char **argv)
     memset(rd_HostAddress, 0, sizeof(rd_HostAddress));
     initialize_dstats();
 
-    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses);
+    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses, FSLog);
 
     tservice =
 	rx_NewServiceHost(host, 0, USER_SERVICE_ID, "Vldb server",
@@ -400,9 +400,6 @@ main(int argc, char **argv)
     rx_SetMaxProcs(tservice, 4);
 
     LogCommandLine(argc, argv, "vlserver", VldbVersion, "Starting AFS", FSLog);
-    if (afsconf_GetLatestKey(tdir, NULL, NULL) == 0) {
-	LogDesWarning();
-    }
     printf("%s\n", cml_version_number);	/* Goes to the log */
 
     /* allow super users to manage RX statistics */

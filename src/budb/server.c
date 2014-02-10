@@ -583,7 +583,7 @@ main(int argc, char **argv)
     }
 
     afsconf_BuildServerSecurityObjects(BU_conf, 0,
-				       &securityClasses, &numClasses);
+				       &securityClasses, &numClasses, FSLog);
 
     tservice =
 	rx_NewServiceHost(host, 0, BUDB_SERVICE, "BackupDatabase",

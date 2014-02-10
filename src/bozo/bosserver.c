@@ -1088,7 +1088,7 @@ main(int argc, char **argv, char **envp)
     rx_SetRxStatUserOk(bozo_rxstat_userok);
 
     afsconf_SetNoAuthFlag(tdir, noAuth);
-    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses);
+    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses, bozo_Log);
 
     if (DoPidFiles) {
 	bozo_CreatePidFile("bosserver", NULL, getpid());

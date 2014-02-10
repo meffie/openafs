@@ -514,7 +514,7 @@ main(int argc, char **argv)
 #endif
 
     afsconf_BuildServerSecurityObjects(prdir, 0, &securityClasses,
-				       &numClasses);
+				       &numClasses, FSLog);
 
     tservice =
 	rx_NewServiceHost(host, 0, PRSRV, "Protection Server", securityClasses,
@@ -550,9 +550,6 @@ main(int argc, char **argv)
 		   "1.0",
 #endif
 		   "Starting AFS", FSLog);
-    if (afsconf_GetLatestKey(prdir, NULL, NULL) == 0) {
-	LogDesWarning();
-    }
 
     rx_StartServer(1);
     osi_audit(PTS_FinishEvent, -1, AUD_END);

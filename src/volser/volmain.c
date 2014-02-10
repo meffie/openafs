@@ -527,7 +527,7 @@ main(int argc, char **argv)
 	VS_EXIT(1);
     }
     afsconf_GetKey(tdir, 999, &tkey);
-    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses);
+    afsconf_BuildServerSecurityObjects(tdir, 0, &securityClasses, &numClasses, FSLog);
     if (securityClasses[0] == NULL)
 	Abort("rxnull_NewServerSecurityObject");
     service =
@@ -564,9 +564,6 @@ main(int argc, char **argv)
 
     LogCommandLine(argc, argv, "Volserver", VolserVersion, "Starting AFS",
 		   Log);
-    if (afsconf_GetLatestKey(tdir, NULL, NULL) == 0) {
-	LogDesWarning();
-    }
     if (TTsleep) {
 	Log("Will sleep %d second%s every %d second%s\n", TTsleep,
 	    (TTsleep > 1) ? "s" : "", TTrun + TTsleep,
