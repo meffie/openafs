@@ -64,7 +64,7 @@ struct afs_cacheOps {
     int (*vwrite) (struct vcache * avc, struct uio * auio, int aio,
 		   afs_ucred_t * acred, int noLock);
     struct dcache *(*GetDSlot) (afs_int32 aslot, int indexvalid, int datavalid);
-    struct volume *(*GetVolSlot) (void);
+    struct volume *(*GetVolSlot) (afs_int32 volid, struct cell *cell);
     int (*HandleLink) (struct vcache * avc, struct vrequest * areq);
 };
 
@@ -74,7 +74,7 @@ struct afs_cacheOps {
 #define	afs_CFileRead(file, offset, data, size) (*(afs_cacheType->fread))(file, offset, data, size)
 #define	afs_CFileWrite(file, offset, data, size) (*(afs_cacheType->fwrite))(file, offset, data, size)
 #define	afs_CFileClose(handle)		(*(afs_cacheType->close))(handle)
-#define	afs_GetVolSlot()		(*(afs_cacheType->GetVolSlot))()
+#define	afs_GetVolSlot(volid, cell)	(*(afs_cacheType->GetVolSlot))((volid),(cell))
 #define	afs_HandleLink(avc, areq)	(*(afs_cacheType->HandleLink))(avc, areq)
 
 /* Use afs_GetValidDSlot to get a dcache from a dcache slot number when we
