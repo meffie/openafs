@@ -437,6 +437,7 @@ afs_UFSWrite(struct vcache *avc, struct uio *auio, int aio,
 	    break;
 	}
 	tfile = (struct osi_file *)osi_UFSOpen(&tdc->f.inode);
+        osi_Assert(tfile);
 	len = totalLength;	/* write this amount by default */
 	offset = filePos - AFS_CHUNKTOBASE(tdc->f.chunk);
 	max = AFS_CHUNKTOSIZE(tdc->f.chunk);	/* max size of this chunk */
