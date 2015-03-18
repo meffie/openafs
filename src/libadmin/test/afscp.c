@@ -48,11 +48,6 @@
 
 void *cellHandle;
 void *tokenHandle;
-#ifdef AFS_DARWIN_ENV
-pthread_mutex_t des_init_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t des_random_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t rxkad_random_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif /* AFS_DARWIN_ENV */
 
 /*
  * Before processing any command, process the common arguments and
