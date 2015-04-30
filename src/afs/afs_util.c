@@ -38,15 +38,6 @@
 
 #include "afs/afs_md5.h"	/* For MD5 inodes */
 
-#if	defined(AFS_SUN56_ENV)
-#include <inet/led.h>
-#include <inet/common.h>
-#if     defined(AFS_SUN58_ENV)
-#include <netinet/ip6.h>
-#endif
-#include <inet/ip.h>
-#endif
-
 #if	defined(AFS_AIX_ENV)
 #include <sys/fp_io.h>
 #endif
