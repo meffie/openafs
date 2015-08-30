@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Helper script to install Transarc compatible path bins.
+#
+# Note: Transarc compatible paths are deprecated and
+#       may be removed in future versions of OpenAFS.
+#
+
+PROGNAME="$0"
+SYSNAME="$1"
+
+usage() {
+    echo "usage: install-dest <sysname>" >&2
+    exit 1
+}
+
+fatal() {
+    echo "$PROGNAME: $*" >&2
+    exit 1
+}
+
+install_dest_dir() {
+    src="${SYSNAME}/dest/$1"
+    dst="$2"
+    if [ ! -d $dst ]; then
+       mkdir -p $dst || fatal "Failed to make directory $dst"
+    fi
+    (cd $src && tar cf - .) | (cd $dst && tar xf -) || \
+       fatal "Failed to install files from directory $src to $dst."
+}
+
+if [ -z "$SYSNAME" ]; then
+    usage
+fi
+if [ ! -d "$SYSNAME" ]; then
+    fatal "Missing dest directory or invalid sysname: $SYSNAME"
+fi
+if [ ! -d "$SYSNAME/dest" ]; then
+    fatal "Missing dest directory: $SYSNAME/dest"
+fi
+
+install_dest_dir root.server /
+install_dest_dir root.client /
+install_dest_dir bin /usr/afsws/bin
+install_dest_dir etc /usr/afsws/etc
+install_dest_dir man /usr/afsws/man
+install_dest_dir lib /usr/afsws/lib
+install_dest_dir include /usr/afsws/include
+

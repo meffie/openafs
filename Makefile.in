@@ -79,6 +79,9 @@ install_nolibafs: all_nolibafs install_dirs
 install_only_libafs: only_libafs install_dirs
 	$(MAKE) build TARGET=libafs COMPILE_PART2B=install
 
+install_dest: dest
+	./build-tools/install-dest "${SYS_NAME}"
+
 dest: all dest_dirs
 	$(MAKE) build COMPILE_PART2B=dest
 	-${INSTALL_DATA} ${srcdir}/LICENSE ${DEST}/LICENSE
