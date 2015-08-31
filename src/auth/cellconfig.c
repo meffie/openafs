@@ -395,6 +395,9 @@ afsconf_UpToDate(void *rock)
 int
 _afsconf_Check(struct afsconf_dir *adir)
 {
+    if (adir->cellName == NULL)
+	return 0; /* This configuration is for adding keys only. */
+
     /* did configuration change? */
     if (_afsconf_UpToDate(adir))
 	return 0;
@@ -412,6 +415,9 @@ _afsconf_Touch(struct afsconf_dir *adir)
 #ifndef AFS_NT40_ENV
     struct timeval tvp[2];
 #endif
+
+    if (adir->cellName == NULL)
+	return 0; /* This configuration is for adding keys only. */
 
     adir->timeRead = 0;		/* just in case */
     adir->timeCheck = 0;
@@ -504,6 +510,44 @@ fail:
     free(tdir);
     UNLOCK_GLOBAL_MUTEX;
     return NULL;
+}
+
+/*!
+ * Open a configuration for managing keys only.
+ *
+ * This is a variant of afsconf_Open() which can be used to add new keys
+ * before the CellServDB and ThisCell files are available. This allows
+ * keys to be added before the bosserver is started for the first time.
+ *
+ * Unlike afsconf_Open(), this function does not search the enviroment
+ * or hidden files to find an alternate configuration directory.
+ *
+ * \param  adir[in]  path to the existing configuration directory
+ * \return pointer to the newly allocated configuration
+ */
+struct afsconf_dir *
+afsconf_OpenServerKeys(const char *adir)
+{
+    int code;
+    struct afsconf_dir *tdir;
+    struct stat st;
+
+    /* The configuration directory must at least exist,
+     * otherwise the key management calls will fail. */
+    code = stat(adir, &st);
+    if (code != 0 || !S_ISDIR(st.st_mode)) {
+	return NULL;
+    }
+
+    tdir = calloc(1, sizeof(struct afsconf_dir));
+    tdir->name = strdup(adir);
+
+    LOCK_GLOBAL_MUTEX;
+    _afsconf_InitKeys(tdir);
+    _afsconf_LoadKeys(tdir); /* load keys if any */
+    UNLOCK_GLOBAL_MUTEX;
+
+    return tdir;
 }
 
 static int

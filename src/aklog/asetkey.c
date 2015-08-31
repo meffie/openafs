@@ -11,6 +11,7 @@
 #include <afs/stds.h>
 
 #include <roken.h>
+#include <opr/mkdirp.h>
 
 #define KERBEROS_APPLE_DEPRECATED(x)
 #include <krb5.h>
@@ -321,8 +322,32 @@ main(int argc, char *argv[])
     }
 
     confdir = AFSDIR_SERVER_ETC_DIRPATH;
+    /*
+     * If this is a new cell, the server configuration directory may not exist
+     * yet. Traditionally, the configuration directory was created by the
+     * bosserver the first time the bosserver was started. However, we do not
+     * want to start the bosserver until a service key is added so it can be
+     * started in authenticated mode.  Create the directory so we can add the
+     * key before starting bosserver. The directory is created with the same
+     * permissions as is expected by the bosserver.
+     */
+    if (strcmp(argv[1], "add") == 0) {
+	int code;
+	struct stat sb;
 
-    tdir = afsconf_Open(confdir);
+	code = stat(confdir, &sb);
+	if (code != 0 && errno == ENOENT) {
+	    code = opr_mkdirp(confdir, 0777, 0755);
+	    if (code != 0) {
+		fprintf(stderr,
+			"%s: Failed to create the conf dir '%s': %d\n",
+			argv[0], confdir, code);
+		exit(1);
+	    }
+	}
+    }
+
+    tdir = afsconf_OpenServerKeys(confdir);
     if (!tdir) {
 	fprintf(stderr, "%s: can't initialize conf dir '%s'\n", argv[0],
 		confdir);

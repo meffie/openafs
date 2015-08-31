@@ -104,6 +104,7 @@ struct afsconf_dir {
 extern afs_int32 afsconf_FindService(const char *aname);
 extern const char *afsconf_FindIANAName(const char *aname);
 extern struct afsconf_dir *afsconf_Open(const char *adir);
+extern struct afsconf_dir *afsconf_OpenServerKeys(const char *adir);
 extern int afsconf_CellApply(struct afsconf_dir *adir,
 			     int (*aproc) (struct afsconf_cell * cell,
 					   void *arock,

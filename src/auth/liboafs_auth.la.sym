@@ -19,6 +19,7 @@ afsconf_GetLocalCell
 afsconf_GetNoAuthFlag
 afsconf_IsLocalRealmMatch
 afsconf_Open
+afsconf_OpenServerKeys
 afsconf_ParseNetFiles
 afsconf_PickClientSecObj
 afsconf_SetLocalRealm
