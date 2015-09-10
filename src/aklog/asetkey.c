@@ -30,6 +30,37 @@
 #define USING_HEIMDAL 1
 #endif
 
+static char *progname = NULL;
+
+static void
+usage(char *opcode)
+{
+    if (!*opcode || strcmp(opcode, "add") == 0) {
+	fprintf(stderr, "%s: usage is '%s <opcode> options, e.g.\n", progname,
+		progname);
+	fprintf(stderr, "\t%s add <kvno> <keyfile> <princ>\n", progname);
+	fprintf(stderr, "\tOR\n\t%s add <kvno> <key>\n", progname);
+	fprintf(stderr, "\tOR\n\t%s add <type> <kvno> <subtype> <key>\n",
+		progname);
+	fprintf(stderr,
+		"\tOR\n\t%s add <type> <kvno> <subtype> <keyfile> <princ>\n",
+		progname);
+    }
+    if (!*opcode || strcmp(opcode, "delete") == 0) {
+	fprintf(stderr, "\t%s delete <kvno>\n", progname);
+    }
+    if (!*opcode || strcmp(opcode, "list") == 0) {
+	fprintf(stderr, "\t%s list\n", progname);
+    }
+    if (!*opcode || strcmp(opcode, "add") == 0) {
+	fprintf(stderr, "Examples:\n");
+	fprintf(stderr, "   %s add 0 \"80b6a7cd7a9dadb6\"\n", progname);
+	fprintf(stderr,
+		"   %s add rxkad_krb5 1 18 afs.keytab afs/example.com@EXAMPLE.COM\n",
+		progname);
+    }
+}
+
 static int
 stringToType(const char *string) {
     if (strcmp(string, "rxkad") == 0)
@@ -219,15 +250,8 @@ addKey(struct afsconf_dir *dir, int argc, char **argv) {
 	}
 	break;
       default:
-	fprintf(stderr, "%s add: usage is '%s add <kvno> <keyfile> "
-			"<princ>\n", argv[0], argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <kvno> <key>\n", argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <type> <kvno> <subtype> <key>\n",
-		argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <type> <kvno> <subtype> <keyfile> <princ>\n",
-	        argv[0]);
-	fprintf(stderr, "\t\tEx: %s add 0 \"80b6a7cd7a9dadb6\"\n", argv[0]);
-		exit(1);
+        usage("add");
+	exit(1);
     }
     code = afsconf_AddTypedKey(dir, typedKey, 1);
     afsconf_typedKey_put(&typedKey);
@@ -244,8 +268,7 @@ deleteKey(struct afsconf_dir *dir, int argc, char **argv)
     int code;
 
     if (argc != 3) {
-	fprintf(stderr, "%s delete: usage is '%s delete <kvno>\n",
-		argv[0], argv[0]);
+	usage("delete");
 	exit(1);
     }
     kvno = atoi(argv[2]);
@@ -306,18 +329,10 @@ main(int argc, char *argv[])
     struct afsconf_dir *tdir;
     const char *confdir;
 
+    progname = argv[0];
+
     if (argc == 1) {
-	fprintf(stderr, "%s: usage is '%s <opcode> options, e.g.\n",
-		argv[0], argv[0]);
-	fprintf(stderr, "\t%s add <kvno> <keyfile> <princ>\n", argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <kvno> <key>\n", argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <type> <kvno> <subtype> <key>\n",
-	        argv[0]);
-	fprintf(stderr, "\tOR\n\t%s add <type> <kvno> <subtype> <keyfile> <princ>\n",
-	        argv[0]);
-	fprintf(stderr, "\t\tEx: %s add 0 \"80b6a7cd7a9dadb6\"\n", argv[0]);
-	fprintf(stderr, "\t%s delete <kvno>\n", argv[0]);
-	fprintf(stderr, "\t%s list\n", argv[0]);
+	usage("");
 	exit(1);
     }
 
@@ -361,7 +376,9 @@ main(int argc, char *argv[])
     }
     else if (strcmp(argv[1], "list") == 0) {
 	listKey(tdir, argc, argv);
-
+    }
+    else if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-help") == 0) {
+	usage("");
     }
     else {
 	fprintf(stderr, "%s: unknown operation '%s', type '%s' for "
