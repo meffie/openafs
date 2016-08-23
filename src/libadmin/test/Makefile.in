@@ -14,6 +14,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
 CC = ${MT_CC}
 CFLAGS = ${COMMON_CFLAGS} ${MT_CFLAGS}
+LIBS = ${MT_LIBS} $(XLIBS) ${KRB5_LDFLAGS} ${KRB5_LIBS}
 
 ########################################################################
 # build tests
@@ -45,7 +46,7 @@ client.o: client.c
 
 afscp: afscp.o $(AFSCPOBJS) $(AFSCPLIBS)
 	$(CC) $(CFLAGS) -o afscp afscp.o $(AFSCPOBJS) \
-	-L${TOP_LIBDIR} $(AFSCPLIBS) ${MT_LIBS} $(XLIBS)
+	-L${TOP_LIBDIR} $(AFSCPLIBS) ${LIBS}
 
 #######################################################################
 install:
