@@ -25,6 +25,7 @@
 
 #include <rx/rx.h>
 #include <rx/rxstat.h>
+#include <afs/dirpath.h>
 #include <afs/cmd.h>
 
 #include <afs/afs_Admin.h>
@@ -35,6 +36,7 @@ enum optionsList {
     OPT_cell,
     OPT_server,
     OPT_port,
+    OPT_localauth,
 };
 
 int
@@ -46,6 +48,8 @@ rxstat_enable_process(struct cmd_syndesc *as, void *arock)
     char *srvrName = NULL;
     int srvrPort = 0;
     char *cellName = NULL;
+    int localauth = 0;
+    const char *confdir = AFSDIR_SERVER_ETC_DIR;
     void *tokenHandle;
     void *cellHandle;
 
@@ -63,16 +67,27 @@ rxstat_enable_process(struct cmd_syndesc *as, void *arock)
 	}
     }
 
+    if (as->parms[OPT_localauth].items)
+	localauth = 1;
+
     rc = afsclient_Init(&st);
     if (!rc) {
 	fprintf(stderr, "afsclient_Init, status %d\n", st);
 	return 1;
     }
 
-    rc = afsclient_TokenGetExisting(cellName, &tokenHandle, &st);
-    if (!rc) {
-	fprintf(stderr, "afsclient_TokenGetExisting, status %d\n", st);
-	return 1;
+    if (localauth) {
+	rc = afsclient_TokenPrint(confdir, &tokenHandle, &st);
+	if (!rc) {
+	    fprintf(stderr, "afsclient_TokenPrint, status %d\n", st);
+	    return 1;
+	}
+    } else {
+	rc = afsclient_TokenGetExisting(cellName, &tokenHandle, &st);
+	if (!rc) {
+	    fprintf(stderr, "afsclient_TokenGetExisting, status %d\n", st);
+	    return 1;
+	}
     }
 
     rc = afsclient_CellOpen(cellName, tokenHandle, &cellHandle, &st);
@@ -124,6 +139,7 @@ main(int argc, char *argv[])
     cmd_AddParm(ts, "-cell", CMD_SINGLE, CMD_REQUIRED, "cell name");
     cmd_AddParm(ts, "-server", CMD_SINGLE, CMD_REQUIRED, "server");
     cmd_AddParm(ts, "-port", CMD_SINGLE, CMD_REQUIRED, "port");
+    cmd_AddParm(ts, "-localauth", CMD_FLAG, CMD_OPTIONAL, "user server tickets");
 
     return cmd_Dispatch(argc, argv);
 }
