@@ -21,104 +21,109 @@
 #include <winsock2.h>
 #include <pthread.h>
 #endif
+#include <limits.h>
 
 #include <rx/rx.h>
 #include <rx/rxstat.h>
+#include <afs/cmd.h>
 
 #include <afs/afs_Admin.h>
 #include <afs/afs_clientAdmin.h>
 #include <afs/afs_utilAdmin.h>
 
-void
-Usage(void)
-{
-    fprintf(stderr, "Usage: rxstat_disable_peer <cell> <host> <port>\n");
-    exit(1);
-}
-
-void
-ParseArgs(int argc, char *argv[], char **cellName, char **srvrName,
-	  long *srvrPort)
-{
-    char **argp = argv;
-
-    if (!*(++argp))
-	Usage();
-    *cellName = *(argp++);
-    if (!*(argp))
-	Usage();
-    *srvrName = *(argp++);
-    if (!*(argp))
-	Usage();
-    *srvrPort = strtol(*(argp++), NULL, 0);
-    if (*srvrPort <= 0 || *srvrPort >= 65536)
-	Usage();
-    if (*(argp))
-	Usage();
-}
+enum optionsList {
+    OPT_cell,
+    OPT_server,
+    OPT_port,
+};
 
 int
-main(int argc, char *argv[])
+rxstat_disable_peer(struct cmd_syndesc *as, void *arock)
 {
     int rc;
     afs_status_t st = 0;
     struct rx_connection *conn;
-    char *srvrName;
-    long srvrPort;
-    char *cellName;
+    char *srvrName = NULL;
+    int srvrPort = 0;
+    char *cellName = NULL;
     void *tokenHandle;
     void *cellHandle;
 
-    ParseArgs(argc, argv, &cellName, &srvrName, &srvrPort);
+    if (as->parms[OPT_cell].items)
+	cellName = as->parms[OPT_cell].items->data;
+
+    if (as->parms[OPT_server].items)
+	srvrName = as->parms[OPT_server].items->data;
+
+    if (as->parms[OPT_port].items) {
+	srvrPort = atoi(as->parms[OPT_port].items->data);
+	if (srvrPort <= 0 || srvrPort > USHRT_MAX) {
+	    fprintf(stderr, "Invalid port number.\n");
+	    return 1;
+	}
+    }
 
     rc = afsclient_Init(&st);
     if (!rc) {
 	fprintf(stderr, "afsclient_Init, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_TokenGetExisting(cellName, &tokenHandle, &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_TokenGetExisting, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_CellOpen(cellName, tokenHandle, &cellHandle, &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_CellOpen, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_RPCStatOpenPort(cellHandle, srvrName, srvrPort, &conn,
 				   &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_RPCStatOpenPort, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = util_RPCStatsStateDisable(conn, RXSTATS_DisablePeerRPCStats, &st);
     if (!rc) {
 	fprintf(stderr, "util_RPCStatsStateDisable, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_RPCStatClose(conn, &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_RPCStatClose, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_CellClose(cellHandle, &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_CellClose, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
     rc = afsclient_TokenClose(tokenHandle, &st);
     if (!rc) {
 	fprintf(stderr, "afsclient_TokenClose, status %d\n", st);
-	exit(1);
+	return 1;
     }
 
-    exit(0);
+    return 0;
+}
+
+int
+main(int argc, char *argv[])
+{
+    struct cmd_syndesc *ts;
+
+    ts = cmd_CreateSyntax(NULL, rxstat_disable_peer, NULL, "rxstat disable peer");
+    cmd_AddParm(ts, "-cell", CMD_SINGLE, CMD_REQUIRED, "cell name");
+    cmd_AddParm(ts, "-server", CMD_SINGLE, CMD_REQUIRED, "server");
+    cmd_AddParm(ts, "-port", CMD_SINGLE, CMD_REQUIRED, "port");
+
+    return cmd_Dispatch(argc, argv);
 }

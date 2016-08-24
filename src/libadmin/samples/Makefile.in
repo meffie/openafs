@@ -45,7 +45,8 @@ SAMPLELIBS =\
 	${TOP_LIBDIR}/libbosadmin.a \
 	${TOP_LIBDIR}/libafsauthent.a \
 	${TOP_LIBDIR}/libafsrpc.a \
-	$(TOP_LIBDIR)/libafsutil.a
+	$(TOP_LIBDIR)/libafsutil.a \
+	$(TOP_LIBDIR)/libcmd.a
 
 all test tests: $(SAMPLEPROGS)
 
