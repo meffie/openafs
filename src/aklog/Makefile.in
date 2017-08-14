@@ -23,8 +23,8 @@ KCLIBS = \
 	 $(top_builddir)/src/opr/liboafs_opr.la
 LT_libs = $(LDFLAGS_hcrypto) $(LIB_hcrypto) $(LDFLAGS_roken) $(LIB_roken)
 
-SRCS=	aklog.c krb_util.c linked_list.c
-OBJS=   aklog.o krb_util.o linked_list.o
+SRCS=	aklog.c krb_util.c linked_list.c akimpersonate.c akimpersonate_v5gen.c
+OBJS=   aklog.o krb_util.o linked_list.o akimpersonate.o akimpersonate_v5gen.o
 
 all: aklog asetkey klog akeyconvert
 
