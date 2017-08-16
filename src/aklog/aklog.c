@@ -287,6 +287,145 @@ afs_dprintf(char *fmt, ...) {
     va_end(ap);
 }
 
+/*!
+ * Hex dump for debugging.
+ */
+static void
+afs_dhexdump(void *addr, int len)
+{
+    int i, j;
+    unsigned char *byte = (unsigned char *)addr;
+    unsigned char ascii[17];
+
+    if (dflag == 0)
+	return;
+
+    ascii[0] = '\0';
+    for (i = 0, j = 0; i < len; i++, byte++) {
+	if (j == 0)
+	    printf("  %04x ", i);
+	printf(" %02x", *byte);
+	if (j == 7)
+	    printf(" ");
+	if (isprint(*byte))
+	    ascii[j++] = *byte;
+	else
+	    ascii[j++] = '.';
+	ascii[j] = '\0';
+	if (j == 16) {
+	    printf("  %s\n", ascii);
+	    j = 0;
+	    ascii[0] = '\0';
+	}
+    }
+    if (ascii[0] != '\0') {
+	for (; j < 16; j++) {
+	    if (j == 7)
+	       printf(" ");
+	    printf("   ");
+	}
+	printf("  %s\n", ascii);
+    }
+}
+
+/*!
+ * Print an rxkad token and principals.
+ */
+static void
+afs_dprint_rxkad_token_data(struct ktc_principal *client,
+			    struct ktc_principal *server,
+			    struct ktc_token *token)
+{
+    if (dflag > 0) {
+	printf("rxkad token:\n");
+	printf("  client principal:\n");
+	printf("    name: %.*s\n", (int)sizeof(client->name), client->name);
+	printf("    inst: %.*s\n", (int)sizeof(client->instance), client->instance);
+	printf("    cell: %.*s\n", (int)sizeof(client->cell), client->cell);
+	printf("  server principal:\n");
+	printf("    name: %.*s\n", (int)sizeof(server->name), server->name);
+	printf("    inst: %.*s\n", (int)sizeof(server->instance), server->instance);
+	printf("    cell: %.*s\n", (int)sizeof(server->cell), server->cell);
+	printf("  kvno:      %d%s\n", token->kvno,
+	       token->kvno == RXKAD_TKT_TYPE_KERBEROS_V5 ?
+	       " (RXKAD_TKT_TYPE_KERBEROS_V5)" : "");
+	printf("  startTime: %d\n", token->startTime);
+	printf("  endTime:   %d\n", token->endTime);
+	printf("  sessionKey:\n");
+	afs_dhexdump(&(token->sessionKey), sizeof(token->sessionKey));
+	printf("  ticketLen: %d\n", token->ticketLen);
+	printf("  ticket:\n");
+	afs_dhexdump(token->ticket, token->ticketLen);
+    }
+}
+
+/*!
+ * Extract and print the rxkad token, if found.
+ */
+int
+afs_dprint_rxkad_token(struct ktc_setTokenData *token)
+{
+    int code;
+    struct ktc_principal server, client;
+    struct ktc_token *rxkadToken;
+    afs_int32 flags;
+
+    if (dflag == 0)
+	return 0;
+
+    rxkadToken = malloc(sizeof(*rxkadToken));
+    if (rxkadToken == NULL)
+	return ENOMEM;
+
+    code = token_extractRxkad(token, rxkadToken, &flags, &client);
+    if (code) {
+	free(rxkadToken);
+	return KTC_INVAL;
+    }
+
+    memset(&server, 0, sizeof(server));
+    strcpy(server.name, "afs");
+    if (strlcpy(server.cell, token->cell, sizeof(server.cell))
+	>= sizeof(server.cell)) {
+	free(rxkadToken);
+	return KTC_INVAL;
+    }
+
+    afs_dprint_rxkad_token_data(&client, &server, rxkadToken);
+    free(rxkadToken);
+    return 0;
+}
+
+/*!
+ * Print the token data for debugging.
+ *
+ * Attempt to extract and dump the rxkad token if found in the unified token.
+ * If the rxkad token was not found or the debug level is 3 or more, dump the
+ * opaque token as an unformatted hex dump.
+ */
+static void
+afs_dprint_token(struct ktc_setTokenData *token)
+{
+    int code;
+    int i;
+
+    if (dflag == 0)
+	return;
+
+    code = afs_dprint_rxkad_token(token);
+    if (code != 0 || dflag > 2) {
+	printf("token data:\n");
+	printf("  flags: 0x%04x\n", token->flags);
+	printf("  cell: %.*s\n", AFSTOKEN_CELL_MAX, token->cell);
+	printf("  number of tokens: %d\n", token->tokens.tokens_len);
+	for (i = 0; i < token->tokens.tokens_len; i++) {
+	    token_opaque *t = token->tokens.tokens_val + i;
+	    printf("  token %d:\n", i);
+	    afs_dhexdump(t->token_opaque_val, t->token_opaque_len);
+	}
+    }
+}
+
 static char *
 copy_cellinfo(cellinfo_t *cellinfo)
 {
@@ -978,6 +1117,8 @@ auth_to_cell(krb5_context context, const char *config,
 			username, cellconf.name);
 		viceId = 0;
 
+		if (dflag > 1)
+		    afs_dprint_token(token);
 		status = ktc_SetTokenEx(token);
 		if (status) {
 		    afs_com_err(progname, status,
@@ -1040,6 +1181,8 @@ auth_to_cell(krb5_context context, const char *config,
 	if (write(2,"",0) < 0) /* dummy write */
 	    ; /* don't care */
 #endif
+        if (dflag > 1)
+	    afs_dprint_token(token);
 	token_setPag(token, afssetpag);
 	status = ktc_SetTokenEx(token);
 	if (status) {
