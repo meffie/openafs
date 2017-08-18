@@ -94,9 +94,9 @@
 #define deref_enc_tkt_addrs(tkt)	((tkt)->caddrs)
 #define deref_enc_data(enc)		((enc)->ciphertext.data)
 #endif
-#if HAVE_DECL_KRB5_FREE_KEYTAB_ENTRY_CONTENTS
+#if HAVE_KRB5_FREE_KEYTAB_ENTRY_CONTENTS
 /* nothing */
-#elif HAVE_DECL_KRB5_KT_FREE_ENTRY
+#elif HAVE_KRB5_KT_FREE_ENTRY
 #define krb5_free_keytab_entry_contents krb5_kt_free_entry
 #else
 static inline int
@@ -251,6 +251,9 @@ encode_krb5_enc_tkt_part(krb5_enc_tkt_part *encpart, krb5_data **a_out)
     code = EINVAL;
     goto cleanup;
 }
+# else
+extern krb5_error_code
+encode_krb5_enc_tkt_part(const krb5_enc_tkt_part *rep, krb5_data **code);
 # endif /* !HAVE_ENCODE_KRB5_ENC_TKT_PART */
 
 # if !defined(HAVE_KRB5_ENCRYPT_TKT_PART)

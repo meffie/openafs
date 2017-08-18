@@ -59,6 +59,7 @@ AS_IF([test x"$KRB5_LIBS" != x],
 	krb5_c_encrypt \
 	krb5_decode_ticket \
 	krb5_enctype_enable \
+	krb5_encrypt_tkt_part \
 	krb5_free_keytab_entry_contents \
 	krb5_free_unparsed_name \
 	krb5_get_init_creds_opt_alloc \
