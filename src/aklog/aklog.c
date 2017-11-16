@@ -288,47 +288,6 @@ afs_dprintf(char *fmt, ...) {
 }
 
 /*!
- * Hex dump for debugging.
- */
-static void
-afs_dhexdump(void *addr, int len)
-{
-    int i, j;
-    unsigned char *byte = (unsigned char *)addr;
-    unsigned char ascii[17];
-
-    if (dflag == 0)
-	return;
-
-    ascii[0] = '\0';
-    for (i = 0, j = 0; i < len; i++, byte++) {
-	if (j == 0)
-	    printf("  %04x ", i);
-	printf(" %02x", *byte);
-	if (j == 7)
-	    printf(" ");
-	if (isprint(*byte))
-	    ascii[j++] = *byte;
-	else
-	    ascii[j++] = '.';
-	ascii[j] = '\0';
-	if (j == 16) {
-	    printf("  %s\n", ascii);
-	    j = 0;
-	    ascii[0] = '\0';
-	}
-    }
-    if (ascii[0] != '\0') {
-	for (; j < 16; j++) {
-	    if (j == 7)
-	       printf(" ");
-	    printf("   ");
-	}
-	printf("  %s\n", ascii);
-    }
-}
-
-/*!
  * Print an rxkad token and principals.
  */
 static void
@@ -352,10 +311,10 @@ afs_dprint_rxkad_token_data(struct ktc_principal *client,
 	printf("  startTime: %d\n", token->startTime);
 	printf("  endTime:   %d\n", token->endTime);
 	printf("  sessionKey:\n");
-	afs_dhexdump(&(token->sessionKey), sizeof(token->sessionKey));
+	//afs_dhexdump(&(token->sessionKey), sizeof(token->sessionKey));
 	printf("  ticketLen: %d\n", token->ticketLen);
 	printf("  ticket:\n");
-	afs_dhexdump(token->ticket, token->ticketLen);
+	//afs_dhexdump(token->ticket, token->ticketLen);
     }
 }
 
@@ -419,9 +378,9 @@ afs_dprint_token(struct ktc_setTokenData *token)
 	printf("  cell: %.*s\n", AFSTOKEN_CELL_MAX, token->cell);
 	printf("  number of tokens: %d\n", token->tokens.tokens_len);
 	for (i = 0; i < token->tokens.tokens_len; i++) {
-	    token_opaque *t = token->tokens.tokens_val + i;
+	    //token_opaque *t = token->tokens.tokens_val + i;
 	    printf("  token %d:\n", i);
-	    afs_dhexdump(t->token_opaque_val, t->token_opaque_len);
+	    //afs_dhexdump(t->token_opaque_val, t->token_opaque_len);
 	}
     }
 }
