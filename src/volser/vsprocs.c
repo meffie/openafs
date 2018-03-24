@@ -1897,13 +1897,12 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
     if (!(flags & RV_NOCLONE)) {
 	code = DoVolDelete(fromconn, newVol, afrompart,
 			   "cloned", 0, NULL, NULL);
-	if (code) {
-	    if (code == VNOVOL) {
-		EPRINT1(code, "Failed to start transaction on %u\n", newVol);
-	    }
+	if (code && code != VNOVOL) {
 	    error = code;
 	    goto mfail;
 	}
+
+	code = 0;	/* clone missing? that's okay */
     }
 
     /* fall through */
@@ -2509,13 +2508,12 @@ cpincr:
     if (!(flags & RV_NOCLONE)) {
 	code = DoVolDelete(fromconn, cloneVol, afrompart,
 			   "cloned", 0, NULL, NULL);
-	if (code) {
-	    if (code == VNOVOL) {
-		EPRINT1(code, "Failed to start transaction on %u\n", cloneVol);
-	    }
+	if (code && code != VNOVOL) {
 	    error = code;
 	    goto mfail;
 	}
+
+	code = 0;		/* clone missing? that's ok */
     }
 
     if (!(flags & RV_NOVLDB)) {
@@ -2641,9 +2639,6 @@ cpincr:
     if (cloneVol) {
 	code = DoVolDelete(fromconn, cloneVol, afrompart,
 			   "clone", 0, NULL, "Recovery:");
-	if (code == VNOVOL) {
-	    EPRINT1(code, "Recovery: Failed to start transaction on %u\n", cloneVol);
-	}
     }
 
   done:			/* routine cleanup */
@@ -4255,7 +4250,8 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 	}
 	code = DoVolDelete(fromconn, cloneVolId, afrompart, NULL, 0, NULL,
 			   NULL);
-	ONERROR(code, cloneVolId, "Failed to delete volume %u.\n");
+	if (code && code != VNOVOL)
+	    ONERROR(code, cloneVolId, "Failed to delete volume %u.\n");
 	VDONE;
     }
 
