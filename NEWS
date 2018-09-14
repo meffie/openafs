@@ -1,5 +1,57 @@
                        User-Visible OpenAFS Changes
 
+OpenAFS 1.6.25 (in progress)
+
+  All Platforms
+
+    * Documentation improvements (12645 12646)
+
+    * Avoid "rxdebug -version" potentially printing garbage (12926)
+
+  All Server Platforms
+
+    * Fix ubik quorum loss on a write transaction within approximately 15
+      seconds of quorum being established (12803)
+
+    * Fix ubik issue which can leave the database locked on a server, causing
+      read and write transactions to fail on an affected site until the next
+      database restart (12806)
+
+    * Assorted fixes, cleanups, and efficiency improvements in the ubik implementation
+      (12807 12811 12814 12891 12892 13027 13028 13223)
+
+    * Don't punish rx clients by introducing delays when they issue calls
+      not yet implemented or no longer supported (12929)
+
+    * Return a valid InlineBulkStatus response in error cases (13234)
+
+  Linux/Unix Clients
+
+    * Provide a new option "-volume-ttl" for the cache manager allowing to
+      limit the amount of time VLDB information will be cached (12687)
+
+    * Avoid a potential deadlock of clients running in afsdb mode (12667)
+
+  Linux Clients
+
+    * Improved diagnostic messages (12643)
+
+    * Avoid potential EIO errors with multiple processes doing intensive
+      memory-mapped writing (12328)
+
+    * In Red Hat packaging, create separate debuginfo packages for kernel
+      modules (12818 13029 13053)
+
+  Solaris Clients
+
+    * Avoid a potential deadlock (12907)
+
+    * Add more debug information to kernel module builds (12974 13083)
+
+  FreeBSD Clients
+
+    * Add support for recent releases (12984 12985 13024)
+
 OpenAFS 1.6.24
 
 All platforms
