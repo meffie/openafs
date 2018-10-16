@@ -72,7 +72,7 @@ LT_deps = $(top_builddir)/src/opr/liboafs_opr.la \
 	  $(top_builddir)/src/ubik/liboafs_ubik.la \
 	  $(top_builddir)/src/vlserver/liboafs_vldb.la
 
-all: volserver vos restorevol voldump \
+all: volserver vos createvol restorevol voldump \
 	liboafs_volser.la \
 	libvolser_pic.la \
 	${TOP_INCDIR}/afs/volser.h \
@@ -97,6 +97,16 @@ ${TOP_INCDIR}/afs/volint.h: volint.h
 
 ${TOP_LIBDIR}/libvolser.a: libvolser.a
 	${INSTALL_DATA} $? $@
+
+createvol: createvol.o
+	$(AFS_LDRULE) \
+        createvol.o \
+		physio.o \
+		$(LIBS) \
+        ${TOP_LIBDIR}/libcmd.a \
+		${TOP_LIBDIR}/libdir.a \
+        $(LIB_roken) \
+        ${XLIBS}
 
 restorevol: restorevol.o
 	$(AFS_LDRULE) restorevol.o ${TOP_LIBDIR}/libcmd.a \
