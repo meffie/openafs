@@ -2339,7 +2339,6 @@ VAttachVolumeByName_r(Error * ec, char *partition, char *name, int mode)
     }
 
     if (VRequiresPartLock()) {
-	opr_Assert(VInit == 3);
 	VLockPartition_r(partition);
     } else if (programType == fileServer) {
 #ifdef AFS_DEMAND_ATTACH_FS
