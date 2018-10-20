@@ -51,7 +51,6 @@
 #define afs_putint32(p, v)  *p++ = v>>24, *p++ = v>>16, *p++ = v>>8, *p++ = v
 #define afs_putshort(p, v) *p++ = v>>8, *p++ = v
 
-int VolumeChanged;		/* needed by physio - leave alone */
 int verbose = 0;
 
 /* Forward Declarations */

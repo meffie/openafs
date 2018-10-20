@@ -103,7 +103,6 @@
 
 #include "salvage.h"
 int volumeId;
-int VolumeChanged;		/* to satisfy library libdir use */
 
 #include "listVicepx.h"
 char *orphan_NoVnode = "ORPHANED_NoVnode";

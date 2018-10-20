@@ -51,9 +51,6 @@
 #include <pthread.h>
 #endif
 
-int VolumeChanged; /* hack to make dir package happy */
-
-
 #ifndef AFS_DEMAND_ATTACH_FS
 int
 main(int argc, char ** argv)

@@ -62,7 +62,6 @@ char *GlobalNameHack = NULL;
 int hackIsIn = 0;
 afs_int32 GlobalVolCloneId, GlobalVolParentId;
 int GlobalVolType;
-int VolumeChanged;		/* XXXX */
 static char busyFlags[MAXHELPERS];
 struct volser_trans *QI_GlobalWriteTrans = 0;
 struct afsconf_dir *tdir;

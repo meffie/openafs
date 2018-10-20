@@ -54,9 +54,6 @@
 #include <pthread.h>
 #endif
 
-int VolumeChanged; /* hack to make dir package happy */
-
-
 struct volop_state {
     VolumeId volume;
     afs_uint32 vnode;

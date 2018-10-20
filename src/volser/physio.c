@@ -53,7 +53,6 @@ int
 ReallyWrite(DirHandle * file, int block, char *data)
 {
     FdHandle_t *fdP;
-    extern int VolumeChanged;
     int code;
     ssize_t nBytes;
 
@@ -74,7 +73,6 @@ ReallyWrite(DirHandle * file, int block, char *data)
 	return code;
     }
     FDH_CLOSE(fdP);
-    VolumeChanged = 1;
     return 0;
 }
 

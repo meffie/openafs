@@ -22,8 +22,6 @@
 #include "vnode.h"
 #include "volume.h"
 
-int VolumeChanged; /* to keep physio happy */
-
 static int
 handleit(struct cmd_syndesc *as, void *arock)
 {
