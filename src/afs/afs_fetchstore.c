@@ -1161,11 +1161,15 @@ afs_CacheFetchProc(struct afs_conn *tc, struct rx_connection *rxconn,
 	adc->validPos = base;
     }
 
-    if ( !code ) do {
+    if (code) {
+        goto done;
+    }
+
+    do {
 	if (avc->f.states & CForeign) {
 	    code = (*ops->more)(rock, &length, &moredata);
 	    if ( code )
-		break;
+		goto done;
 	}
 #ifndef AFS_NOSTATS
 	bytesToXfer += length;
@@ -1188,11 +1192,11 @@ afs_CacheFetchProc(struct afs_conn *tc, struct rx_connection *rxconn,
 			   ICL_TYPE_POINTER, avc, ICL_TYPE_INT32, code,
 			   ICL_TYPE_INT32, length);
 		code = -34;
-		break;
+		goto done;
 	    }
 	    code = (*ops->write)(rock, fP, offset, bytesread, &byteswritten);
 	    if ( code )
-		break;
+		goto done;
 	    offset += bytesread;
 	    base += bytesread;
 	    length -= bytesread;
@@ -1205,6 +1209,7 @@ afs_CacheFetchProc(struct afs_conn *tc, struct rx_connection *rxconn,
 	}
 	code = 0;
     } while (moredata);
+ done:
     if (!code)
 	code = (*ops->close)(rock, avc, adc, tsmall);
     if (ops)
