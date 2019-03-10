@@ -43,7 +43,17 @@ enum cmdOptions {
    copt_fourth,
    copt_fifth,
    copt_perhaps,
-   copt_sanity
+   copt_sanity,
+   copt_exclusive_xa,
+   copt_exclusive_xb,
+   copt_exclusive_ya,
+   copt_exclusive_yb,
+   copt_exclusive_yc
+};
+
+enum cmdGroups {
+   cgrp_x = 0,
+   cgrp_y
 };
 
 static int
@@ -94,8 +104,9 @@ main(int argc, char **argv)
     int retval;
     char *path;
     char *retstring = NULL;
+    int pos;
 
-    plan(109);
+    plan(135);
 
     initialize_CMD_error_table();
 
@@ -390,6 +401,84 @@ main(int argc, char **argv)
     code = cmd_OptionAsList(retopts, copt_second, &list);
     is_int(0, code, "cmd_OptionAsList succeeds");
     checkList(list, "one", "two", "three", "four", NULL);
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    /* Check exclusive options */
+    cmd_AddGroup(opts, cgrp_x, CMD_OPTIONAL);
+    cmd_AddGroupParm(opts, cgrp_x, copt_exclusive_xa, "-xa", CMD_FLAG, 0, "exclusive xa");
+    cmd_AddGroupParm(opts, cgrp_x, copt_exclusive_xb, "-xb", CMD_FLAG, 0, "exclusive xb");
+
+    code = cmd_ParseLine("-first 1 -xa", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1 -xa");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(0, code, "cmd_Parse succeeds for 1st of 2 exclusive");
+    code = cmd_OptionInGroup(retopts, cgrp_x, &pos);
+    ok(code, "cmd_OptionInGroup ok for -xa");
+    is_int(copt_exclusive_xa, pos, "cmd_OptionInGroup returned the correct offset for -xa");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1 -xb", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1 -xb");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(0, code, "cmd_Parse succeeds for 2nd of 2 exclusive");
+    code = cmd_OptionInGroup(retopts, cgrp_x, &pos);
+    ok(code, "cmd_OptionInGroup true for -xb");
+    is_int(copt_exclusive_xb, pos, "cmd_OptionInGroup returned the correct offset for -xb");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1 -xa -xb", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1 -xa -xb");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(CMD_TOOMANY, code, "cmd_Parse fails for 2 of 2 exclusive as expected");
+    ok(retopts == NULL, " ... and options is empty");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(0, code, "cmd_Parse succeeds for 0 of 2 optional exclusive");
+    code = cmd_OptionInGroup(retopts, cgrp_x, &pos);
+    ok(!code, "cmd_OptionInGroup false as expected");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    cmd_AddGroup(opts, cgrp_y, CMD_REQUIRED);
+    cmd_AddGroupParm(opts, cgrp_y, copt_exclusive_ya, "-ya", CMD_FLAG, 0, "exclusive ya");
+    cmd_AddGroupParm(opts, cgrp_y, copt_exclusive_yb, "-yb", CMD_SINGLE, 0, "exclusive yb");
+    cmd_AddGroupParm(opts, cgrp_y, copt_exclusive_yc, "-yc", CMD_SINGLE, 0, "exclusive yc");
+
+    code = cmd_ParseLine("-first 1", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(CMD_TOOFEW, code, "cmd_Parse too few required exclusive as expected");
+    ok(retopts == NULL, " ... and options is empty");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1 -yb 2", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1 -yb 2");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(0, code, "cmd_Parse succeeds for -first 1 -yb 2");
+    code = cmd_OptionInGroup(retopts, cgrp_y, &pos);
+    ok(code, "cmd_OptionInGroup true for -yb");
+    is_int(copt_exclusive_yb, pos, "cmd_OptionInGroup returned the correct offset for -yb");
+    code = cmd_OptionAsInt(retopts, pos, &retval);
+    is_int(0, code, "cmd_OptionsAsInt for -yb succeeds");
+    is_int(2, retval, " ... and returns correct value");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1 -ya -yb 2 -yc a", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds for -first 1 -ya -yb 2 -yx a");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(CMD_TOOMANY, code, "cmd_Parse too many exclusive as expected");
+    ok(retopts == NULL, " ... and options is empty");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
 
     return 0;
 }

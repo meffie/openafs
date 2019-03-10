@@ -163,6 +163,28 @@ FindSyntax(char *aname, int *aambig)
 	return best;		/* otherwise its not ambiguous, and they know */
 }
 
+static void
+PrintGroup(FILE * fp, struct cmd_syndesc *as, int group)
+{
+    struct cmd_groupdesc *gp = &as->groups[group];
+    struct cmd_parmdesc *tp;
+    int i;
+    int printed = 0;
+    char *sep1 = "";
+    char *sep2 = "";
+
+    for (i = 0; i < CMD_MAXPARMS; i++) {
+	tp = &as->parms[i];
+	if ((tp->flags & CMD_GROUPED) && tp->group == group) {
+	    fprintf(fp, "%s%s '%s'", sep1, sep2, tp->name);
+	    if (gp->nParms > 2)
+		sep1 = ",";
+	    if (++printed + 1 == gp->nParms)
+		sep2 = " or";
+	}
+    }
+}
+
 /* print the help for a single parameter */
 static char *
 ParmHelpString(struct cmd_parmdesc *aparm)
@@ -336,6 +358,31 @@ PrintFlagHelp(struct cmd_syndesc *as)
     }
 }
 
+void
+PrintNotesHelp(struct cmd_syndesc *as)
+{
+    int i;
+    struct cmd_parmdesc *tp;
+    int group;
+    int count;
+    char *prefix = "Note:";
+
+    /* Show which options are exclusive. */
+    for (group = 0; group < as->nGroups; group++) {
+	for (count = 0, i = 0; i < CMD_MAXPARMS; i++) {
+	    tp = &as->parms[i];
+	    if ((tp->flags & CMD_GROUPED) && tp->group == group)
+		count++;
+	}
+	if (count > 1) {
+	    printf("%-7sOnly one of", prefix);
+	    PrintGroup(stdout, as, group);
+	    printf(" may be specified.\n");
+	    prefix = "";
+	}
+    }
+}
+
 static int
 AproposProc(struct cmd_syndesc *as, void *arock)
 {
@@ -392,6 +439,7 @@ HelpProc(struct cmd_syndesc *as, void *arock)
 	    PrintAliases(initcmd);
 	    PrintSyntax(initcmd);
 	    PrintFlagHelp(initcmd);
+	    PrintNotesHelp(initcmd);
 	} else {
 	    printf("%sCommands are:\n", NName(as->a0name, ": "));
 	    for (ts = allSyntax; ts; ts = ts->next) {
@@ -415,6 +463,7 @@ HelpProc(struct cmd_syndesc *as, void *arock)
 		PrintAliases(ts);
 		PrintSyntax(ts);
 		PrintFlagHelp(ts);
+		PrintNotesHelp(ts);
 	    } else {
 		if (!ambig)
 		    fprintf(stderr, "%sUnknown topic '%s'\n",
@@ -572,8 +621,8 @@ cmd_Seek(struct cmd_syndesc *as, int apos)
     return 0;
 }
 
-int
-cmd_AddParmAtOffset(struct cmd_syndesc *as, int ref, char *aname, int atype,
+static int
+cmd_AddParmInternal(struct cmd_syndesc *as, int group, int ref, char *aname, int atype,
 		    afs_int32 aflags, char *ahelp)
 {
     struct cmd_parmdesc *tp;
@@ -594,6 +643,10 @@ cmd_AddParmAtOffset(struct cmd_syndesc *as, int ref, char *aname, int atype,
 	tp->help = NULL;
 
     tp->aliases = NULL;
+    if ((aflags & CMD_GROUPED) != 0) {
+	tp->group = group;
+	as->groups[group].nParms++;
+    }
 
     if (as->nParms <= ref)
 	as->nParms = ref+1;
@@ -602,13 +655,48 @@ cmd_AddParmAtOffset(struct cmd_syndesc *as, int ref, char *aname, int atype,
 }
 
 int
+cmd_AddGroup(struct cmd_syndesc *as, int group, afs_uint32 aflags)
+{
+    struct cmd_groupdesc *gp;
+
+    if (group < 0 || group >= CMD_MAXGROUPS)
+	return CMD_BADGROUP;
+
+    gp = &as->groups[group];
+    gp->flags = aflags;
+
+    if (as->nGroups <= group)
+        as->nGroups = group + 1;
+
+    return 0;
+}
+
+int
+cmd_AddGroupParm(struct cmd_syndesc *as, int group, int ref, char *aname, int atype,
+		    afs_int32 aflags, char *ahelp)
+{
+    if (group < 0 || group >= as->nGroups)
+	return CMD_BADGROUP;
+    aflags |= (CMD_OPTIONAL | CMD_GROUPED); /* Grouped paramaters must be optional. */
+    return cmd_AddParmInternal(as, group, ref, aname, atype, aflags, ahelp);
+}
+
+int
+cmd_AddParmAtOffset(struct cmd_syndesc *as, int ref, char *aname, int atype,
+		    afs_int32 aflags, char *ahelp)
+{
+    aflags &= ~CMD_GROUPED;
+    return cmd_AddParmInternal(as, 0, ref, aname, atype, aflags, ahelp);
+}
+
+int
 cmd_AddParm(struct cmd_syndesc *as, char *aname, int atype,
 	    afs_int32 aflags, char *ahelp)
 {
     if (as->nParms >= CMD_MAXPARMS)
 	return CMD_EXCESSPARMS;
-
-    return cmd_AddParmAtOffset(as, as->nParms++, aname, atype, aflags, ahelp);
+    aflags &= ~CMD_GROUPED;
+    return cmd_AddParmInternal(as, 0, as->nParms++, aname, atype, aflags, ahelp);
 }
 
 int
@@ -834,6 +922,7 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     int code = 0;
     char *param = NULL;
     char *embeddedvalue = NULL;
+    int group;
     static int initd = 0;	/*Is this the first time this routine has been called? */
     static int initcmdpossible = 1;	/*Should be consider parsing the initial command? */
 
@@ -1053,8 +1142,10 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     if (ts->parms[CMD_HELPPARM].items) {
 	PrintSyntax(ts);
 	/* Display full help syntax if we don't have subcommands */
-	if (noOpcodes)
+	if (noOpcodes) {
 	    PrintFlagHelp(ts);
+	    PrintNotesHelp(ts);
+	}
 	code = CMD_HELP;
 	goto out;
     }
@@ -1082,6 +1173,33 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
 	}
 	tparm->flags &= ~CMD_PROCESSED;
     }
+
+    /* Exclusion checks. */
+    for (group = 0; group < ts->nGroups; group++) {
+	int count = 0;
+	for (i = 0; i < CMD_MAXPARMS; i++) {
+	    tparm = &ts->parms[i];
+	    if (tparm->items == NULL)
+		continue;
+	    if ((tparm->flags & CMD_GROUPED) && tparm->group == group)
+		count++;
+	}
+	if (count > 1) {
+	    fprintf(stderr, "Only one of");
+	    PrintGroup(stderr, ts, group);
+	    fprintf(stderr, " may be specified.\n");
+	    code = CMD_TOOMANY;
+	    goto out;
+	}
+	if (!(ts->groups[group].flags & CMD_OPTIONAL) && count < 1) {
+	    fprintf(stderr, "One of");
+	    PrintGroup(stderr, ts, group);
+	    fprintf(stderr, "must be specified.\n");
+	    code = CMD_TOOFEW;
+	    goto out;
+	}
+    }
+
     *outsyntax = ts;
 
 out:
@@ -1498,6 +1616,26 @@ cmd_OptionPresent(struct cmd_syndesc *syn, int pos)
     if (code == 0)
 	return 1;
 
+    return 0;
+}
+
+int
+cmd_OptionInGroup(struct cmd_syndesc *syn, int group, int *pos)
+{
+    struct cmd_parmdesc *tp;
+    int i, j;
+
+    for (i = 0; i < syn->nGroups; i++) {
+	for (j = 0; j < CMD_MAXPARMS; j++) {
+	    tp = &syn->parms[j];
+	    if ((tp->flags & CMD_GROUPED) && tp->group == group) {
+		if (cmd_OptionPresent(syn, j)) {
+		    *pos = j;  /* Only one allowed per group, so this is it. */
+		    return 1;
+		}
+	    }
+	}
+    }
     return 0;
 }
 

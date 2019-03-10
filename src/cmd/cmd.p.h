@@ -23,6 +23,7 @@
 
 #define CMD_HELPPARM	(CMD_MAXPARMS-1)	/* last one is used by -help switch */
 #define	CMD_MAXPARMS	64	/* max number of parm types to a cmd line */
+#define CMD_MAXGROUPS	(CMD_MAXPARMS/2)	/* max number of parm groups */
 
 /* parse items are here */
 struct cmd_item {
@@ -37,6 +38,12 @@ struct cmd_parmdesc {
     afs_int32 flags;		/* flags */
     char *help;			/* optional help descr */
     struct cmd_item *aliases;   /* optional aliases */
+    int group;			/* exclusion group */
+};
+
+struct cmd_groupdesc {
+    afs_uint32 flags;		/* optional or required */
+    int nParms;			/* number of parms in the group */
 };
 
 /* cmd_parmdesc flags */
@@ -46,6 +53,7 @@ struct cmd_parmdesc {
 #define CMD_HIDE            4	/* A hidden option */
 #define	CMD_PROCESSED	    8
 #define CMD_NOABBRV	   16   /* Abbreviation not supported */
+#define CMD_GROUPED	   32   /* In an exclusion group */
 
 struct cmd_syndesc {
     struct cmd_syndesc *next;	/* next one in system list */
@@ -57,8 +65,10 @@ struct cmd_syndesc {
     int (*proc) (struct cmd_syndesc * ts, void *arock);
     void *rock;
     int nParms;			/* number of parms */
+    int nGroups;		/* number of exclusion groups */
     afs_uint32 flags;		/* random flags */
     struct cmd_parmdesc parms[CMD_MAXPARMS];	/* parms themselves */
+    struct cmd_groupdesc groups[CMD_MAXGROUPS];	/* exclusion groups */
 };
 
 extern struct cmd_syndesc *cmd_CreateSyntax(char *namep,
@@ -77,6 +87,9 @@ extern int cmd_AddParm(struct cmd_syndesc *as, char *aname, int atype,
 		       afs_int32 aflags, char *ahelp);
 extern int cmd_AddParmAtOffset(struct cmd_syndesc *as, int ref, char *name,
 			       int atype, afs_int32 aflags, char *ahelp);
+extern int cmd_AddGroup(struct cmd_syndesc *as, int group, afs_uint32 aflags);
+extern int cmd_AddGroupParm(struct cmd_syndesc *as, int group, int ref, char *name,
+			    int atype, afs_int32 aflags, char *ahelp);
 extern int cmd_AddParmAlias(struct cmd_syndesc *as, int pos, char *alias);
 extern int cmd_Dispatch(int argc, char **argv);
 extern int cmd_FreeArgv(char **argv);
@@ -95,6 +108,7 @@ extern int cmd_OptionAsString(struct cmd_syndesc *syn, int pos, char **value);
 extern int cmd_OptionAsList(struct cmd_syndesc *syn, int pos, struct cmd_item **);
 extern int cmd_OptionAsFlag(struct cmd_syndesc *syn, int pos, int *value);
 extern int cmd_OptionPresent(struct cmd_syndesc *syn, int pos);
+extern int cmd_OptionInGroup(struct cmd_syndesc *syn, int group, int *pos);
 
 /* Config files */
 
