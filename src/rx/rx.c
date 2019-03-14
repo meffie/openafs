@@ -2236,7 +2236,9 @@ rx_GetCall(int tno, struct rx_service *cur_service, osi_socket * socketp)
 	    rxi_minDeficit--;
 	rxi_availProcs--;
         MUTEX_EXIT(&rx_quota_mutex);
+	MUTEX_ENTER(&rx_waiting_mutex);
 	rx_nWaiting--;
+	MUTEX_EXIT(&rx_waiting_mutex);
 	/* MUTEX_EXIT(&call->lock); */
     } else {
 	/* If there are no eligible incoming calls, add this process
@@ -5483,9 +5485,9 @@ rxi_ResetCall(struct rx_call *call, int newcall)
 #endif
 
     if (flags & RX_CALL_WAIT_PROC) {
-	MUTEX_ENTER(&rx_stats_mutex);
+	MUTEX_ENTER(&rx_waiting_mutex);
 	rx_nWaiting--;
-	MUTEX_EXIT(&rx_stats_mutex);
+	MUTEX_EXIT(&rx_waiting_mutex);
     }
 #ifdef RX_ENABLE_LOCKS
     /* The following ensures that we don't mess with any queue while some
