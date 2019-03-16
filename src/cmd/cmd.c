@@ -11,6 +11,7 @@
 #include <afs/param.h>
 
 #include <roken.h>
+#include <afs/afsutil.h>
 
 #include <ctype.h>
 #include <assert.h>
@@ -260,10 +261,11 @@ PrintSyntax(struct cmd_syndesc *as)
 	    len = 8;
 	}
 
-	printf(" %s%s%s%s",
+	printf(" %s%s%s%s%s",
 	       tp->flags & CMD_OPTIONAL?"[":"",
 	       name,
 	       str,
+	       tp->flags & CMD_HUMANIZE?"[KMGT]":"",
 	       tp->flags & CMD_OPTIONAL?"]":"");
 	free(str);
 	free(name);
@@ -1370,7 +1372,15 @@ cmd_OptionAsInt(struct cmd_syndesc *syn, int pos, int *value)
     if (str == NULL)
 	return CMD_MISSING;
 
-    *value = strtol(str, NULL, 10);
+    if ((syn->parms[pos].flags & CMD_HUMANIZE) == 0) {
+	*value = strtol(str, NULL, 10);
+    } else {
+	afs_int32 v;
+	code = util_GetHumanInt32((char*)str, &v);
+	if (code)
+	    return code;
+	*value = v;
+    }
 
     return 0;
 }
@@ -1389,7 +1399,15 @@ cmd_OptionAsUint(struct cmd_syndesc *syn, int pos,
     if (str == NULL)
 	return CMD_MISSING;
 
-    *value = strtoul(str, NULL, 10);
+    if ((syn->parms[pos].flags & CMD_HUMANIZE) == 0) {
+	*value = strtoul(str, NULL, 10);
+    } else {
+	afs_int32 v;
+	code = util_GetHumanInt32((char*)str, &v);
+	if (code)
+	    return code;
+	*value = v;
+    }
 
     return 0;
 }

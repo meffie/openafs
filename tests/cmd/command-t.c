@@ -43,7 +43,8 @@ enum cmdOptions {
    copt_fourth,
    copt_fifth,
    copt_perhaps,
-   copt_sanity
+   copt_sanity,
+   copt_howbig
 };
 
 static int
@@ -390,6 +391,28 @@ main(int argc, char **argv)
     code = cmd_OptionAsList(retopts, copt_second, &list);
     is_int(0, code, "cmd_OptionAsList succeeds");
     checkList(list, "one", "two", "three", "four", NULL);
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+// xxx
+
+    cmd_AddParmAtOffset(opts, copt_howbig, "-howbig", CMD_SINGLE, CMD_OPTIONAL|CMD_HUMANIZE, "how big");
+
+    code = cmd_ParseLine("-help", tv, &tc, 100);
+    is_int(0, code, "cmd_ParseLine succeeds");
+    code = cmd_Parse(tc, tv, &retopts);
+    is_int(CMD_HELP, code, "cmd_Parse returns help indicator with help output");
+    ok(retopts == NULL, " ... and options is empty");
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
+    code = cmd_ParseLine("-first 1 -howbig 1G", tv, &tc, 100);
+    code = cmd_Parse(tc, tv, &retopts);
+    code = cmd_OptionAsInt(retopts, copt_howbig, &retval);
+    printf("code=%d, retval=%d\n", code, retval);
+    cmd_FreeOptions(&retopts);
+    cmd_FreeArgv(tv);
+
 
     return 0;
 }

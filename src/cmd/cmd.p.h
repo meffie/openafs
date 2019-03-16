@@ -46,6 +46,7 @@ struct cmd_parmdesc {
 #define CMD_HIDE            4	/* A hidden option */
 #define	CMD_PROCESSED	    8
 #define CMD_NOABBRV	   16   /* Abbreviation not supported */
+#define CMD_HUMANIZE	   32   /* A human readable data size in units of KB by default */
 
 struct cmd_syndesc {
     struct cmd_syndesc *next;	/* next one in system list */
