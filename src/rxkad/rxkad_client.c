@@ -37,7 +37,6 @@
 #include "afs/sysincludes.h"
 #endif /* !UKERNEL */
 #ifndef AFS_LINUX22_ENV
-#include "rpc/types.h"
 #include "rx/xdr.h"
 #endif
 #include "rx/rx.h"
