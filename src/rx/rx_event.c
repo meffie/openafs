@@ -428,6 +428,7 @@ rxevent_Cancel_1(struct rxevent *ev, struct rx_call *call,
 	rxevent_nPosted--;
 	rxevent_nFree++;
 	if (call) {
+	    MUTEX_ENTER(&rx_refcnt_mutex);
 	    call->refCount--;
 #ifdef RX_REFCOUNT_CHECK
 	    call->refCDebug[type]--;
@@ -436,6 +437,7 @@ rxevent_Cancel_1(struct rxevent *ev, struct rx_call *call,
 		osi_Panic("rxevent_Cancel: call refCount < 0");
 	    }
 #endif /* RX_REFCOUNT_CHECK */
+	    MUTEX_EXIT(&rx_refcnt_mutex);
 	}
     }
 #else /* RX_ENABLE_LOCKS */
