@@ -23,6 +23,7 @@ B<bosserver>
     S<<< [B<-transarc-logs>] >>>
     S<<< [B<-pidfiles>[=<I<path>>]] >>>
     S<<< [B<-nofork>] >>>
+    S<<< [B<-skip-root-check>] >>>
     S<<< [B<-help>] >>>
 
 =for html
@@ -229,6 +230,12 @@ names.
 Run the BOS Server in the foreground. By default, the BOS Server process will
 fork and detach the stdio, stderr, and stdin streams.
 
+=item B<-skip-root-check>
+
+Allow the BOS Server (and thus the processes started by the BOS Server) to run
+as a regular local user.  By default, the BOS Server process must be run by the
+local C<root> user.
+
 =item B<-help>
 
 Prints the online help for this command. All other valid options are
@@ -246,7 +253,7 @@ users who issue privileged B<bos> commands.
 =head1 PRIVILEGE REQUIRED
 
 The issuer most be logged onto a file server machine as the local
-superuser C<root>.
+superuser C<root>, unless the B<-skip-root-check> option is specified.
 
 =head1 SEE ALSO
 

@@ -834,6 +834,7 @@ main(int argc, char **argv, char **envp)
     struct stat sb;
 #ifndef AFS_NT40_ENV
     int nofork = 0;
+    int skip_root_check = 0;
 #endif
 #ifdef	AFS_AIX32_ENV
     struct sigaction nsa;
@@ -932,6 +933,8 @@ main(int argc, char **argv, char **envp)
 		DoCore = (argv[code]+7);
 	} else if (strcmp(argv[code], "-nofork") == 0) {
 	    nofork = 1;
+	} else if (strcmp(argv[code], "-skip-root-check") == 0) {
+	    skip_root_check = 1;
 	}
 #endif
 	else if (strcmp(argv[code], "-enable_peer_stats") == 0) {
@@ -994,7 +997,7 @@ main(int argc, char **argv, char **envp)
 		   "[-cores=<none|path>] \n"
 		   "[-pidfiles[=path]] "
 		   "[-transarc-logs] "
-		   "[-nofork] " "[-help]\n");
+		   "[-nofork] [-skip-root-check] [-help]\n");
 #else
 	    printf("Usage: bosserver [-noauth] [-log] "
 		   "[-auditlog <log path>] "
@@ -1016,7 +1019,7 @@ main(int argc, char **argv, char **envp)
     }
 
 #ifndef AFS_NT40_ENV
-    if (geteuid() != 0) {
+    if (!skip_root_check && geteuid() != 0) {
 	printf("bosserver: must be run as root.\n");
 	exit(1);
     }
