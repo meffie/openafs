@@ -5656,8 +5656,13 @@ SRXAFS_FlushCPS(struct rx_call * acall, struct ViceIds * vids,
 
     addr = addrs->IPAddrs_val;
     for (i = 0; i < naddrs; i++, addr++) {
-	if (*addr)
-	    h_flushhostcps(*addr, htons(7001));
+	if (*addr) {
+	    struct sockaddr_in taddr;
+	    taddr.sin_family = AF_INET;
+	    taddr.sin_addr.s_addr = *addr;
+	    taddr.sin_port = htons(7001);
+	    h_flushhostcps(&taddr);
+	}
     }
 
   Bad_FlushCPS:
