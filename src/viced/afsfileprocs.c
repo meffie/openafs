@@ -6721,7 +6721,7 @@ init_sys_error_to_et(void)
 }
 
 /* NOTE:  2006-03-01
- *  SRXAFS_CallBackRxConnAddr should be re-written as follows:
+ *  SRXAFS_CallBackRxConnAddr should be implemented as follows:
  *  - pass back the connection, client, and host from CallPreamble
  *  - keep a ref on the client, which we don't now
  *  - keep a hold on the host, which we already do
@@ -6739,80 +6739,11 @@ SRXAFS_CallBackRxConnAddr (struct rx_call * acall, afs_int32 *addr)
     Error errorCode = 0;
     struct rx_connection *tcon;
     struct host *tcallhost;
-#ifdef __EXPERIMENTAL_CALLBACK_CONN_MOVING
-    struct host *thost;
-    struct client *tclient;
-    static struct rx_securityClass *sc = 0;
-    int i,j;
-    struct rx_connection *conn;
-    afs_int32 viceid = -1;
-#endif
 
     if ((errorCode = CallPreamble(acall, ACTIVECALL, NULL, &tcon, &tcallhost)))
 	    goto Bad_CallBackRxConnAddr1;
 
-#ifndef __EXPERIMENTAL_CALLBACK_CONN_MOVING
-    errorCode = 1;
-#else
-    H_LOCK;
-    tclient = h_FindClient_r(tcon, &viceid);
-    if (!tclient) {
-	errorCode = VBUSY;
-	LogClientError("Client host too busy (CallBackRxConnAddr)", tcon, viceid, NULL);
-	goto Bad_CallBackRxConnAddr;
-    }
-    thost = tclient->z.host;
-
-    /* nothing more can be done */
-    if ( !thost->z.interface )
-	goto Bad_CallBackRxConnAddr;
-
-    /* the only address is the primary interface */
-    /* can't change when there's only 1 address, anyway */
-    if ( thost->z.interface->numberOfInterfaces <= 1 )
-	goto Bad_CallBackRxConnAddr;
-
-    /* initialise a security object only once */
-    if ( !sc )
-	sc = (struct rx_securityClass *) rxnull_NewClientSecurityObject();
-
-    for ( i=0; i < thost->z.interface->numberOfInterfaces; i++)
-    {
-	    if ( *addr == thost->z.interface->addr[i] ) {
-		    break;
-	    }
-    }
-
-    if ( *addr != thost->z.interface->addr[i] )
-	goto Bad_CallBackRxConnAddr;
-
-    conn = rx_NewConnection (thost->z.interface->addr[i],
-			     thost->z.port, 1, sc, 0);
-    rx_SetConnDeadTime(conn, 2);
-    rx_SetConnHardDeadTime(conn, AFS_HARDDEADTIME);
-    H_UNLOCK;
-    errorCode = RXAFSCB_Probe(conn);
-    H_LOCK;
-    if (!errorCode) {
-	if ( thost->z.callback_rxcon )
-	    rx_DestroyConnection(thost->z.callback_rxcon);
-	thost->z.callback_rxcon = conn;
-	thost->z.host           = addr;
-	rx_SetConnDeadTime(thost->z.callback_rxcon, 50);
-	rx_SetConnHardDeadTime(thost->z.callback_rxcon, AFS_HARDDEADTIME);
-	h_ReleaseClient_r(tclient);
-	/* The hold on thost will be released by CallPostamble */
-	H_UNLOCK;
-	errorCode = CallPostamble(tcon, errorCode, tcallhost);
-	return errorCode;
-    } else {
-	rx_DestroyConnection(conn);
-    }
-  Bad_CallBackRxConnAddr:
-    h_ReleaseClient_r(tclient);
-    /* The hold on thost will be released by CallPostamble */
-    H_UNLOCK;
-#endif
+    errorCode = 1; /* Not implemented. */
 
     errorCode = CallPostamble(tcon, errorCode, tcallhost);
  Bad_CallBackRxConnAddr1:
