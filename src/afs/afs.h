@@ -22,6 +22,7 @@
 
 /* jhash.h is a standalone header and is fine to pull into kernel code. */
 #include <opr/jhash.h>
+#include <opr/sockaddr.h>
 
 /*
  * afs_fsfragsize cannot be less than 1023, or some cache-tracking
@@ -457,11 +458,12 @@ struct srvAddr {
     struct server *server;	/* back to parent */
     struct sa_conn_vector *conns;   /* All user connections to this server */
     struct afs_conn *natping;
-    afs_int32 sa_ip;		/* Host addr in network byte order */
+    struct opr_sockaddr sa_addr; /* Host addr and port in network byte order */
     u_short sa_iprank;		/* indiv ip address priority */
-    u_short sa_portal;		/* port addr in network byte order */
     u_char sa_flags;
 };
+#define sa_ip sa_addr.u.in.sin_addr.s_addr
+#define sa_portal sa_addr.u.in.sin_port
 
 /*
  * Values used in the flags field of the server structure below.
