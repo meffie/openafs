@@ -188,10 +188,9 @@ print_internet_address(char *preamble, struct srvAddr *sa, char *postamble,
 {
     struct server *aserver = sa->server;
     char *ptr = "\n";
-    afs_uint32 address;
+    opr_sockaddr_str buffer;
 
     AFS_STATCNT(print_internet_address);
-    address = ntohl(sa->sa_ip);
     if (aserver->flags & SRVR_MULTIHOMED) {
 	if (flag == 1) {	/* server down mesg */
 	    if (!(aserver->flags & SRVR_ISDOWN))
@@ -204,8 +203,8 @@ print_internet_address(char *preamble, struct srvAddr *sa, char *postamble,
 		" (multi-homed address; other same-host interfaces may still be down)\n";
 	}
     }
-    afs_warnall("%s%d.%d.%d.%d in cell %s%s (code %d)%s", preamble, (address >> 24),
-	     (address >> 16) & 0xff, (address >> 8) & 0xff, (address) & 0xff,
+    afs_warnall("%s%s in cell %s%s (code %d)%s", preamble,
+	     opr_sockaddr2str(&sa->sa_addr, &buffer),
 	     aserver->cell->cellName, postamble, code, ptr);
 
     if (flag == 1 && rxconn) {
@@ -219,13 +218,9 @@ print_internet_address(char *preamble, struct srvAddr *sa, char *postamble,
 	    if (!errmsg) {
 		errmsg = str1 = str2 = "";
 	    }
-	    afs_warnall("afs: network error for %d.%d.%d.%d:%d: origin %d type %d code %d%s%s%s\n",
-	             (address >> 24),
-	             (address >> 16) & 0xff,
-	             (address >> 8) & 0xff,
-	             (address) & 0xff,
-	             (int)ntohs(sa->sa_portal),
-	             errorigin, errtype, errcode, str1, errmsg, str2);
+	    afs_warnall("afs: network error for %s: origin %d type %d code %d%s%s%s\n",
+			opr_sockaddr2str(&sa->sa_addr, &buffer),
+			errorigin, errtype, errcode, str1, errmsg, str2);
 	}
     }
 }				/*print_internet_address */

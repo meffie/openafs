@@ -3994,7 +3994,9 @@ afs_setsprefs(struct spref *sp, unsigned int num, unsigned int vlonly)
 
 	if (sa && matches) {	/* found one! */
 	    if (debugsetsp) {
-		afs_warn("sa ip=%x, ip_rank=%d\n", sa->sa_ip, sa->sa_iprank);
+		opr_sockaddr_str buffer;
+		afs_warn("sa address=%s, ip_rank=%d\n",
+			 opr_sockaddr2str(&sa->sa_addr, &buffer), sa->sa_iprank);
 	    }
 	    sa->sa_iprank = sp->rank + afs_randomMod15();
 	    afs_SortOneServer(sa->server);
