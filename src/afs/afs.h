@@ -1374,6 +1374,12 @@ extern struct brequest afs_brs[NBRS];	/* request structures */
 #define	SHash(aserv)	((ntohl(aserv)) & (NSERVERS-1))
 #define	FVHash(acell,avol)  (((avol)+(acell)) & (NFENTRIES-1))
 
+static_inline afs_uint32
+SHashBySockaddr(struct opr_sockaddr *addr)
+{
+    return ntohl(addr->u.in.sin_addr.s_addr) & (NSERVERS - 1);
+}
+
 /* Performance hack - we could replace VerifyVCache2 with the appropriate
  * GetVCache incantation, and could eliminate even this code from afs_UFSRead
  * by making intentionally invalidating quick.stamp in the various callbacks

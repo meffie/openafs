@@ -1598,25 +1598,30 @@ afs_SearchServer(u_short aport, afsUUID * uuidp, afs_int32 locktype,
  *      A server structure matching the request.
  */
 struct server *
-afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
-	      u_short aport, afs_int32 locktype, afsUUID * uuidp,
+afs_GetServerBySockaddr(struct opr_sockaddr *addrs, afs_int32 nservers, afs_int32 acell,
+	      afs_int32 locktype, afsUUID * uuidp,
 	      afs_int32 addr_uniquifier, struct volume *tv)
 {
     struct server *oldts = 0, *ts, *newts, *orphts = 0;
     struct srvAddr *oldsa, *newsa, *nextsa, *orphsa;
     afs_int32 iphash, k, srvcount = 0;
     unsigned int srvhash;
+    u_short aport = 0;  /* XXX: hack alert */
 
     AFS_STATCNT(afs_GetServer);
 
     ObtainSharedLock(&afs_xserver, 13);
+
+    if (nservers > 0) {
+	aport = addrs[0].u.in.sin_port; /* XXX: hack alert */
+    }
 
     /* Check if the server struct exists and is up to date */
     if (!uuidp) {
 	if (nservers != 1)
 	    panic("afs_GetServer: incorrect count of servers");
 	ObtainReadLock(&afs_xsrvAddr);
-	ts = afs_FindServer(aserverp[0], aport, NULL, locktype);
+	ts = afs_FindServer(addrs[0].u.in.sin_addr.s_addr, addrs[0].u.in.sin_port, NULL, locktype);
 	ReleaseReadLock(&afs_xsrvAddr);
 	if (ts && !(ts->flags & SRVR_MULTIHOMED)) {
 	    /* Found a server struct that is not multihomed and has the
@@ -1629,7 +1634,7 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 	if (nservers <= 0)
 	    panic("afs_GetServer: incorrect count of servers");
 
-	ts = afs_SearchServer(aport, uuidp, locktype, &oldts, addr_uniquifier);
+	ts = afs_SearchServer(addrs[0].u.in.sin_port, uuidp, locktype, &oldts, addr_uniquifier);
 	if (ts) {
 	    ReleaseSharedLock(&afs_xserver);
 	    return ts;
@@ -1673,7 +1678,7 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 
 	/* Add the server struct to the afs_servers[] hash chain */
 	srvhash =
-	    (uuidp ? (afs_uuid_hash(uuidp) % NSERVERS) : SHash(aserverp[0]));
+	    (uuidp ? (afs_uuid_hash(uuidp) % NSERVERS) : SHashBySockaddr(addrs));
 	newts->next = afs_servers[srvhash];
 	afs_servers[srvhash] = newts;
     }
@@ -1690,13 +1695,13 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 
     /* For each IP address we are registering */
     for (k = 0; k < nservers; k++) {
-	iphash = SHash(aserverp[k]);
+	iphash = SHashBySockaddr(&addrs[k]);
 
 	/* Check if the srvAddr structure already exists. If so, remove
 	 * it from its server structure and add it to the new one.
 	 */
 	for (oldsa = afs_srvAddrs[iphash]; oldsa; oldsa = oldsa->next_bkt) {
-	    if ((oldsa->sa_ip == aserverp[k]) && (oldsa->sa_portal == aport))
+	    if (opr_sockaddr_equal(&oldsa->sa_addr, &addrs[k]))
 		break;
 	}
 	if (oldsa && (oldsa->server != newts)) {
@@ -1724,8 +1729,7 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 	    newts->addr = newsa;
 
 	    /* Initialize the srvAddr Structure */
-	    newsa->sa_ip = aserverp[k];
-	    newsa->sa_portal = aport;
+	    opr_sockaddr_copy(&newsa->sa_addr, &addrs[k]);
 	}
 
 	/* Update the srvAddr Structure */
@@ -1751,7 +1755,7 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 	for (orphsa = newts->addr; orphsa; orphsa = nextsa) {
 	    nextsa = orphsa->next_sa;
 	    for (k = 0; k < nservers; k++) {
-		if (orphsa->sa_ip == aserverp[k])
+		if (orphsa->sa_ip == addrs[k].u.in.sin_addr.s_addr)
 		    break;	/* belongs */
 	    }
 	    if (k < nservers)
@@ -1770,7 +1774,7 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 		 * in the afs_servers table by its ip address (only by uuid -
 		 * which this has none).
 		 */
-		iphash = SHash(aserverp[k]);
+		iphash = SHashBySockaddr(&addrs[k]);
 		orphts->next = afs_servers[iphash];
 		afs_servers[iphash] = orphts;
 
@@ -1815,7 +1819,31 @@ afs_GetServer(afs_uint32 *aserverp, afs_int32 nservers, afs_int32 acell,
 
     ReleaseWriteLock(&afs_xserver);
     return (newts);
-}				/* afs_GetServer */
+}
+
+struct server *
+afs_GetServer(afs_uint32 * aserverp, afs_int32 nservers, afs_int32 acell,
+	      u_short aport, afs_int32 locktype, afsUUID * uuidp,
+	      afs_int32 addr_uniquifier, struct volume *tv)
+{
+    struct opr_sockaddr *addrs = NULL;
+    struct server *server = NULL;
+    int i;
+
+    if (nservers > 0) {
+	addrs = afs_osi_Alloc(nservers * sizeof(*addrs));
+	osi_Assert(addrs != NULL);
+    }
+    for (i = 0; i < nservers; i++) {
+	addrs[i].u.in.sin_family = AF_INET;
+	addrs[i].u.in.sin_addr.s_addr = aserverp[i];
+	addrs[i].u.in.sin_port = aport;
+    }
+    server = afs_GetServerBySockaddr(addrs, nservers, acell, locktype,
+				     uuidp, addr_uniquifier, tv);
+    afs_osi_Free(addrs, nservers * sizeof(*addrs));
+    return server;
+}
 
 void
 afs_ActivateServer(struct srvAddr *sap)

@@ -858,6 +858,12 @@ extern struct server *afs_GetServer(afs_uint32 * aserver, afs_int32 nservers,
 				    afs_int32 locktype, afsUUID * uuidp,
 				    afs_int32 addr_uniquifier,
 				    struct volume *tv);
+extern struct server *afs_GetServerBySockaddr(struct opr_sockaddr *addr,
+				    afs_int32 naddrs,
+				    afs_int32 acell,
+				    afs_int32 locktype, afsUUID * uuidp,
+				    afs_int32 addr_uniquifier,
+				    struct volume *tv);
 extern void afs_GetCapabilities(struct server *ts);
 extern void ForceAllNewConnections(void);
 extern void afs_MarkServerUpOrDown(struct srvAddr *sa, int a_isDown);
