@@ -755,7 +755,7 @@ afs_LoopServers(int adown, struct cell *acellp, int vlalso,
 
 /* find a server structure given the host address */
 struct server *
-afs_FindServer(afs_int32 aserver, afs_uint16 aport, afsUUID * uuidp,
+afs_FindServerBySockaddr(struct opr_sockaddr *addrp, afsUUID * uuidp,
 	       afs_int32 locktype)
 {
     struct server *ts;
@@ -769,21 +769,31 @@ afs_FindServer(afs_int32 aserver, afs_uint16 aport, afsUUID * uuidp,
 	    if ((ts->flags & SRVR_MULTIHOMED)
 		&&
 		(memcmp((char *)uuidp, (char *)&ts->sr_uuid, sizeof(*uuidp))
-		 == 0) && (!ts->addr || (ts->addr->sa_portal == aport)))
+		 == 0) && (!ts->addr || (ts->addr->sa_portal == addrp->u.in.sin_port)))
 		return ts;
 	}
     } else {
-	i = SHash(aserver);
+	i = SHashBySockaddr(addrp);
 	for (sa = afs_srvAddrs[i]; sa; sa = sa->next_bkt) {
-	    if ((sa->sa_ip == aserver) && (sa->sa_portal == aport)) {
+	    if (opr_sockaddr_equal(&sa->sa_addr, addrp)) {
 		return sa->server;
 	    }
 	}
     }
     return NULL;
 
-}				/*afs_FindServer */
+}
 
+struct server *
+afs_FindServer(afs_int32 aserver, afs_uint16 aport, afsUUID * uuidp,
+	       afs_int32 locktype)
+{
+    struct opr_sockaddr addr;
+    addr.u.in.sin_family = AF_INET;
+    addr.u.in.sin_addr.s_addr = aserver;
+    addr.u.in.sin_port = aport;
+    return afs_FindServerBySockaddr(&addr, uuidp, locktype);
+}
 
 /* some code for creating new server structs and setting preferences follows
  * in the next few lines...
