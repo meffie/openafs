@@ -31,10 +31,10 @@
 int
 main(int argc, char **argv)
 {
-    struct opr_sockaddr a;
-    struct opr_sockaddr b;
-    struct opr_sockaddr_str astr;
-    struct opr_sockaddr_str bstr;
+    opr_sockaddr a;
+    opr_sockaddr b;
+    opr_sockaddr_str astr;
+    opr_sockaddr_str bstr;
 
     plan(5);
 
