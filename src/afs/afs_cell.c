@@ -922,7 +922,7 @@ afs_SetPrimaryCell(char *acellName)
  * \return
  */
 afs_int32
-afs_NewCell(char *acellName, afs_int32 * acellHosts, int aflags,
+afs_NewCellBySockaddr(char *acellName, struct opr_sockaddr *acellAddrs, int aflags,
 	    char *linkedcname, u_short fsport, u_short vlport, int timeout)
 {
     struct cell *tc, *tcl = 0;
@@ -1002,10 +1002,9 @@ afs_NewCell(char *acellName, afs_int32 * acellHosts, int aflags,
     for (i = 0; i < AFS_MAXCELLHOSTS; i++) {
 	/* Get server for each host and link this cell in.*/
 	struct server *ts;
-	afs_uint32 temp = acellHosts[i];
-	if (!temp)
+	if (acellAddrs[i].u.in.sin_addr.s_addr == 0)
 	    break;
-	ts = afs_GetServer(&temp, 1, 0, tc->vlport, WRITE_LOCK, NULL, 0, NULL);
+	ts = afs_GetServerBySockaddr(&acellAddrs[i], 1, 0, WRITE_LOCK, NULL, 0, NULL);
 	ts->cell = tc;
 	ts->flags &= ~SRVR_ISGONE;
 	/* Set the server as a host of the new cell. */
@@ -1047,6 +1046,42 @@ afs_NewCell(char *acellName, afs_int32 * acellHosts, int aflags,
     }
 
     ReleaseWriteLock(&afs_xcell);
+    return code;
+}
+
+/*!
+ * Create or update a cell entry.
+ * \param acellName Name of cell.
+ * \param acellHosts Array of hosts that this cell has.
+ * \param aflags Cell flags.
+ * \param linkedcname
+ * \param fsport File server port.
+ * \param vlport Volume server port.
+ * \param timeout Cell timeout value, 0 means static AFSDB entry.
+ * \return
+ */
+afs_int32
+afs_NewCell(char *acellName, afs_int32 * acellHosts, int aflags,
+	    char *linkedcname, u_short fsport, u_short vlport, int timeout)
+{
+    afs_int32 code;
+    struct opr_sockaddr *cellAddrs;
+    int i;
+
+    cellAddrs = afs_osi_Alloc(AFS_MAXCELLHOSTS * sizeof(*cellAddrs));
+    osi_Assert(cellAddrs != NULL);
+    memset(cellAddrs, 0, AFS_MAXCELLHOSTS * sizeof(*cellAddrs));
+    for (i = 0; i < AFS_MAXCELLHOSTS; i++) {
+	if (acellHosts[i]) {
+	    cellAddrs[i].u.in.sin_family = AF_INET;
+	    cellAddrs[i].u.in.sin_addr.s_addr = acellHosts[i];
+	    cellAddrs[i].u.in.sin_port = (vlport ? vlport : AFS_VLPORT);
+	}
+    }
+
+    code = afs_NewCellBySockaddr(acellName, cellAddrs, aflags,
+				 linkedcname, fsport, vlport, timeout);
+    afs_osi_Free(cellAddrs, AFS_MAXCELLHOSTS * sizeof(*cellAddrs));
     return code;
 }
 

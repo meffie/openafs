@@ -130,6 +130,9 @@ extern int afs_cellname_write(void);
 extern afs_int32 afs_NewCell(char *acellName, afs_int32 * acellHosts,
 			     int aflags, char *linkedcname, u_short fsport,
 			     u_short vlport, int timeout);
+extern afs_int32 afs_NewCellBySockaddr(char *acellName, struct opr_sockaddr * acellAddrs,
+			     int aflags, char *linkedcname, u_short fsport,
+			     u_short vlport, int timeout);
 extern afs_int32 afs_SetPrimaryCell(char *acellName);
 extern struct cell *afs_GetCell(afs_int32 acell, afs_int32 locktype);
 extern struct cell *afs_GetCellStale(afs_int32 acell, afs_int32 locktype);
