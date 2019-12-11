@@ -371,3 +371,4 @@ EXPORTS
     rx_GetCachedConnectionSA   @10000
     rx_NewConnectionSA         @10001
     rx_NewServiceSA            @10002
+    rx_InitSA                  @10003
