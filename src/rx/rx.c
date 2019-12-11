@@ -482,8 +482,10 @@ rxi_IsRunning(void)
  * /etc/services is anybody's guess...  Returns 0 on success, -1 on
  * error. */
 int
-rx_InitHost(u_int host, u_int port)
+rx_InitSA(struct opr_sockaddr *addr)
 {
+    u_int host = addr->u.in.sin_addr.s_addr;
+    u_int port = addr->u.in.sin_port;
 #ifdef KERNEL
     osi_timeval_t tv;
 #else /* KERNEL */
@@ -665,6 +667,16 @@ rx_InitHost(u_int host, u_int port)
  error:
     UNLOCK_RX_INIT;
     return -1;
+}
+
+int
+rx_InitHost(u_int host, u_int port)
+{
+    struct opr_sockaddr addr;
+    addr.u.in.sin_family = AF_INET;
+    addr.u.in.sin_addr.s_addr = host;
+    addr.u.in.sin_port = port;
+    return rx_InitSA(&addr);
 }
 
 int
