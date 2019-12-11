@@ -173,3 +173,4 @@ xdr_alloc
 rx_GetCachedConnectionSA
 rx_NewConnectionSA
 rx_NewServiceSA
+rx_InitSA
