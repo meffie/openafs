@@ -1773,7 +1773,7 @@ rxi_SetCallNumberVector(struct rx_connection *aconn,
                          service name might be used for probing for
                          statistics) */
 struct rx_service *
-rx_NewServiceHostSA(struct opr_sockaddr *addr, u_short serviceId,
+rx_NewServiceSA(struct opr_sockaddr *addr, u_short serviceId,
 		  char *serviceName, struct rx_securityClass **securityObjects,
 		  int nSecurityObjects,
 		  afs_int32(*serviceProc) (struct rx_call * acall))
@@ -1898,7 +1898,7 @@ rx_NewServiceHost(afs_uint32 host, u_short port, u_short serviceId,
     struct opr_sockaddr addr;
     addr.u.in.sin_addr.s_addr = host;
     addr.u.in.sin_port = port;
-    return rx_NewServiceHostSA(&addr, serviceId,
+    return rx_NewServiceSA(&addr, serviceId,
 			       serviceName, securityObjects,
 			       nSecurityObjects, serviceProc);
 }
