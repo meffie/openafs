@@ -179,7 +179,9 @@ pthread_key_t viced_uclient_key;
 char FS_HostName[128] = "localhost";
 char *FS_configPath = NULL;
 opr_sockaddr FS_HostAddr;
-afs_uint32 FS_HostAddrs[ADDRSPERSITE], FS_HostAddr_cnt = 0, FS_registered = 0;
+opr_sockaddr FS_HostAddrs[ADDRSPERSITE];
+afs_uint32 FS_HostAddr_cnt = 0;
+afs_uint32 FS_registered = 0;
 /* All addresses in FS_HostAddrs are in NBO */
 afsUUID FS_HostUUID;
 
@@ -1720,7 +1722,7 @@ Do_VLRegisterRPC(void)
     int i = 0;
 
     for (i = 0; i < FS_HostAddr_cnt; i++)
-	FS_HostAddrs_HBO[i] = ntohl(FS_HostAddrs[i]);
+	FS_HostAddrs_HBO[i] = ntohl(FS_HostAddrs[i].u.in.sin_addr.s_addr);
     addrs.bulkaddrs_len = FS_HostAddr_cnt;
     addrs.bulkaddrs_val = (afs_uint32 *) FS_HostAddrs_HBO;
     code = ubik_VL_RegisterAddrs(cstruct, 0, &FS_HostUUID, 0, &addrs);
@@ -1753,6 +1755,11 @@ afs_int32
 SetupVL(void)
 {
     afs_int32 code;
+    /* Hack Alert: scaffolding for now... */
+    afs_uint32 taddrs[ADDRSPERSITE];
+    int i;
+    memset(&taddrs, 0, sizeof(*taddrs));
+    /* end alert */
 
     if (AFSDIR_SERVER_NETRESTRICT_FILEPATH || AFSDIR_SERVER_NETINFO_FILEPATH) {
 	/*
@@ -1763,7 +1770,7 @@ SetupVL(void)
 	char reason[1024];
 	afs_int32 code;
 
-	code = afsconf_ParseNetFiles(FS_HostAddrs, NULL, NULL,
+	code = afsconf_ParseNetFiles(taddrs, NULL, NULL,
 				     ADDRSPERSITE, reason,
 				     AFSDIR_SERVER_NETINFO_FILEPATH,
 				     AFSDIR_SERVER_NETRESTRICT_FILEPATH);
@@ -1774,11 +1781,23 @@ SetupVL(void)
 	FS_HostAddr_cnt = (afs_uint32) code;
     } else
     {
-	FS_HostAddr_cnt = rx_getAllAddr(FS_HostAddrs, ADDRSPERSITE);
+	FS_HostAddr_cnt = rx_getAllAddr(taddrs, ADDRSPERSITE);
     }
 
+    /*
+     * Hack Alert: We need a sane api to get the list of addresses.
+     *             This is just placeholder code.
+     */
+    memset(FS_HostAddrs, 0, sizeof(*FS_HostAddrs));
+    for (i = 0; i < FS_HostAddr_cnt; i++) {
+	FS_HostAddrs[i].u.in.sin_family = AF_INET;
+	FS_HostAddrs[i].u.in.sin_addr.s_addr = taddrs[i];
+	FS_HostAddrs[i].u.in.sin_port = htons(7000);
+    }
+    /* end alert, but yuck below. */
+
     if (FS_HostAddr_cnt == 1 && rxBind == 1)
-	code = FS_HostAddrs[0];
+	code = FS_HostAddrs[0].u.in.sin_addr.s_addr;
     else
 	code = htonl(INADDR_ANY);
     return code;
