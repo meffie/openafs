@@ -32,7 +32,7 @@
  */
 
 char *
-opr_sockaddr2str(struct opr_sockaddr *addr, struct opr_sockaddr_str *str)
+opr_sockaddr2str(opr_sockaddr *addr, opr_sockaddr_str *str)
 {
     afs_uint32 taddr = ntohl(addr->u.in.sin_addr.s_addr);
     afs_uint16 tport = ntohs(addr->u.in.sin_port);
@@ -53,7 +53,7 @@ opr_sockaddr2str(struct opr_sockaddr *addr, struct opr_sockaddr_str *str)
  * @param[in] b  sockaddr to compare
  */
 int
-opr_sockaddr_equal(struct opr_sockaddr *a, struct opr_sockaddr *b)
+opr_sockaddr_equal(opr_sockaddr *a, opr_sockaddr *b)
 {
     return a->u.in.sin_addr.s_addr == b->u.in.sin_addr.s_addr
 	   && a->u.in.sin_port == b->u.in.sin_port;
@@ -66,7 +66,7 @@ opr_sockaddr_equal(struct opr_sockaddr *a, struct opr_sockaddr *b)
  * @param[in] src source address
  */
 int
-opr_sockaddr_copy(struct opr_sockaddr *dst, struct opr_sockaddr *src)
+opr_sockaddr_copy(opr_sockaddr *dst, opr_sockaddr *src)
 {
     dst->u.in.sin_family = AF_INET;
     dst->u.in.sin_addr.s_addr = src->u.in.sin_addr.s_addr;

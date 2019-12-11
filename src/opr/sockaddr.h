@@ -37,13 +37,15 @@ struct opr_sockaddr {
 	struct sockaddr_storage ss;
     } u;
 };
+typedef struct opr_sockaddr opr_sockaddr;
 
 struct opr_sockaddr_str {
     char buffer[23]; /**< ipv4addr:port ddd.ddd.ddd.ddd:dddddz */
 };
+typedef struct opr_sockaddr_str opr_sockaddr_str;
 
-extern char *opr_sockaddr2str(struct opr_sockaddr *sa, struct opr_sockaddr_str *str);
-extern int opr_sockaddr_equal(struct opr_sockaddr *a, struct opr_sockaddr *b);
-extern int opr_sockaddr_copy(struct opr_sockaddr *dst, struct opr_sockaddr *src);
+extern char *opr_sockaddr2str(opr_sockaddr *sa, opr_sockaddr_str *str);
+extern int opr_sockaddr_equal(opr_sockaddr *a, opr_sockaddr *b);
+extern int opr_sockaddr_copy(opr_sockaddr *dst, opr_sockaddr *src);
 
 #endif
