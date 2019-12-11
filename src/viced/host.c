@@ -685,6 +685,7 @@ h_Alloc_r(struct rx_connection *r_con)
     struct servent *serverentry;
     struct host *host;
     afs_uint32 newHostAddr_HBO;	/*New host IP addr, in host byte order */
+    afs_uint32 FS_HostAddr_HBO;
 
     host = GetHT();
     if (!host)
@@ -730,6 +731,7 @@ h_Alloc_r(struct rx_connection *r_con)
      * (the File Server's), remembering if they are in the same network.
      */
     newHostAddr_HBO = (afs_uint32) ntohl(host->z.addr.u.in.sin_addr.s_addr);
+    FS_HostAddr_HBO = ntohl(FS_HostAddr.u.in.sin_addr.s_addr);
     host->z.InSameNetwork =
 	h_AddrInSameNetwork(FS_HostAddr_HBO, newHostAddr_HBO);
     return host;
@@ -4045,6 +4047,7 @@ h_GetHostNetStats(afs_int32 * a_numHostsP, afs_int32 * a_sameNetOrSubnetP,
 
     struct host *hostP;	/*Ptr to current host entry */
     afs_uint32 currAddr_HBO;	/*Curr host addr, host byte order */
+    afs_uint32 FS_HostAddr_HBO = ntohl(FS_HostAddr.u.in.sin_addr.s_addr);
     int count;
 
     /*

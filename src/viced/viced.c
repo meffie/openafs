@@ -178,8 +178,7 @@ pthread_key_t viced_uclient_key;
 
 char FS_HostName[128] = "localhost";
 char *FS_configPath = NULL;
-afs_uint32 FS_HostAddr_NBO;
-afs_uint32 FS_HostAddr_HBO;
+opr_sockaddr FS_HostAddr;
 afs_uint32 FS_HostAddrs[ADDRSPERSITE], FS_HostAddr_cnt = 0, FS_registered = 0;
 /* All addresses in FS_HostAddrs are in NBO */
 afsUUID FS_HostUUID;
@@ -1839,7 +1838,6 @@ main(int argc, char *argv[])
     int curLimit;
     time_t t;
     struct tm tm;
-    char hoststr[16];
     opr_sockaddr rx_bindhost;
     opr_sockaddr_str bindstr;
     VolumePackageOptions opts;
@@ -2216,12 +2214,12 @@ main(int argc, char *argv[])
     if (!he) {
 	ViceLog(0, ("Can't find address for FileServer '%s'\n", FS_HostName));
     } else {
-	memcpy(&FS_HostAddr_NBO, he->h_addr, 4);
-	(void)afs_inet_ntoa_r(FS_HostAddr_NBO, hoststr);
-	FS_HostAddr_HBO = ntohl(FS_HostAddr_NBO);
-	ViceLog(0,
-		("FileServer %s has address %s (0x%x or 0x%x in host byte order)\n",
-		 FS_HostName, hoststr, FS_HostAddr_NBO, FS_HostAddr_HBO));
+	opr_sockaddr_str hoststr;
+	FS_HostAddr.u.in.sin_family = AF_INET;
+	memcpy(&FS_HostAddr.u.in.sin_addr.s_addr, he->h_addr, he->h_length);
+	FS_HostAddr.u.in.sin_port = htons(7000);
+	opr_sockaddr2str(&FS_HostAddr, &hoststr);
+	ViceLog(0, ("FileServer %s has address %s\n", FS_HostName, hoststr.buffer));
     }
 
     t = tp.tv_sec;
