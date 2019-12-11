@@ -1840,7 +1840,8 @@ main(int argc, char *argv[])
     time_t t;
     struct tm tm;
     char hoststr[16];
-    afs_uint32 rx_bindhost;
+    opr_sockaddr rx_bindhost;
+    opr_sockaddr_str bindstr;
     VolumePackageOptions opts;
 
 #ifdef	AFS_AIX32_ENV
@@ -2006,11 +2007,14 @@ main(int argc, char *argv[])
 #endif
     if (udpBufSize)
 	rx_SetUdpBufSize(udpBufSize);	/* set the UDP buffer size for receive */
-    rx_bindhost = SetupVL();
 
-    ViceLog(0, ("File server binding rx to %s:%d\n",
-            afs_inet_ntoa_r(rx_bindhost, hoststr), 7000));
-    if (rx_InitHost(rx_bindhost, (int)htons(7000)) < 0) {
+    rx_bindhost.u.in.sin_family = AF_INET;
+    rx_bindhost.u.in.sin_addr.s_addr = SetupVL();
+    rx_bindhost.u.in.sin_port = htons(7000);
+
+    ViceLog(0, ("File server binding rx to %s\n",
+            opr_sockaddr2str(&rx_bindhost, &bindstr)));
+    if (rx_InitSA(&rx_bindhost) < 0) {
 	ViceLog(0, ("Cannot initialize RX\n"));
 	exit(1);
     }
@@ -2029,9 +2033,9 @@ main(int argc, char *argv[])
     afsconf_SetSecurityFlags(confDir, AFSCONF_SECOPTS_ALWAYSENCRYPT);
     afsconf_BuildServerSecurityObjects(confDir, &securityClasses, &numClasses);
 
-    tservice = rx_NewServiceHost(rx_bindhost,  /* port */ 0, /* service id */
-				 1,	/*service name */
-				 "AFS",
+    tservice = rx_NewServiceSA(&rx_bindhost,
+				 /* service id */ 1,
+				 /* service name */ "AFS",
 				 securityClasses, numClasses,
 				 RXAFS_ExecuteRequest);
     if (!tservice) {
