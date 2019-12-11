@@ -241,7 +241,7 @@ int
 main(int argc, char **argv)
 {
     afs_int32 code;
-    afs_uint32 myHost;
+    opr_sockaddr myHost;
     struct hostent *th;
     char hostname[64];
     struct rx_service *tservice;
@@ -249,8 +249,9 @@ main(int argc, char **argv)
     afs_int32 numClasses;
     int lwps = 3;
     char clones[MAXHOSTSPERCELL];
-    char hoststr[16];
-    afs_uint32 host = htonl(INADDR_ANY);
+    struct opr_sockaddr_str hoststr;
+    opr_sockaddr host;
+    
     struct cmd_syndesc *opts;
     struct cmd_item *list;
     int s2s_rxgk = 0;
@@ -520,7 +521,10 @@ main(int argc, char **argv)
 	fprintf(stderr, "ptserver: couldn't get address of this host.\n");
 	PT_EXIT(1);
     }
-    memcpy(&myHost, th->h_addr, sizeof(afs_uint32));
+    memset(&myHost, 0, sizeof(myHost));
+    myHost.u.in.sin_family = th->h_addrtype;
+    memcpy(&myHost.u.in.sin_addr.s_addr, th->h_addr, sizeof(afs_uint32));
+    myHost.u.in.sin_port = htons(AFSCONF_PROTPORT);
 
     /* get list of servers */
     code =
@@ -554,6 +558,13 @@ main(int argc, char **argv)
      * required. */
     ubik_nBuffers = 120 + /*fudge */ 40;
 
+    host.u.in.sin_family = AF_INET;
+    host.u.in.sin_addr.s_addr = htonl(INADDR_ANY);
+    host.u.in.sin_port = htons(AFSCONF_PROTPORT);
+#ifdef STRUCT_SOCKADDR_HAS_SA_LEN
+    host.u.in.sin_len = sizeof(opr_sockaddr.u.in);
+#endif
+
     if (rxBind) {
 	afs_int32 ccode;
 	if (AFSDIR_SERVER_NETRESTRICT_FILEPATH ||
@@ -568,13 +579,13 @@ main(int argc, char **argv)
 	    ccode = rx_getAllAddr(SHostAddrs, ADDRSPERSITE);
 	}
 	if (ccode == 1) {
-	    host = SHostAddrs[0];
+	    host.u.in.sin_addr.s_addr = SHostAddrs[0];
 	}
     }
 
-    ViceLog(0, ("ptserver binding rx to %s:%d\n",
-            afs_inet_ntoa_r(host, hoststr), AFSCONF_PROTPORT));
-    code = rx_InitHost(host, htons(AFSCONF_PROTPORT));
+    ViceLog(0, ("ptserver binding rx to %s\n",
+		opr_sockaddr2str(&host, &hoststr)));
+    code = rx_InitSA(&host);
     if (code < 0) {
 	ViceLog(0, ("ptserver: Rx init failed: %d\n", code));
 	PT_EXIT(1);
@@ -591,8 +602,8 @@ main(int argc, char **argv)
     }
 
     code =
-	ubik_ServerInitByInfo(myHost, htons(AFSCONF_PROTPORT), &info, clones,
-			      pr_dbaseName, &dbase);
+	ubik_ServerInitByInfo(myHost.u.in.sin_addr.s_addr, myHost.u.in.sin_port,
+			      &info, clones, pr_dbaseName, &dbase);
     if (code) {
 	afs_com_err(whoami, code, "Ubik init failed");
 	PT_EXIT(2);
@@ -604,9 +615,10 @@ main(int argc, char **argv)
 
     afsconf_BuildServerSecurityObjects(prdir, &securityClasses, &numClasses);
 
+    host.u.in.sin_port = 0;
     tservice =
-	rx_NewServiceHost(host, 0, PRSRV, "Protection Server", securityClasses,
-		          numClasses, PR_ExecuteRequest);
+	rx_NewServiceSA(&host, PRSRV, "Protection Server", securityClasses,
+			numClasses, PR_ExecuteRequest);
     if (tservice == (struct rx_service *)0) {
 	fprintf(stderr, "ptserver: Could not create new rx service.\n");
 	PT_EXIT(3);
@@ -623,8 +635,8 @@ main(int argc, char **argv)
     }
 
     tservice =
-	rx_NewServiceHost(host, 0, RX_STATS_SERVICE_ID, "rpcstats",
-			  securityClasses, numClasses, RXSTATS_ExecuteRequest);
+	rx_NewServiceSA(&host, RX_STATS_SERVICE_ID, "rpcstats",
+			securityClasses, numClasses, RXSTATS_ExecuteRequest);
     if (tservice == (struct rx_service *)0) {
 	fprintf(stderr, "ptserver: Could not create new rx service.\n");
 	PT_EXIT(3);
