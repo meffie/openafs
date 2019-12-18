@@ -31,6 +31,9 @@
  * Supports only AF_INET (IPv4) at this time.
  */
 
+/**
+ * Format a sockaddr as a human readable string.
+ */
 char *
 opr_sockaddr2str(opr_sockaddr *addr, opr_sockaddr_str *str)
 {
@@ -44,6 +47,18 @@ opr_sockaddr2str(opr_sockaddr *addr, opr_sockaddr_str *str)
 	     (taddr) & 0xff,
 	     tport);
     return str->buffer;
+}
+
+/**
+ * Set a sockaddr from an IPv4 address and port.
+ */
+extern int
+opr_sockaddr_by_inet(opr_sockaddr *dst, struct in_addr addr, afs_uint16 port)
+{
+    dst->u.in.sin_family = AF_INET;
+    dst->u.in.sin_addr.s_addr = addr.s_addr;
+    dst->u.in.sin_port = port;
+    return 0;
 }
 
 /**
