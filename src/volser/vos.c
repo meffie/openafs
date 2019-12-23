@@ -57,6 +57,12 @@
 #include <regex.h>
 #endif
 
+/*
+ * Rx security class and index for volume server connections.
+ */
+static struct rx_securityClass *securityClass = 0;
+static int securityIndex = -1;
+
 /* Local Prototypes */
 static int PrintDiagnostics(char *astring, afs_int32 acode);
 static int GetVolumeInfo(afs_uint32 volid, afs_uint32 *server, afs_int32 *part,
@@ -283,6 +289,54 @@ GetServer(char *aname)
     /*
      * No non-loopback address could be obtained for 'aname'.
      */
+    return 0;
+}
+
+/**
+ * Create a new rx connection to a volume server by hostname (or numerical
+ * network address).
+ *
+ * @param[in]  name   volume server hostname or numerical network address
+ * @param[out] conn   rx connection to a volume server
+ *
+ * @returns 0 on success
+ *
+ * @note Caller must destroy returned connection when no longer needed.
+ */
+static int
+GetConnByName(char *name, struct rx_connection **conn)
+{
+    int code;
+    struct rx_connection *tc = NULL;
+    char port[16];
+    struct addrinfo hints;
+    struct addrinfo *results = NULL;
+    struct addrinfo *r = NULL;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_NUMERICSERV;
+
+    snprintf(port, sizeof(port), "%d", AFSCONF_VOLUMEPORT);
+    code = getaddrinfo(name, port, &hints, &results);
+    if (code) {
+	fprintf(STDERR, "Unable to get address of '%s': %s (code=%d)\n",
+		name, gai_strerror(code), code);
+	return code;
+    }
+    for (r = results; r; r = r->ai_next) {
+	opr_sockaddr *addr = (opr_sockaddr*)r->ai_addr;
+	tc = rx_NewConnectionSA(addr, VOLSERVICE_ID, securityClass, securityIndex);
+	if (tc)
+	    break;
+    }
+    freeaddrinfo(results);
+    if (!tc) {
+	fprintf(STDERR, "Unable to create connection to '%s'.", name);
+	return 1;
+    }
+    *conn = tc;
     return 0;
 }
 
@@ -5891,17 +5945,9 @@ Sizes(struct cmd_syndesc *as, void *arock)
 static int
 EndTrans(struct cmd_syndesc *as, void *arock)
 {
-    afs_uint32 server;
     afs_int32 code, tid, rcode;
-    struct rx_connection *aconn;
+    struct rx_connection *aconn = NULL;
     afs_int32 error = 0;
-
-    server = GetServer(as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(EINVAL);
-    }
 
     code = util_GetInt32(as->parms[1].items->data, &tid);
     if (code) {
@@ -5909,7 +5955,11 @@ EndTrans(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(code);
     }
 
-    aconn = UV_Bind(server, AFSCONF_VOLUMEPORT);
+    code = GetConnByName(as->parms[0].items->data, &aconn);
+    if (code) {
+	ERROR_EXIT(code);
+    }
+
     code = AFSVolEndTrans(aconn, tid, &rcode);
     if (!code) {
 	code = rcode;
@@ -5921,6 +5971,8 @@ EndTrans(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (aconn)
+	rx_DestroyConnection(aconn);
     return error;
 }
 
@@ -5968,6 +6020,15 @@ win32_enableCrypt(void)
     return cryptall;
 }
 #endif /* AFS_NT40_ENV */
+
+static int
+SetSecurity(struct rx_securityClass *as, afs_int32 aindex)
+{
+    securityClass = as;
+    securityIndex = aindex;
+    UV_SetSecurity(as, aindex);  /* for UV_Bind() */
+    return 0;
+}
 
 static int
 MyBeforeProc(struct cmd_syndesc *as, void *arock)
@@ -6022,7 +6083,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	rxgk_seclevel_str = NULL;
     }
 
-    if ((code = vsu_ClientInit(confdir, tcell, secFlags, UV_SetSecurity,
+    if ((code = vsu_ClientInit(confdir, tcell, secFlags, SetSecurity,
 			       &cstruct))) {
 	fprintf(STDERR, "could not initialize VLDB library (code=%lu) \n",
 		(unsigned long)code);
