@@ -10,6 +10,11 @@
 #ifndef AFS_VSPROCS_COMPAT_H
 #define AFS_VSPROCS_COMPAT_H
 
+#include <afsconfig.h>
+#include <afs/param.h>
+#include <roken.h>
+#include <afs/cellconfig.h>  /* for AFSCONF_VOLUMEPORT */
+
 /*
  * Compatibility wrappers for libvolser.
  *

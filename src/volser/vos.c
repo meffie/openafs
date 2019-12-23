@@ -1588,15 +1588,13 @@ NukeVolume(struct cmd_syndesc *as)
     afs_uint32 volID;
     afs_int32  err;
     afs_int32 partID;
-    afs_uint32 server;
+    struct rx_connection *conn = NULL;
     char *tp;
     afs_int32 error = 0;
 
-
-    server = GetServer(tp = as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n", tp);
-	ERROR_EXIT(1);
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code) {
+	ERROR_EXIT(code);
     }
 
     partID = volutil_GetPartitionID(tp = as->parms[1].items->data);
@@ -1619,7 +1617,7 @@ NukeVolume(struct cmd_syndesc *as)
 	    "vos: forcibly removing all traces of volume %d, please wait...",
 	    volID);
     fflush(STDOUT);
-    code = UV_NukeVolume(server, partID, volID);
+    code = AFSVolNukeVolume(conn, partID, volID);
     if (code == 0)
 	fprintf(STDOUT, "done.\n");
     else {
@@ -1628,6 +1626,8 @@ NukeVolume(struct cmd_syndesc *as)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 

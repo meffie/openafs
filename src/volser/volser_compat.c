@@ -58,7 +58,16 @@ UV_Bind(afs_uint32 aserver, afs_int32 port)
 int
 UV_NukeVolume(afs_uint32 server, afs_int32 partid, afs_uint32 volid)
 {
-    return vs_NukeVolume(server, partid, volid);
+    struct rx_connection *tconn;
+    afs_int32 code;
+
+    tconn = UV_Bind(server, AFSCONF_VOLUMEPORT);
+    if (tconn) {
+	code = AFSVolNukeVolume(tconn, partid, volid);
+	rx_DestroyConnection(tconn);
+    } else
+	code = 0;
+    return code;
 }
 
 int
