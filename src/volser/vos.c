@@ -2151,6 +2151,10 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
     afs_int32 idx, j;
     afs_int32 error = 0;
 
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires a -server option.\n");
+	ERROR_EXIT(EINVAL);
+    }
 
     if (as->parms[0].items) {
 	server = GetServer(as->parms[0].items->data);
