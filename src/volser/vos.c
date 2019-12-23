@@ -2081,6 +2081,11 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
     char pname[10];
     afs_int32 idx, j;
 
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires the -server option.\n");
+	return EINVAL;
+    }
+
     if (as->parms[0].items) {
 	server = GetServer(as->parms[0].items->data);
 	if (!server) {
@@ -3812,6 +3817,12 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     afs_uint32 tserver;
 
     tserver = 0;
+
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires a -server option.\n");
+	return EINVAL;
+    }
+
     if (as->parms[0].items) {
 	tserver = GetServer(as->parms[0].items->data);
 	if (!tserver) {
@@ -3838,12 +3849,6 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
 	    exit(1);
 	}
 	flags = 1;
-
-	if (!tserver) {
-	    fprintf(STDERR,
-		    "The -partition option requires a -server option\n");
-	    exit(1);
-	}
     }
 
     if (as->parms[3].items) {
@@ -5016,6 +5021,11 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
     apart = -1;
     totalE = 0;
     memset(&attributes, 0, sizeof(attributes));
+
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires the -server option.\n");
+	return EINVAL;
+    }
 
     if (as->parms[0].items) {	/* server specified */
 	aserver = GetServer(as->parms[0].items->data);
