@@ -5136,16 +5136,14 @@ vs_ChangeLocation(afs_uint32 server, afs_int32 part, afs_uint32 volid)
 
 /*list all the partitions on <aserver> */
 int
-vs_ListPartitions(afs_uint32 aserver, struct partList *ptrPartList,
+vs_ListPartitions(struct rx_connection *aconn, struct partList *ptrPartList,
 		  afs_int32 * cntp)
 {
-    struct rx_connection *aconn;
     struct pIDs partIds;
     struct partEntries partEnts;
     int i, j = 0, code;
 
     *cntp = 0;
-    aconn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
 
     partEnts.partEntries_len = 0;
     partEnts.partEntries_val = NULL;
@@ -5185,8 +5183,6 @@ vs_ListPartitions(afs_uint32 aserver, struct partList *ptrPartList,
 	fprintf(STDERR,
 		"Could not fetch the list of partitions from the server\n");
     PrintError("", code);
-    if (aconn)
-	rx_DestroyConnection(aconn);
     return code;
 }
 

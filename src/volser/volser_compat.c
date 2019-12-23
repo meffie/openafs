@@ -273,7 +273,14 @@ int
 UV_ListPartitions(afs_uint32 aserver, struct partList *ptrPartList,
 		  afs_int32 * cntp)
 {
-    return vs_ListPartitions(aserver, ptrPartList, cntp);
+    int code;
+    struct rx_connection *conn = NULL;
+    conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
+    if (conn) {
+	code = vs_ListPartitions(conn, ptrPartList, cntp);
+	rx_DestroyConection(conn);
+    }
+    return code;
 }
 
 int
