@@ -42,8 +42,8 @@ extern int vs_DeleteVolume(afs_uint32 aserver, afs_int32 apart,
 			   afs_uint32 avolid);
 extern int vs_ListOneVolume(afs_uint32 aserver, afs_int32 apart,
 			    afs_uint32 volid, struct volintInfo **resultPtr);
-extern int vs_PartitionInfo64(afs_uint32 server, char *pname,
-			    struct diskPartition64 *partition);
+extern int vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
+			      struct diskPartition64 *partition);
 extern int vs_CreateVolume(afs_uint32 aserver, afs_int32 apart, char *aname,
 			    afs_int32 aquota, afs_int32 aspare1,
 			    afs_int32 aspare2, afs_int32 aspare3,

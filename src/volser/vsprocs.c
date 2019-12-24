@@ -536,13 +536,11 @@ vs_NukeVolume(afs_uint32 server, afs_int32 partid, afs_uint32 volid)
 
 /* like df. Return usage of <pname> on <server> in <partition> */
 int
-vs_PartitionInfo64(afs_uint32 server, char *pname,
+vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
 		   struct diskPartition64 *partition)
 {
-    struct rx_connection *aconn;
     afs_int32 code = 0;
 
-    aconn = UV_Bind(server, AFSCONF_VOLUMEPORT);
     code = AFSVolPartitionInfo64(aconn, pname, partition);
     if (code == RXGEN_OPCODE) {
 	struct diskPartition *dpp = malloc(sizeof(struct diskPartition));
@@ -560,8 +558,6 @@ vs_PartitionInfo64(afs_uint32 server, char *pname,
 	fprintf(STDERR, "Could not get information on partition %s\n", pname);
 	PrintError("", code);
     }
-    if (aconn)
-	rx_DestroyConnection(aconn);
     return code;
 }
 

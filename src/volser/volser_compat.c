@@ -75,7 +75,15 @@ int
 UV_PartitionInfo64(afs_uint32 server, char *pname,
 		   struct diskPartition64 *partition)
 {
-    return vs_PartitionInfo64(server, pname, partition);
+    struct rx_connection *conn;
+    afs_int32 code = 1;
+
+    conn = UV_Bind(server, AFSCONF_VOLUMEPORT);
+    if (conn) {
+	code = vs_PartitionInfo64(conn, pname, partition);
+	rx_DestroyConnection(conn);
+    }
+    return code;
 }
 
 int
