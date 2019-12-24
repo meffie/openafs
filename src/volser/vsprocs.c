@@ -6036,7 +6036,7 @@ sortVolumes(const void *a, const void *b)
 int
 vs_SyncVolume(afs_uint32 aserver, afs_int32 apart, char *avolname, int flags)
 {
-    struct rx_connection *aconn = 0;
+    struct rx_connection *aconn = NULL;
     afs_int32 j, k, code, vcode, error = 0;
     afs_int32 tverbose;
     afs_int32 mod, modified = 0, deleted = 0;
@@ -6109,9 +6109,11 @@ vs_SyncVolume(afs_uint32 aserver, afs_int32 apart, char *avolname, int flags)
 
     /* If aserver is given, we will search for the desired volume on it */
     if (aserver) {
+	aconn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
+
 	/* Generate array of partitions on the server that we will check */
 	if (!(flags & 1)) {
-	    code = vs_ListPartitions(aserver, &PartList, &pcnt);
+	    code = vs_ListPartitions(aconn, &PartList, &pcnt);
 	    if (code) {
 		fprintf(STDERR,
 			"Could not fetch the list of partitions from the server\n");
@@ -6121,8 +6123,6 @@ vs_SyncVolume(afs_uint32 aserver, afs_int32 apart, char *avolname, int flags)
 	    PartList.partId[0] = apart;
 	    pcnt = 1;
 	}
-
-	aconn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
 
 	/* If a volume ID were given, search for it on each partition */
 	if ((volumeid = atol(avolname))) {
@@ -6279,7 +6279,7 @@ vs_SyncVldb(afs_uint32 aserver, afs_int32 apart, int flags, int force)
 
     /* Generate array of partitions to check */
     if (!(flags & 1)) {
-	code = vs_ListPartitions(aserver, &PartList, &pcnt);
+	code = vs_ListPartitions(aconn, &PartList, &pcnt);
 	if (code) {
 	    fprintf(STDERR,
 		    "Could not fetch the list of partitions from the server\n");

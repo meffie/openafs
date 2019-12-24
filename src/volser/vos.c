@@ -5244,7 +5244,10 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 		    as->parms[1].items->data);
 	    ERROR_EXIT(1);
 	}
-	if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+	code = GetConnByName(as->parms[0].items->data, &conn);
+	if (code)
+	    ERROR_EXIT(code);
+	if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -5307,6 +5310,8 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
     xdr_free((xdrproc_t) xdr_nbulkentries, &arrayEntries);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -5351,6 +5356,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     int printSummary=0, sumPartitions=0;
     afs_uint64 sumFree, sumStorage;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     ZeroInt64(sumFree);
     ZeroInt64(sumStorage);
@@ -5361,6 +5367,9 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     if (as->parms[1].items) {
 	apart = volutil_GetPartitionID(as->parms[1].items->data);
 	if (apart < 0) {
@@ -5376,7 +5385,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
 	printSummary = 1;
     }
     if (apart != -1) {
-	if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -5421,6 +5430,8 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -5862,6 +5873,7 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
     int force = 0;
     int c, dc;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     server = GetServer(as->parms[0].items->data);
     if (!server) {
@@ -5869,13 +5881,16 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(ENOENT);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     partition = volutil_GetPartitionID(as->parms[1].items->data);
     if (partition < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[1].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    if (!IsPartValid(partition, server, &code)) {
+    if (!IsPartValid(partition, conn, &code)) {
 	if (code)
 	    PrintError("", code);
 	else
@@ -5963,6 +5978,8 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
 
     error = code;
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 

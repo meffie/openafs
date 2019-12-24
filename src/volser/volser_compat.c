@@ -12,6 +12,7 @@
 #include <roken.h>
 #include <afs/stds.h>
 #include <rx/rx_queue.h>
+#include <rx/rx.h>
 #include <afs/vlserver.h>
 #include <afs/afsint.h>
 #include <afs/ihandle.h>
@@ -273,12 +274,13 @@ int
 UV_ListPartitions(afs_uint32 aserver, struct partList *ptrPartList,
 		  afs_int32 * cntp)
 {
-    int code;
-    struct rx_connection *conn = NULL;
+    int code = 0;
+    struct rx_connection *conn;
+
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
 	code = vs_ListPartitions(conn, ptrPartList, cntp);
-	rx_DestroyConection(conn);
+	rx_DestroyConnection(conn);
     }
     return code;
 }
