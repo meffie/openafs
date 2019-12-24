@@ -4006,6 +4006,12 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     struct rx_connection *conn = NULL;
 
     tserver = 0;
+
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires a -server option.\n");
+	ERROR_EXIT(EINVAL);
+    }
+
     if (as->parms[0].items) {
 	tserver = GetServer(as->parms[0].items->data);
 	if (!tserver) {
@@ -4035,12 +4041,6 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(1);
 	}
 	flags = 1;
-
-	if (!tserver) {
-	    fprintf(STDERR,
-		    "The -partition option requires a -server option\n");
-	    ERROR_EXIT(1);
-	}
     }
 
     if (as->parms[3].items) {
@@ -5221,6 +5221,11 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
     apart = -1;
     totalE = 0;
     memset(&attributes, 0, sizeof(attributes));
+
+    if (as->parms[1].items && !as->parms[0].items) {
+	fprintf(STDERR, "vos: The -partition option requires a -server option.\n");
+	ERROR_EXIT(EINVAL);
+    }
 
     if (as->parms[0].items) {	/* server specified */
 	aserver = GetServer(as->parms[0].items->data);
