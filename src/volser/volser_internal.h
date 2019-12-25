@@ -34,6 +34,7 @@ extern afs_int32 GCTrans(void);
 
 /* vsprocs.c */
 struct nvldbentry;
+struct vsu_site;
 extern int PrintError(char *msg, afs_int32 errcode);
 extern void init_volintInfo(struct volintInfo *vinfo);
 extern void SubEnumerateEntry(struct nvldbentry *entry);
@@ -44,8 +45,8 @@ extern int vs_ListOneVolume(struct rx_connection *aconn, afs_uint32 aserver,
 			    afs_int32 apart, afs_uint32 volid, struct volintInfo **resultPtr);
 extern int vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
 			      struct diskPartition64 *partition);
-extern int vs_CreateVolume(struct rx_connection *conn, afs_uint32 aserver,
-			    afs_int32 apart, char *aname,
+extern int vs_CreateVolume(struct rx_connection *conn, struct vsu_site *site,
+			    char *aname,
 			    afs_int32 aquota, afs_int32 aspare1,
 			    afs_int32 aspare2, afs_int32 aspare3,
 			    afs_int32 aspare4, afs_uint32 * anewid,

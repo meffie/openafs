@@ -21,6 +21,7 @@
 #include "volser.h"
 #include "volint.h"
 #include "volser_internal.h"
+#include "vsutils_prototypes.h"
 #include "volser_compat.h"
 
 /*
@@ -92,6 +93,7 @@ UV_CreateVolume(afs_uint32 aserver, afs_int32 apart, char *aname,
 {
     int code = -1;
     struct rx_connection *conn;
+    struct vsu_site site;
     afs_int32 aquota = 5000;
     afs_int32 aspare1 = 0;
     afs_int32 aspare2 = 0;
@@ -100,10 +102,12 @@ UV_CreateVolume(afs_uint32 aserver, afs_int32 apart, char *aname,
     afs_uint32 roid = 0;
     afs_uint32 bkid = 0;
 
+    site.server.id = aserver;
+    site.part.id = apart;
     *anewid = 0;
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, aspare1,
+	code = vs_CreateVolume(conn, &site, aname, aquota, aspare1,
 			       aspare2, aspare3, aspare4, anewid, &roid, &bkid);
 	rx_DestroyConnection(conn);
     }
@@ -117,12 +121,15 @@ UV_CreateVolume2(afs_uint32 aserver, afs_int32 apart, char *aname,
 {
     int code = -1;
     struct rx_connection *conn;
+    struct vsu_site site;
     afs_uint32 roid = 0;
     afs_uint32 bkid = 0;
 
+    site.server.id = aserver;
+    site.part.id = apart;
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, aspare1,
+	code = vs_CreateVolume(conn, &site, aname, aquota, aspare1,
 			       aspare2, aspare3, aspare4, anewid, &roid, &bkid);
 	rx_DestroyConnection(conn);
     }
@@ -137,10 +144,13 @@ UV_CreateVolume3(afs_uint32 aserver, afs_int32 apart, char *aname,
 {
     int code = -1;
     struct rx_connection *conn;
+    struct vsu_site site;
 
+    site.server.id = aserver;
+    site.part.id = apart;
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, aspare1,
+	code = vs_CreateVolume(conn, &site, aname, aquota, aspare1,
 			       aspare2, aspare3, aspare4, anewid, aroid, abkid);
 	rx_DestroyConnection(conn);
     }

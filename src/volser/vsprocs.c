@@ -564,7 +564,7 @@ vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
  * @return 0 on success, error code otherwise.
  */
 int
-vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart, char *aname,
+vs_CreateVolume(struct rx_connection *aconn, struct vsu_site *site, char *aname,
 		 afs_int32 aquota, afs_int32 aspare1, afs_int32 aspare2,
 		 afs_int32 aspare3, afs_int32 aspare4, afs_uint32 * anewid,
 		 afs_uint32 * aroid, afs_uint32 * abkid)
@@ -631,7 +631,7 @@ vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart
     }
 
     code =
-	AFSVolCreateVolume_retry(aconn, apart, aname, volser_RW, 0, anewid, &tid);
+	AFSVolCreateVolume_retry(aconn, site->part.id, aname, volser_RW, 0, anewid, &tid);
     EGOTO2(cfail, code, "Failed to create the volume %s %u \n", aname,
 	   *anewid);
 
@@ -648,10 +648,8 @@ vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart
     /* set up the vldb entry for this volume */
     strncpy(entry.name, aname, VOLSER_OLDMAXVOLNAME);
     entry.nServers = 1;
-    entry.serverNumber[0] = aserver;	/* this should have another
-					 * level of indirection later */
-    entry.serverPartition[0] = apart;	/* this should also have
-					 * another indirection level */
+    entry.serverNumber[0] = site->server.id;
+    entry.serverPartition[0] = site->part.id;
     entry.flags = VLF_RWEXISTS;	/* this records that rw volume exists */
     entry.serverFlags[0] = VLSF_RWVOL;	/*this rep site has rw  vol */
     entry.volumeId[RWVOL] = *anewid;

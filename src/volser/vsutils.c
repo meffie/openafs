@@ -467,3 +467,12 @@ vsu_GetVolumeID(char *astring, struct ubik_client *acstruct, afs_int32 *errp)
     *errp = vcode;
     return 0;		/* can't find volume */
 }
+
+int
+vsu_NewConnBySite(struct rx_connection **conn, struct nvldbentry *entry,
+		  afs_int32 index, afs_int32 voltype)
+{
+    /* todo */
+    return 0;
+}
+
