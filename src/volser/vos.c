@@ -57,12 +57,6 @@
 #include <regex.h>
 #endif
 
-/*
- * Rx security class and index for volume server connections.
- */
-static struct rx_securityClass *securityClass = 0;
-static int securityIndex = -1;
-
 /* Local Prototypes */
 static int PrintDiagnostics(char *astring, afs_int32 acode);
 static int GetVolumeInfo(afs_uint32 volid, afs_uint32 *server, afs_int32 *part,
@@ -308,6 +302,8 @@ GetConnByName(char *name, struct rx_connection **conn)
 {
     int code;
     struct rx_connection *tc = NULL;
+    struct rx_securityClass *securityClass;
+    afs_int32 securityIndex;
     char port[16];
     struct addrinfo hints;
     struct addrinfo *results = NULL;
@@ -325,6 +321,7 @@ GetConnByName(char *name, struct rx_connection **conn)
 		name, gai_strerror(code), code);
 	return code;
     }
+    vs_GetSecurity(&securityClass, &securityIndex);
     for (r = results; r; r = r->ai_next) {
 	opr_sockaddr *addr = (opr_sockaddr*)r->ai_addr;
 	tc = rx_NewConnectionSA(addr, VOLSERVICE_ID, securityClass, securityIndex);
@@ -6147,15 +6144,6 @@ win32_enableCrypt(void)
 #endif /* AFS_NT40_ENV */
 
 static int
-SetSecurity(struct rx_securityClass *as, afs_int32 aindex)
-{
-    securityClass = as;
-    securityIndex = aindex;
-    UV_SetSecurity(as, aindex);  /* for UV_Bind() */
-    return 0;
-}
-
-static int
 MyBeforeProc(struct cmd_syndesc *as, void *arock)
 {
     char *tcell;
@@ -6208,7 +6196,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	rxgk_seclevel_str = NULL;
     }
 
-    if ((code = vsu_ClientInit(confdir, tcell, secFlags, SetSecurity,
+    if ((code = vsu_ClientInit(confdir, tcell, secFlags, vs_SetSecurity,
 			       &cstruct))) {
 	fprintf(STDERR, "could not initialize VLDB library (code=%lu) \n",
 		(unsigned long)code);

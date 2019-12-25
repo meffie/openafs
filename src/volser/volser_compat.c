@@ -34,15 +34,11 @@
 
 /* vsproc.c */
 
-static struct rx_securityClass *uvclass = 0;
-static int uvindex = -1;
 /* called by VLDBClient_Init to set the security module to be used in the RPC */
 int
 UV_SetSecurity(struct rx_securityClass *as, afs_int32 aindex)
 {
-    uvindex = aindex;
-    uvclass = as;
-    return 0;
+    return vs_SetSecurity(as, aindex);
 }
 
 /* bind to volser on <port> <aserver> */
@@ -50,11 +46,12 @@ UV_SetSecurity(struct rx_securityClass *as, afs_int32 aindex)
 struct rx_connection *
 UV_Bind(afs_uint32 aserver, afs_int32 port)
 {
-    struct rx_connection *tc;
+    struct rx_securityClass *sc;
+    afs_int32 index;
 
-    tc = rx_NewConnection(aserver, htons(port), VOLSERVICE_ID, uvclass,
-			  uvindex);
-    return tc;
+    vs_GetSecurity(&sc, &index);
+    port = htons(port);
+    return rx_NewConnection(aserver, port, VOLSERVICE_ID, sc, index);
 }
 
 /* forcibly remove a volume.  Very dangerous call */

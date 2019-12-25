@@ -39,6 +39,8 @@ extern int PrintError(char *msg, afs_int32 errcode);
 extern void init_volintInfo(struct volintInfo *vinfo);
 extern void SubEnumerateEntry(struct nvldbentry *entry);
 extern void EnumerateEntry(struct nvldbentry *entry);
+extern int vs_SetSecurity(struct rx_securityClass *as, afs_int32 aindex);
+extern int vs_GetSecurity(struct rx_securityClass **asp, afs_int32 *aindexp);
 extern int vs_DeleteVolume(struct rx_connection *aconn, afs_uint32 aserver,
 			   afs_int32 apart, afs_uint32 avolid);
 extern int vs_ListOneVolume(struct rx_connection *aconn, afs_uint32 aserver,

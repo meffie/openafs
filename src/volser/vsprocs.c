@@ -414,6 +414,24 @@ void init_volintInfo(struct volintInfo *vinfo) {
     vinfo->spare3 = -1;
 }
 
+static struct rx_securityClass *uvclass = 0;
+static int uvindex = -1;
+int
+vs_SetSecurity(struct rx_securityClass *as, afs_int32 aindex)
+{
+    uvindex = aindex;
+    uvclass = as;
+    return 0;
+}
+
+int
+vs_GetSecurity(struct rx_securityClass **asp, afs_int32 *aindexp)
+{
+    *aindexp = uvindex;
+    *asp = uvclass;
+    return 0;
+}
+
 static int
 AFSVolCreateVolume_retry(struct rx_connection *z_conn,
 		       afs_int32 partition, char *name, afs_int32 type,
