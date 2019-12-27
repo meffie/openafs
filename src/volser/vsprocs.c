@@ -1459,11 +1459,6 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
     int same;
     char hoststr[16];
 
-#ifdef	ENABLE_BUGFIX_1165
-    volEntries volumeInfo;
-    struct volintInfo *infop = 0;
-#endif
-
     islocked = 0;
     fromconn = (struct rx_connection *)0;
     toconn = (struct rx_connection *)0;
@@ -1692,26 +1687,6 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
 	fromDate = 0;
     }
 
-
-#ifdef	ENABLE_BUGFIX_1165
-    /*
-     * Get the internal volume state from the source volume. We'll use such info (i.e. dayUse)
-     * to copy it to the new volume (via AFSSetInfo later on) so that when we move volumes we
-     * don't use this information...
-     */
-    volumeInfo.volEntries_val = (volintInfo *) 0;	/*this hints the stub to allocate space */
-    volumeInfo.volEntries_len = 0;
-    code = AFSVolListOneVolume(fromconn, afrompart, afromvol, &volumeInfo);
-    EGOTO1(mfail, code,
-	   "Failed to get the volint Info of the cloned volume %u\n",
-	   afromvol);
-
-    infop = (volintInfo *) volumeInfo.volEntries_val;
-    infop->maxquota = -1;	/* Else it will replace the default quota */
-    infop->creationDate = -1;	/* Else it will use the source creation date */
-    infop->updateDate = -1;	/* Else it will use the source update date */
-#endif
-
     /* create a volume on the target machine */
     volid = afromvol;
     code = DoVolDelete(toconn, volid, atopart,
@@ -1816,15 +1791,6 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
     EGOTO(mfail, code,
 	  "Failed to set the flags to make new source volume online\n");
     VDONE;
-
-#ifdef	ENABLE_BUGFIX_1165
-    VPRINT1("Setting volume status on destination volume %u ...", volid);
-    code = AFSVolSetInfo(toconn, totid, infop);
-    EGOTO1(mfail, code,
-	   "Failed to set volume status on the destination volume %u\n",
-	   volid);
-    VDONE;
-#endif
 
     /* put new volume online */
     VPRINT1("Ending transaction on destination volume %u ...", afromvol);
@@ -2034,10 +2000,6 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
     }
     if (volName)
 	free(volName);
-#ifdef	ENABLE_BUGFIX_1165
-    if (infop)
-	free(infop);
-#endif
     if (fromconn)
 	rx_DestroyConnection(fromconn);
     if (toconn)
@@ -2185,10 +2147,6 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
   done:			/* routine cleanup */
     if (volName)
 	free(volName);
-#ifdef	ENABLE_BUGFIX_1165
-    if (infop)
-	free(infop);
-#endif
     if (fromconn)
 	rx_DestroyConnection(fromconn);
     if (toconn)
