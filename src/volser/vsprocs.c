@@ -177,8 +177,10 @@ static int DoVolDelete(struct rx_connection *aconn, afs_uint32 avolid,
 static afs_int32 CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver,
 			     afs_int32 apart, afs_int32 * modentry,
 			     afs_uint32 * maxvolid, struct nvldbentry *aentry);
-static afs_int32 VolumeExists(afs_uint32 server, afs_int32 partition,
-                              afs_uint32 volumeid);
+static afs_int32 VolumeExists(struct rx_connection *conn, afs_int32 partition,
+			      afs_uint32 volumeid);
+static afs_int32 VolumeExistsAtSite(struct nvldbentry *entry, afs_int32 index,
+				    afs_int32 vtype);
 static afs_int32 CheckVldbRWBK(struct nvldbentry * entry,
                                afs_int32 * modified);
 static afs_int32 CheckVldbRO(struct nvldbentry *entry, afs_int32 * modified);
@@ -3015,8 +3017,9 @@ GetTrans(struct nvldbentry *vldbEntryPtr, afs_int32 index,
     *uptimePtr = 0;
 
     /* get connection to the replication site */
-    *connPtr = UV_Bind(vldbEntryPtr->serverNumber[index], AFSCONF_VOLUMEPORT);
-    if (!*connPtr)
+    code = VLDB_NewConnByServerId(connPtr, uvclass, uvindex,
+				  vldbEntryPtr->serverNumber[index]);
+    if (code)
 	goto fail;		/* server is down */
 
     volid = vldbEntryPtr->volumeId[ROVOL];
@@ -3462,13 +3465,13 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
     cloneVolId = (complete_release || entry.cloneId == 0)
 		  ? entry.volumeId[ROVOL] : entry.cloneId;
 
-    code = VolumeExists(afromserver, afrompart, cloneVolId);
-    roexists = ((code == ENODEV) ? 0 : 1);
-
     fromconn = UV_Bind(afromserver, AFSCONF_VOLUMEPORT);
     if (!fromconn)
 	ONERROR(-1, afromserver,
 		"Cannot establish connection with server 0x%x\n");
+
+    code = VolumeExists(fromconn, afrompart, cloneVolId);
+    roexists = ((code == ENODEV) ? 0 : 1);
 
     if (!complete_release) {
 	if (!roexists) {
@@ -3593,8 +3596,9 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 		if ((entry.serverFlags[vldbindex] & VLSF_DONTUSE)) {
 		    continue;
 		}
-		conn = UV_Bind(entry.serverNumber[vldbindex], AFSCONF_VOLUMEPORT);
-		if (!conn) {
+		code = VLDB_NewConnByServerId(&conn, uvclass, uvindex,
+					      entry.serverNumber[vldbindex]);
+		if (code) {
 		    fprintf(STDERR, "Cannot establish connection to server %s\n",
 		                    hostutil_GetNameByINet(entry.serverNumber[vldbindex]));
 		    justnewsites = 0;
@@ -4769,10 +4773,12 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
                              noresolve ? afs_inet_ntoa_r(entry.serverNumber[index], hoststr) :
 			     hostutil_GetNameByINet(entry.serverNumber[index]));
 		    } else {
-			tempconn =
-			    UV_Bind(entry.serverNumber[index],
-				    AFSCONF_VOLUMEPORT);
-
+			code = VLDB_NewConnByServerId(&tempconn, uvclass, uvindex,
+						      entry.serverNumber[index]);
+			if (code) {
+			    error = code;
+			    goto refail;
+			}
 			MapPartIdIntoName(entry.serverPartition[index],
 					  apartName);
 			VPRINT3
@@ -6441,37 +6447,65 @@ UV_SyncVldb(afs_uint32 aserver, afs_int32 apart, int flags, int force)
 	}
     }
 
-    if (aconn)
-	rx_DestroyConnection(aconn);
     if (volumeInfo.volEntries_val)
 	free(volumeInfo.volEntries_val);
     PrintError("", error);
     return (error);
 }
 
-/* VolumeExists()
- *      Determine if a volume exists on a server and partition.
- *      Try creating a transaction on the volume. If we can,
- *      the volume exists, if not, then return the error code.
- *      Some error codes mean the volume is unavailable but
- *      still exists - so we catch these error codes.
+/**
+ * Determine if a volume exists on a server and partition.
+ *
+ * Try creating a transaction on the volume. If we can, the volume exists, if
+ * not, then return the error code.  Some error codes mean the volume is
+ * unavailable but still exists - so we catch these error codes.
+ *
+ * @param[in]  conn        rx connection to the volume server
+ * @param[in]  partition   partition id
+ * @param[in]  volumeid    volume id
+ *
+ * @returns  0  volume is present
  */
 static afs_int32
-VolumeExists(afs_uint32 server, afs_int32 partition, afs_uint32 volumeid)
+VolumeExists(struct rx_connection *conn, afs_int32 partition, afs_uint32 volumeid)
 {
-    struct rx_connection *conn = (struct rx_connection *)0;
-    afs_int32 code = -1;
+    afs_int32 code;
     volEntries volumeInfo;
 
-    conn = UV_Bind(server, AFSCONF_VOLUMEPORT);
-    if (conn) {
-	volumeInfo.volEntries_val = (volintInfo *) 0;
-	volumeInfo.volEntries_len = 0;
-	code = AFSVolListOneVolume(conn, partition, volumeid, &volumeInfo);
-	if (volumeInfo.volEntries_val)
-	    free(volumeInfo.volEntries_val);
-	if (code == VOLSERILLEGAL_PARTITION)
-	    code = ENODEV;
+    volumeInfo.volEntries_val = NULL;
+    volumeInfo.volEntries_len = 0;
+    code = AFSVolListOneVolume(conn, partition, volumeid, &volumeInfo);
+    if (volumeInfo.volEntries_val)
+	free(volumeInfo.volEntries_val);
+    if (code == VOLSERILLEGAL_PARTITION)
+	code = ENODEV;
+    return code;
+}
+
+/**
+ * Determine if a volume exists at a site specified in a vldb entry.
+ *
+ * Create a temporary connection to the volume server and check for
+ * the existence of the volume on the partition.
+ *
+ * @param[in] entry    vldb entry
+ * @param[in] index    the site index
+ * @param[in] vtype    the volume type to check
+ *
+ * @returns  0  volume is present
+ */
+static afs_int32
+VolumeExistsAtSite(struct nvldbentry *entry, afs_int32 index, afs_int32 vtype)
+{
+    afs_int32 code;
+    struct rx_connection *conn = NULL;
+    afs_uint32 serverid = entry->serverNumber[index];
+    afs_int32 partition = entry->serverPartition[index];
+    afs_uint32 volumeid = entry->volumeId[vtype];
+
+    code = VLDB_NewConnByServerId(&conn, uvclass, uvindex, serverid);
+    if (code) {
+	code = VolumeExists(conn, partition, volumeid);
 	rx_DestroyConnection(conn);
     }
     return code;
@@ -6502,9 +6536,7 @@ CheckVldbRWBK(struct nvldbentry * entry, afs_int32 * modified)
 	    modentry++;
 	}
     } else {
-	code =
-	    VolumeExists(entry->serverNumber[idx],
-			 entry->serverPartition[idx], entry->volumeId[RWVOL]);
+	code = VolumeExistsAtSite(entry, idx, RWVOL);
 	if (code == 0) {	/* RW volume exists */
 	    if (!(entry->flags & VLF_RWEXISTS)) {	/* ... yet entry says RW does not exist */
 		entry->flags |= VLF_RWEXISTS;	/* ... so say RW does exist */
@@ -6540,10 +6572,7 @@ CheckVldbRWBK(struct nvldbentry * entry, afs_int32 * modified)
 	    modentry++;
 	}
     } else {			/* Found a RW entry */
-	code =
-	    VolumeExists(entry->serverNumber[idx],
-			 entry->serverPartition[idx],
-			 entry->volumeId[BACKVOL]);
+	code = VolumeExistsAtSite(entry, idx, BACKVOL);
 	if (code == 0) {	/* BK volume exists */
 	    if (!(entry->flags & VLF_BACKEXISTS)) {	/* ... yet entry says BK does not exist */
 		entry->flags |= VLF_BACKEXISTS;	/* ... so say BK does exist */
@@ -6607,9 +6636,7 @@ CheckVldbRO(struct nvldbentry *entry, afs_int32 * modified)
 	    continue;		/* not a RO */
 	}
 
-	code =
-	    VolumeExists(entry->serverNumber[idx],
-			 entry->serverPartition[idx], entry->volumeId[ROVOL]);
+	code = VolumeExistsAtSite(entry, idx, ROVOL);
 	if (code == 0) {	/* RO volume exists */
 	    foundro++;
 	} else if (code == ENODEV) {	/* RW volume does not exist */
@@ -6953,7 +6980,12 @@ UV_RenameVolume(struct nvldbentry *entry, char oldname[], char newname[])
 	    error = VOLSERVLDB_ERROR;
 	    goto rvfail;
 	}
-	aconn = UV_Bind(entry->serverNumber[index], AFSCONF_VOLUMEPORT);
+	code = VLDB_NewConnByServerId(&aconn, uvclass, uvindex,
+				      entry->serverNumber[index]);
+	if (code) {
+	    error = code;
+	    goto rvfail;
+	}
 	code =
 	    AFSVolTransCreate_retry(aconn, entry->volumeId[RWVOL],
 			      entry->serverPartition[index], ITOffline, &tid);
@@ -7003,7 +7035,12 @@ UV_RenameVolume(struct nvldbentry *entry, char oldname[], char newname[])
 	    error = VOLSERVLDB_ERROR;
 	    goto rvfail;
 	}
-	aconn = UV_Bind(entry->serverNumber[index], AFSCONF_VOLUMEPORT);
+	code = VLDB_NewConnByServerId(&aconn, uvclass, uvindex,
+				      entry->serverNumber[index]);
+	if (code) {
+	    error = code;
+	    goto rvfail;
+	}
 	code =
 	    AFSVolTransCreate_retry(aconn, entry->volumeId[BACKVOL],
 			      entry->serverPartition[index], ITOffline, &tid);
@@ -7053,7 +7090,12 @@ UV_RenameVolume(struct nvldbentry *entry, char oldname[], char newname[])
     if (entry->flags & VLF_ROEXISTS) {	/*process the ro volumes */
 	for (i = 0; i < entry->nServers; i++) {
 	    if (entry->serverFlags[i] & VLSF_ROVOL) {
-		aconn = UV_Bind(entry->serverNumber[i], AFSCONF_VOLUMEPORT);
+		code = VLDB_NewConnByServerId(&aconn, uvclass, uvindex,
+					      entry->serverNumber[i]);
+		if (code) {
+		    error = code;
+		    goto rvfail;
+		}
 		code =
 		    AFSVolTransCreate_retry(aconn, entry->volumeId[ROVOL],
 				      entry->serverPartition[i], ITOffline,

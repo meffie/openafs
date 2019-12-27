@@ -12,4 +12,10 @@ extern int VLDB_ListAttributesN2(VldbListByAttributes *attrp, char *name, afs_in
 extern int VLDB_IsSameAddrs(afs_uint32 serv1, afs_uint32 serv2, afs_int32 *errorp);
 extern int vsu_ExtractName(char rname[], char name[]);
 extern afs_uint32 vsu_GetVolumeID(char *astring, struct ubik_client *acstruct, afs_int32 *errp);
+
+extern int VLDB_NewConnByServerId(struct rx_connection **conn,
+		  struct rx_securityClass *securityClass,
+		  afs_int32 securityIndex,
+		  afs_uint32 serverId);
+
 #endif

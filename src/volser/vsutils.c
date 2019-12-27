@@ -467,3 +467,70 @@ vsu_GetVolumeID(char *astring, struct ubik_client *acstruct, afs_int32 *errp)
     *errp = vcode;
     return 0;		/* can't find volume */
 }
+
+/**
+ * Create a connection to the volume server by server id.
+ *
+ * @param[out]  conn           new rx connection
+ * @param[in]   securityClass  security class for the connection
+ * @param[in]   securityIndex  security index for the connection
+ * @param[in]   serverId       the server id of the fileserver
+ *
+ * @note  Should eventually support uuid server ids.
+ */
+int
+VLDB_NewConnByServerId(struct rx_connection **conn,
+		       struct rx_securityClass *securityClass,
+		       afs_int32 securityIndex,
+		       afs_uint32 serverId)
+{
+    int code;
+    ListAddrByAttributes attrs;
+    bulkaddrs addrs;
+    afsUUID uuid;
+    afs_int32 unique;
+    afs_int32 nentries;
+    afs_int32 i;
+    struct in_addr addr;
+    struct rx_connection *tconn;
+    afs_int16 port = htons(AFSCONF_VOLUMEPORT);
+
+    /*
+     * Legacy short-circuit; assume the 32-bit serverId is the fileserver IPv4
+     * address and try to connect with it.
+     */
+    addr.s_addr = serverId;
+    tconn = rx_NewConnection(addr.s_addr, port, VOLSERVICE_ID,
+			     securityClass, securityIndex);
+    if (tconn) {
+	*conn = tconn;
+	return 0;
+    }
+
+    /*
+     * Look up the addresses for this server id and try to connect in the order
+     * given by the vl server.
+     */
+    memset(&attrs, 0, sizeof(attrs));
+    attrs.Mask = VLADDR_IPADDR;
+    attrs.ipaddr = ntohl(serverId);
+    memset(&addrs, 0, sizeof(addrs));
+    memset(&uuid, 0, sizeof(uuid));
+    code = ubik_VL_GetAddrsU(cstruct, 0, &attrs, &uuid, &unique,
+			     &nentries, &addrs);
+    if (code) {
+	return code;
+    }
+    for (i = 0; i < nentries; i++) {
+	addr.s_addr = htonl(addrs.bulkaddrs_val[i]);
+	if (addr.s_addr == 0)
+	    continue;
+	tconn = rx_NewConnection(addr.s_addr, port, VOLSERVICE_ID,
+				 securityClass, securityIndex);
+	if (tconn) {
+	    *conn = tconn;
+	    return 0;
+	}
+    }
+    return -1;
+}
