@@ -58,6 +58,10 @@ opr_sockaddr_by_inet(opr_sockaddr *dst, struct in_addr addr, afs_uint16 port)
     dst->u.in.sin_family = AF_INET;
     dst->u.in.sin_addr.s_addr = addr.s_addr;
     dst->u.in.sin_port = port;
+    memset(&dst->u.in.sin_zero, 0, sizeof(dst->u.in.sin_zero));
+#ifdef STRUCT_SOCKADDR_AHS_SA_LEN
+    dst->u.in.sin_len = sizeof(struct sockaddr_in);
+#endif
     return 0;
 }
 
@@ -86,5 +90,9 @@ opr_sockaddr_copy(opr_sockaddr *dst, opr_sockaddr *src)
     dst->u.in.sin_family = AF_INET;
     dst->u.in.sin_addr.s_addr = src->u.in.sin_addr.s_addr;
     dst->u.in.sin_port = src->u.in.sin_port;
+    memset(&dst->u.in.sin_zero, 0, sizeof(dst->u.in.sin_zero));
+#ifdef STRUCT_SOCKADDR_AHS_SA_LEN
+    dst->u.in.sin_len = sizeof(struct sockaddr_in);
+#endif
     return 0;
 }
