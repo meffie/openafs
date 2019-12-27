@@ -27,6 +27,11 @@
 #include <roken.h>
 #include "sockaddr.h"
 
+#ifdef KERNEL
+# include "afs/sysincludes.h"
+# include "afsincludes.h"
+#endif
+
 /*
  * Supports only AF_INET (IPv4) at this time.
  */
