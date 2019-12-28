@@ -65,7 +65,7 @@ SOBJS=volmain.o volprocs.o physio.o common.o voltrans.o \
       dumpstuff.o volint.ss.o vol_split.o
 
 LT_objs = vsprocs.lo vsutils.lo lockprocs.lo volint.xdr.lo volerr.lo \
-	  volint.cs.lo
+	  volint.cs.lo volser_compat.lo
 LT_deps = $(top_builddir)/src/opr/liboafs_opr.la \
 	  $(top_builddir)/src/comerr/liboafs_comerr.la \
 	  $(top_builddir)/src/rx/liboafs_rx.la \
@@ -78,15 +78,21 @@ all: volserver vos restorevol voldump \
 	${TOP_INCDIR}/afs/volser.h \
 	${TOP_INCDIR}/afs/vsutils_prototypes.h \
 	${TOP_INCDIR}/afs/volser_prototypes.h \
+	${TOP_INCDIR}/afs/volser_compat.h \
 	${TOP_INCDIR}/afs/volint.h \
 	${TOP_LIBDIR}/libvolser.a
 
 generated: volser.h volerr.c volint.cs.c volint.ss.c volint.xdr.c volint.h
 
+volser_prototypes.h: ${TOP_INCDIR}/afs/volser_compat.h
+
 ${TOP_INCDIR}/afs/vsutils_prototypes.h: vsutils_prototypes.h
 	${INSTALL_DATA} $? $@
 
 ${TOP_INCDIR}/afs/volser_prototypes.h: volser_prototypes.h
+	${INSTALL_DATA} $? $@
+
+${TOP_INCDIR}/afs/volser_compat.h: volser_compat.h
 	${INSTALL_DATA} $? $@
 
 ${TOP_INCDIR}/afs/volser.h: volser.h
@@ -141,6 +147,7 @@ vol_split.o vol_split.lo: volser.h
 voltrans.o voltrans.lo: volser.h
 vos.o vos.lo: volser.h
 vsprocs.o vsprocs.lo: volser.h
+volser_compat.o volser_compat.lo: volser.h
 vsutils.o vsutils.lo: volser.h
 
 volint.cs.c: volint.xg
@@ -172,6 +179,7 @@ dumpstuff.o: dumpstuff.c ${VINCLS} ${RINCLS} ${INTINCLS}
 voldump.o: voldump.c ${VINCLS} ${RINCLS}
 vos.o: vos.c ${VINCLS} ${RINCLS} ${INTINCLS} AFS_component_version_number.c
 vsprocs.lo: vsprocs.c ${VINCLS} ${RINCLS} ${INTINCLS}
+volser_compat.lo: volser_compat.c ${VINCLS} ${RINCLS} ${INTINCLS}
 physio.o: physio.c ${VINCLS}
 common.o: common.c ${VINCLS}
 lockprocs.o: lockprocs.c ${VINCLS} ${INTINCLS} ${RINCLS}
@@ -194,6 +202,7 @@ install: restorevol voldump volser.h volint.h vos volserver libvolser.a
 	${INSTALL_DATA} volser.h ${DESTDIR}${includedir}/afs/volser.h
 	${INSTALL_DATA} volint.h ${DESTDIR}${includedir}/afs/volint.h
 	${INSTALL_DATA} ${srcdir}/vsutils_prototypes.h ${DESTDIR}${includedir}/afs/vsutils_prototypes.h
+	${INSTALL_DATA} ${srcdir}/volser_compat.h ${DESTDIR}${includedir}/afs/volser_compat.h
 	${INSTALL_PROGRAM} vos ${DESTDIR}${sbindir}/vos
 	${INSTALL_PROGRAM} vos ${DESTDIR}${afssrvsbindir}/vos
 	${INSTALL_DATA} libvolser.a ${DESTDIR}${libdir}/afs/libvolser.a
@@ -224,6 +233,7 @@ dest: restorevol voldump volser.h volint.h vos volserver libvolser.a
 	${INSTALL_DATA} volser.h ${DEST}/include/afs/volser.h
 	${INSTALL_DATA} volint.h ${DEST}/include/afs/volint.h
 	${INSTALL_DATA} ${srcdir}/vsutils_prototypes.h ${DEST}/include/afs/vsutils_prototypes.h
+	${INSTALL_DATA} ${srcdir}/volser_compat.h ${DEST}/include/afs/volser_compat.h
 	${INSTALL_PROGRAM} vos ${DEST}/etc/vos
 	${INSTALL_PROGRAM} vos ${DEST}/root.server/usr/afs/bin/vos
 	${INSTALL_DATA} libvolser.a ${DEST}/lib/afs/libvolser.a
