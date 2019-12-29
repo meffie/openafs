@@ -438,6 +438,56 @@ vs_GetSecurityIndex(void)
     return uvindex;
 }
 
+int
+vs_GetServerId(struct rx_connection *conn, afs_uint32 *serverId)
+{
+    int code;
+    afs_uint32 addr;
+    char hostname[MAXHOSTCHARS];
+    char port[16];
+    struct addrinfo hints;
+    struct addrinfo *results = NULL;
+    struct addrinfo *r = NULL;
+
+    /*
+     * Legacy: Use the peer's IPv4 address as the server id.  Eventually, we
+     * should call a new volume server RPC to retrieve the server UUID.
+     */
+    addr = rx_HostOf(rx_PeerOf(conn));
+    if (!rx_IsLoopbackAddr(ntohl(addr))) {
+	*serverId = addr;
+	return 0;
+    }
+
+    /*
+     * It appears we are running on the same host as the volume server.
+     * Try to find a non-loopback IPv4 address for this hostname.
+     */
+    code = gethostname(hostname, sizeof(hostname));
+    if (code)
+	return -1;
+    snprintf(port, sizeof(port), "%d", AFSCONF_VOLUMEPORT);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    code = getaddrinfo(hostname, port, &hints, &results);
+    if (code)
+	return -1;
+    for (r = results; r; r = r->ai_next) {
+	if (r->ai_addr->sa_family == AF_INET) {
+	    struct sockaddr_in *sa = (struct sockaddr_in *)r->ai_addr;
+	    addr = sa->sin_addr.s_addr;
+	    if (!rx_IsLoopbackAddr(ntohl(addr))) {
+		freeaddrinfo(results);
+		*serverId = addr;
+		return 0;
+	    }
+	}
+    }
+    freeaddrinfo(results);
+    return -1;
+}
+
 static int
 AFSVolCreateVolume_retry(struct rx_connection *z_conn,
 		       afs_int32 partition, char *name, afs_int32 type,
@@ -573,7 +623,6 @@ vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
  * Create a volume on the given server and partition
  *
  * @param aconn    connection to volume server to create volume on
- * @param aserver  server id to create volume on
  * @param spart  partition to create volume on
  * @param aname  name of new volume
  * @param aquota  quota for new volume
@@ -588,10 +637,11 @@ vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
  * @return 0 on success, error code otherwise.
  */
 int
-vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart,
+vs_CreateVolume(struct rx_connection *aconn, afs_int32 apart,
 	        char *aname, afs_int32 aquota, afs_uint32 *anewid,
 	        afs_uint32 *aroid, afs_uint32 *abkid)
 {
+    afs_uint32 aserver;
     afs_int32 tid;
     afs_int32 code;
     afs_int32 error;
@@ -607,6 +657,11 @@ vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart
 
     init_volintInfo(&tstatus);
     tstatus.maxquota = aquota;
+
+    code = vs_GetServerId(aconn, &aserver);
+    if (code) {
+	EGOTO(cfail, code, "Could not get the servrer id.\n");
+    }
 
     if (aroid && *aroid) {
 	VPRINT1("Using RO volume ID %d.\n", *aroid);

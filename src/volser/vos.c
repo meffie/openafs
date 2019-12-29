@@ -2051,23 +2051,15 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
     struct nvldbentry entry;
     afs_int32 vcode;
     afs_int32 quota;
-    afs_uint32 tserver;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
 
-
     arovolid = &rovolid;
-
     quota = 5000;
+
     code = GetConnByName(as->parms[0].items->data, &conn);
     if (code) {
 	ERROR_EXIT(code);
-    }
-    tserver = GetServer(as->parms[0].items->data);
-    if (!tserver) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(ENOENT);
     }
     pnum = volutil_GetPartitionID(as->parms[1].items->data);
     if (pnum < 0) {
@@ -2149,7 +2141,7 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
 	}
     }
 
-    code = vs_CreateVolume(conn, tserver, pnum, as->parms[2].items->data,
+    code = vs_CreateVolume(conn, pnum, as->parms[2].items->data,
 			   quota, &volid, arovolid, &bkvolid);
     if (code) {
 	PrintDiagnostics("create", code);
