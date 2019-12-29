@@ -438,6 +438,32 @@ vs_GetSecurityIndex(void)
     return uvindex;
 }
 
+int
+vs_GetServerId(struct rx_connection *conn, afs_uint32 *serverId)
+{
+    struct in_addr addr;
+
+    /*
+     * Legacy: Use the peer's IPv4 address as the server id.  Eventually, we
+     * should call a new volume server RPC to retrieve the server UUID.
+     */
+    addr.s_addr = rx_HostOf(rx_PeerOf(conn));
+    if (rx_IsLoopbackAddr(ntohl(addr.s_addr))) {
+	/*
+	 * Seems we are running on the volume server host.  Try to find a
+	 * non-loopback address to be used as a server id for the vldb.
+	 */
+	char hostname[MAXHOSTCHARS];
+	code = gethostname(hostname, MAXHOSTCHARS);
+	if (code)
+	    return -1;
+
+
+    }
+    *serverId = addr.s_addr;
+    return 0;
+}
+
 static int
 AFSVolCreateVolume_retry(struct rx_connection *z_conn,
 		       afs_int32 partition, char *name, afs_int32 type,
@@ -573,7 +599,6 @@ vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
  * Create a volume on the given server and partition
  *
  * @param aconn    connection to volume server to create volume on
- * @param aserver  server id to create volume on
  * @param spart  partition to create volume on
  * @param aname  name of new volume
  * @param aquota  quota for new volume
@@ -588,10 +613,11 @@ vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
  * @return 0 on success, error code otherwise.
  */
 int
-vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart,
+vs_CreateVolume(struct rx_connection *aconn, afs_int32 apart,
 	        char *aname, afs_int32 aquota, afs_uint32 *anewid,
 	        afs_uint32 *aroid, afs_uint32 *abkid)
 {
+    afs_uint32 aserver;
     afs_int32 tid;
     afs_int32 code;
     afs_int32 error;
@@ -607,6 +633,11 @@ vs_CreateVolume(struct rx_connection *aconn, afs_uint32 aserver, afs_int32 apart
 
     init_volintInfo(&tstatus);
     tstatus.maxquota = aquota;
+
+    code = vs_GetServerId(aconn, &aserver);
+    if (code) {
+	EGOTO(cfail, code, "Could not get the servrer id.\n");
+    }
 
     if (aroid && *aroid) {
 	VPRINT1("Using RO volume ID %d.\n", *aroid);

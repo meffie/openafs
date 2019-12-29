@@ -41,6 +41,7 @@ extern void EnumerateEntry(struct nvldbentry *entry);
 extern int vs_SetSecurity(struct rx_securityClass *as, afs_int32 aindex);
 extern struct rx_securityClass *vs_GetSecurityClass(void);
 extern afs_int32 vs_GetSecurityIndex(void);
+extern int vs_GetServerId(struct rx_connection *conn, afs_uint32 *serverId);
 
 extern int vs_DeleteVolume(struct rx_connection *aconn, afs_uint32 aserver,
 			   afs_int32 apart, afs_uint32 avolid);
@@ -48,7 +49,7 @@ extern int vs_ListOneVolume(struct rx_connection *aconn,
 			    afs_int32 apart, afs_uint32 volid, struct volintInfo **resultPtr);
 extern int vs_PartitionInfo64(struct rx_connection *aconn, char *pname,
 			      struct diskPartition64 *partition);
-extern int vs_CreateVolume(struct rx_connection *conn, afs_uint32 aserver,
+extern int vs_CreateVolume(struct rx_connection *conn,
 			    afs_int32 apart, char *aname,
 			    afs_int32 aquota, afs_uint32 * anewid,
 			    afs_uint32 * aroid, afs_uint32 * abkid);

@@ -94,7 +94,7 @@ UV_CreateVolume(afs_uint32 aserver, afs_int32 apart, char *aname,
     *anewid = 0;
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, anewid,
+	code = vs_CreateVolume(conn, apart, aname, aquota, anewid,
 			       &roid, &bkid);
 	rx_DestroyConnection(conn);
     }
@@ -113,7 +113,7 @@ UV_CreateVolume2(afs_uint32 aserver, afs_int32 apart, char *aname,
 
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, anewid,
+	code = vs_CreateVolume(conn, apart, aname, aquota, anewid,
 			       &roid, &bkid);
 	rx_DestroyConnection(conn);
     }
@@ -131,7 +131,7 @@ UV_CreateVolume3(afs_uint32 aserver, afs_int32 apart, char *aname,
 
     conn = UV_Bind(aserver, AFSCONF_VOLUMEPORT);
     if (conn) {
-	code = vs_CreateVolume(conn, aserver, apart, aname, aquota, anewid,
+	code = vs_CreateVolume(conn, apart, aname, aquota, anewid,
 			       aroid, abkid);
 	rx_DestroyConnection(conn);
     }
