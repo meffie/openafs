@@ -187,24 +187,16 @@ static afs_int32 CheckVldb(struct nvldbentry *entry, afs_int32 * modified,
 static void dump_sig_handler(int x);
 static int sortVolumes(const void *a, const void *b);
 
-
-/*map the partition <partId> into partition name <partName>*/
+/**
+ * Map the partition <partId> into partition name <partName>
+ * Assumes the caller allocated at least 10 characters for the name.
+ *
+ * @note This function is deprecated. Do not use it in new code.
+ */
 void
 MapPartIdIntoName(afs_int32 partId, char *partName)
 {
-    if (partId < 26) {		/* what if partId > = 26 ? */
-	strcpy(partName, "/vicep");
-	partName[6] = partId + 'a';
-	partName[7] = '\0';
-	return;
-    } else if (partId < VOLMAXPARTS) {
-	strcpy(partName, "/vicep");
-	partId -= 26;
-	partName[6] = 'a' + (partId / 26);
-	partName[7] = 'a' + (partId % 26);
-	partName[8] = '\0';
-	return;
-    }
+    volutil_PartitionName_r(partId, partName, 10);
 }
 
 int
