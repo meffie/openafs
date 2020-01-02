@@ -201,6 +201,27 @@ MapPartIdIntoName(afs_int32 partId, char *partName)
     volutil_PartitionName_r(partId, partName, 10);
 }
 
+char *
+servid2str(afs_uint32 serverId, struct serverName *name)
+{
+    struct in_addr addr;
+
+    addr.s_addr = serverId;
+    if (noresolve) {
+	afs_inet_ntoa_r(addr.s_addr, name->buffer);
+    } else {
+	strlcpy(name->buffer, hostutil_GetNameByINet(addr.s_addr),
+		sizeof(name->buffer));
+    }
+    return name->buffer;
+}
+
+char *
+partid2str(afs_int32 partId, struct partName *name)
+{
+    return volutil_PartitionName_r(partId, name->buffer, sizeof(name->buffer));
+}
+
 int
 PrintError(char *msg, afs_int32 errcode)
 {
@@ -479,9 +500,9 @@ void
 SubEnumerateEntry(struct nvldbentry *entry)
 {
     int i;
-    char pname[10];
+    struct partName pname;
     int isMixed = 0;
-    char hoststr[16];
+    struct serverName hoststr;
 
     if (entry->flags & VLF_RWEXISTS)
 	fprintf(STDOUT, "    RWrite: %-10u", entry->volumeId[RWVOL]);
@@ -499,10 +520,9 @@ SubEnumerateEntry(struct nvldbentry *entry)
 	    isMixed = 1;
     }
     for (i = 0; i < entry->nServers; i++) {
-	MapPartIdIntoName(entry->serverPartition[i], pname);
 	fprintf(STDOUT, "       server %s partition %s ",
-		noresolve ? afs_inet_ntoa_r(entry->serverNumber[i], hoststr) :
-                hostutil_GetNameByINet(entry->serverNumber[i]), pname);
+		servid2str(entry->serverNumber[i], &hoststr),
+		partid2str(entry->serverPartition[i], &pname));
 	if (entry->serverFlags[i] & VLSF_RWVOL)
 	    fprintf(STDOUT, "RW Site ");
 	else
@@ -635,6 +655,7 @@ UV_CreateVolume3(afs_uint32 aserver, afs_int32 apart, char *aname,
     afs_int32 lastid;
     struct nvldbentry entry, storeEntry;	/*the new vldb entry */
     struct volintInfo tstatus;
+    struct serverName buf;
 
     tid = 0;
     error = 0;
@@ -1449,7 +1470,7 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
     afs_int32 error;
     char in, lf;		/* for test code */
     int same;
-    char hoststr[16];
+    struct serverName hoststr;
 
     islocked = 0;
     fromconn = (struct rx_connection *)0;
@@ -1521,12 +1542,10 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
 	    fprintf(STDERR, "The current site is :");
 	    for (i = 0; i < entry.nServers; i++) {
 		if (entry.serverFlags[i] == VLSF_RWVOL) {
-		    char pname[10];
-		    MapPartIdIntoName(entry.serverPartition[i], pname);
+		    struct partName pname;
 		    fprintf(STDERR, " server %s partition %s \n",
-			    noresolve ? afs_inet_ntoa_r(entry.serverNumber[i], hoststr) :
-                            hostutil_GetNameByINet(entry.serverNumber[i]),
-			    pname);
+			    servid2str(entry.serverNumber[i], &hoststr),
+			    partid2str(entry.serverPartition[i], &pname));
 		}
 	    }
 	    vcode =
@@ -2999,7 +3018,7 @@ GetTrans(struct nvldbentry *vldbEntryPtr, afs_int32 index,
     struct volser_status tstatus;
     int code = 0;
     int rcode, tcode;
-    char hoststr[16];
+    struct serverName hoststr;
 
     *connPtr = (struct rx_connection *)0;
     *transPtr = 0;
@@ -3062,7 +3081,7 @@ GetTrans(struct nvldbentry *vldbEntryPtr, afs_int32 index,
     /* If the volume does not exist, create it */
     if (!volid || code) {
 	char volname[VL_MAXNAMELEN];
-        char hoststr[16];
+	struct serverName hoststr;
 
 	if (volid && (code != VNOVOL)) {
 	    PrintError("Failed to start a transaction on the RO volume.\n",
@@ -3335,7 +3354,7 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
     } remembertime[NMAXNSERVERS];
     int releasecount = 0;
     struct volser_status volstatus;
-    char hoststr[16];
+    struct serverName hoststr;
     afs_int32 origflags[NMAXNSERVERS];
     struct volser_status orig_status;
     int notreleased = 0;
@@ -3589,8 +3608,9 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 		code = VLDB_NewConnByServerId(&conn, uvclass, uvindex,
 					      entry.serverNumber[vldbindex]);
 		if (code) {
+		    struct serverName hoststr;
 		    fprintf(STDERR, "Cannot establish connection to server %s\n",
-		                    hostutil_GetNameByINet(entry.serverNumber[vldbindex]));
+				    servid2str(entry.serverNumber[vldbindex], &hoststr));
 		    justnewsites = 0;
 		    break;
 		}
@@ -3600,9 +3620,10 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 		                           entry.volumeId[ROVOL],
 		                           &volumeInfo);
 		if (code) {
+		    struct serverName hoststr;
 		    fprintf(STDERR, "Could not fetch information about RO vol %lu from server %s\n",
-		                    (unsigned long)entry.volumeId[ROVOL],
-		                    hostutil_GetNameByINet(entry.serverNumber[vldbindex]));
+				    (unsigned long)entry.volumeId[ROVOL],
+				    servid2str(entry.serverNumber[vldbindex], &hoststr));
 		    PrintError("", code);
 		    justnewsites = 0;
 		    rx_DestroyConnection(conn);
@@ -3931,19 +3952,11 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 	    fprintf(STDOUT, "Starting ForwardMulti from %lu to %u on %s",
 		    (unsigned long)cloneVolId,
 		    entry.volumeId[ROVOL],
-                    noresolve ? afs_inet_ntoa_r(entry.serverNumber[times[0].
-                                                vldbEntryIndex], hoststr) :
-                    hostutil_GetNameByINet(entry.
-					   serverNumber[times[0].
-							vldbEntryIndex]));
+		    servid2str(entry.serverNumber[times[0].vldbEntryIndex], &hoststr));
 
 	    for (s = 1; s < volcount; s++) {
 		fprintf(STDOUT, " and %s",
-                        noresolve ? afs_inet_ntoa_r(entry.serverNumber[times[s].
-                                                    vldbEntryIndex], hoststr) :
-                        hostutil_GetNameByINet(entry.
-					       serverNumber[times[s].
-							    vldbEntryIndex]));
+			servid2str(entry.serverNumber[times[s].vldbEntryIndex], &hoststr));
 	    }
 
 	    if (fromdate == 0)
@@ -4038,16 +4051,15 @@ UV_ReleaseVolume(afs_uint32 afromvol, afs_uint32 afromserver,
 	    failure++;
     }
     if (failure) {
-	char pname[10];
+	struct partName pname;
 	fprintf(STDERR,
 		"The volume %lu could not be released to the following %d sites:\n",
 		(unsigned long)afromvol, failure);
 	for (i = 0; i < entry.nServers; i++) {
 	    if (!(entry.serverFlags[i] & VLSF_NEWREPSITE)) {
-		MapPartIdIntoName(entry.serverPartition[i], pname);
 		fprintf(STDERR, "\t%35s %s\n",
-                        noresolve ? afs_inet_ntoa_r(entry.serverNumber[i], hoststr) :
-                        hostutil_GetNameByINet(entry.serverNumber[i]), pname);
+			servid2str(entry.serverNumber[i], &hoststr),
+			partid2str(entry.serverPartition[i], &pname));
 	    }
 	}
 	MapNetworkToHost(&entry, &storeEntry);
@@ -4440,7 +4452,7 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
     afs_int32 totid, code, rcode, vcode, terror = 0;
     struct volser_status tstatus;
     struct volintInfo vinfo;
-    char partName[10];
+    struct partName partName;
     char tovolreal[VOLSER_OLDMAXVOLNAME];
     afs_uint32 pvolid;
     afs_int32 temptid, pparentid;
@@ -4454,8 +4466,8 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
     VolumeId oldCloneId = 0;
     VolumeId oldBackupId = 0;
     int index, same, errcode;
-    char apartName[10];
-    char hoststr[16];
+    struct partName apartName;
+    struct serverName hoststr;
 
     memset(&cookie, 0, sizeof(cookie));
     islocked = 0;
@@ -4760,8 +4772,7 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
 			VPRINT2
 			    ("Not deleting the previous volume %u on server %s, ...",
 			     pvolid,
-                             noresolve ? afs_inet_ntoa_r(entry.serverNumber[index], hoststr) :
-			     hostutil_GetNameByINet(entry.serverNumber[index]));
+			     servid2str(entry.serverNumber[index], &hoststr));
 		    } else {
 			code = VLDB_NewConnByServerId(&tempconn, uvclass, uvindex,
 						      entry.serverNumber[index]);
@@ -4769,14 +4780,11 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
 			    error = code;
 			    goto refail;
 			}
-			MapPartIdIntoName(entry.serverPartition[index],
-					  apartName);
 			VPRINT3
 			    ("Deleting the previous volume %u on server %s, partition %s ...",
 			     pvolid,
-                             noresolve ? afs_inet_ntoa_r(entry.serverNumber[index], hoststr) :
-			     hostutil_GetNameByINet(entry.serverNumber[index]),
-			     apartName);
+			     servid2str(entry.serverNumber[index], &hoststr),
+			     partid2str(entry.serverPartition[index], &apartName));
 			code = DoVolDelete(tempconn, pvolid,
 					   entry.serverPartition[index],
 					   "the", 0, NULL, NULL);
@@ -4784,8 +4792,6 @@ UV_RestoreVolume2(afs_uint32 toserver, afs_int32 topart, afs_uint32 tovolid,
 			    error = code;
 			    goto refail;
 			}
-			MapPartIdIntoName(entry.serverPartition[index],
-					  partName);
 		    }
 		}
 		entry.serverNumber[index] = toserver;
@@ -4910,7 +4916,7 @@ UV_AddSite2(afs_uint32 server, afs_int32 part, afs_uint32 volid,
     int j, nro = 0, islocked = 0;
     struct nvldbentry entry, storeEntry, entry2;
     afs_int32 vcode, error = 0;
-    char apartName[10];
+    struct partName apartName;
 
     error = ubik_VL_SetLock(cstruct, 0, volid, RWVOL, VLOP_ADDSITE);
     if (error) {
@@ -4956,10 +4962,9 @@ UV_AddSite2(afs_uint32 server, afs_int32 part, afs_uint32 volid,
 			    "Failed to get info about server's %d address(es) from vlserver (err=%d); aborting call!\n",
 			    server, error);
 		} else {
-		    MapPartIdIntoName(entry.serverPartition[j], apartName);
 		    fprintf(STDERR,
 			    "RO already exists on partition %s. Multiple ROs on a single server aren't allowed\n",
-			    apartName);
+			    partid2str(entry.serverPartition[j], &apartName));
 		    error = VOLSERBADOP;
 		}
 		goto asfail;
@@ -5595,10 +5600,10 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
     int j;
     afs_int32 code, error = 0;
     struct nvldbentry entry, storeEntry;
-    char pname[10];
+    struct partName pname;
     int pass = 0, createentry, addvolume, modified, mod, doit = 1;
     afs_uint32 rwvolid;
-    char hoststr[16];
+    struct serverName hoststr;
 
     if (modentry) {
 	if (*modentry == 1)
@@ -5686,23 +5691,16 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 		    if (entry.flags & VLF_RWEXISTS) {
 			/* The RW volume exists elsewhere - report this one a duplicate */
 			if (pass == 1) {
-			    MapPartIdIntoName(apart, pname);
 			    fprintf(STDERR,
 				    "*** Warning: Orphaned RW volume %lu exists on %s %s\n",
 				    (unsigned long)rwvolid,
-                                    noresolve ?
-                                    afs_inet_ntoa_r(aserver, hoststr) :
-				    hostutil_GetNameByINet(aserver), pname);
-			    MapPartIdIntoName(entry.serverPartition[idx],
-					      pname);
+				    servid2str(aserver, &hoststr),
+				    partid2str(apart, &pname));
 			    fprintf(STDERR,
 				    "    VLDB reports RW volume %lu exists on %s %s\n",
 				    (unsigned long)rwvolid,
-                                    noresolve ?
-                                    afs_inet_ntoa_r(entry.serverNumber[idx], hoststr) :
-				    hostutil_GetNameByINet(entry.
-							   serverNumber[idx]),
-				    pname);
+				    servid2str(entry.serverNumber[idx], &hoststr),
+				    partid2str(entry.serverPartition[idx], &pname));
 			}
 		    } else {
 			/* The RW volume does not exist - have VLDB point to this one */
@@ -5711,24 +5709,16 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 			/* Check for orphaned BK volume on old partition */
 			if (entry.flags & VLF_BACKEXISTS) {
 			    if (pass == 1) {
-				MapPartIdIntoName(entry.serverPartition[idx],
-						  pname);
 				fprintf(STDERR,
 					"*** Warning: Orphaned BK volume %u exists on %s %s\n",
 					entry.volumeId[BACKVOL],
-                                        noresolve ?
-                                        afs_inet_ntoa_r(entry.serverNumber[idx], hoststr) :
-					hostutil_GetNameByINet(entry.
-							       serverNumber
-							       [idx]), pname);
-				MapPartIdIntoName(apart, pname);
+					servid2str(entry.serverNumber[idx], &hoststr),
+					partid2str(entry.serverPartition[idx], &pname));
 				fprintf(STDERR,
 					"    VLDB reports its RW volume %lu exists on %s %s\n",
 					(unsigned long)rwvolid,
-                                        noresolve ?
-                                        afs_inet_ntoa_r(aserver, hoststr) :
-					hostutil_GetNameByINet(aserver),
-					pname);
+					servid2str(aserver, &hoststr),
+					partid2str(apart, &pname));
 			    }
 			}
 		    }
@@ -5793,22 +5783,16 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 		if (!Lp_Match(aserver, apart, &entry)) {
 		    /* VLDB says RW and/or BK is elsewhere - report this BK volume orphaned */
 		    if (pass == 1) {
-			MapPartIdIntoName(apart, pname);
 			fprintf(STDERR,
 				"*** Warning: Orphaned BK volume %lu exists on %s %s\n",
 				(unsigned long)volumeinfo->volid,
-                                noresolve ?
-                                afs_inet_ntoa_r(aserver, hoststr) :
-				hostutil_GetNameByINet(aserver), pname);
-			MapPartIdIntoName(entry.serverPartition[idx], pname);
+				servid2str(aserver, &hoststr),
+				partid2str(apart, &pname));
 			fprintf(STDERR,
 				"    VLDB reports its RW/BK volume %lu exists on %s %s\n",
 				(unsigned long)rwvolid,
-                                noresolve ?
-                                afs_inet_ntoa_r(entry.serverNumber[idx], hoststr) :
-				hostutil_GetNameByINet(entry.
-						       serverNumber[idx]),
-				pname);
+				servid2str(entry.serverNumber[idx], &hoststr),
+				partid2str(entry.serverPartition[idx], &pname));
 		    }
 		} else {
 		    if (volumeinfo->volid != entry.volumeId[BACKVOL]) {
@@ -5819,30 +5803,23 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 			    addvolume++;
 
 			    if (pass == 1) {
-				MapPartIdIntoName(entry.serverPartition[idx],
-						  pname);
 				fprintf(STDERR,
 					"*** Warning: Orphaned BK volume %u exists on %s %s\n",
 					entry.volumeId[BACKVOL],
-                                        noresolve ?
-                                        afs_inet_ntoa_r(aserver, hoststr) :
-					hostutil_GetNameByINet(aserver),
-					pname);
+					servid2str(aserver, &hoststr),
+					partid2str(
+					    entry.serverPartition[idx], &pname));
 				fprintf(STDERR,
 					"    VLDB reports its BK volume ID is %lu\n",
 					(unsigned long)volumeinfo->volid);
 			    }
 			} else {
 			    if (pass == 1) {
-				MapPartIdIntoName(entry.serverPartition[idx],
-						  pname);
 				fprintf(STDERR,
 					"*** Warning: Orphaned BK volume %lu exists on %s %s\n",
-                                        (unsigned long)volumeinfo->volid,
-                                        noresolve ?
-                                        afs_inet_ntoa_r(aserver, hoststr) :
-                                        hostutil_GetNameByINet(aserver),
-					pname);
+					(unsigned long)volumeinfo->volid,
+					servid2str(aserver, &hoststr),
+					partid2str(entry.serverPartition[idx], &pname));
 				fprintf(STDERR,
 					"    VLDB reports its BK volume ID is %u\n",
 					entry.volumeId[BACKVOL]);
@@ -5907,15 +5884,11 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 		    if (entry.serverFlags[j] & VLSF_ROVOL) {
 			/* Verify this volume exists and print message we are orphaning it */
 			if (pass == 1) {
-			    MapPartIdIntoName(apart, pname);
 			    fprintf(STDERR,
 				    "*** Warning: Orphaned RO volume %u exists on %s %s\n",
 				    entry.volumeId[ROVOL],
-                                    noresolve ?
-                                    afs_inet_ntoa_r(entry.serverNumber[j], hoststr) :
-                                    hostutil_GetNameByINet(entry.
-							   serverNumber[j]),
-				    pname);
+				    servid2str(entry.serverNumber[j], &hoststr),
+				    partid2str(apart, &pname));
 			    fprintf(STDERR,
 				    "    VLDB reports its RO volume ID is %lu\n",
 				    (unsigned long)volumeinfo->volid);
@@ -5937,13 +5910,11 @@ CheckVolume(volintInfo * volumeinfo, afs_uint32 aserver, afs_int32 apart,
 		 * and the vol hdr's ID is lower (implies its older). So orphan it.
 		 */
 		if (pass == 1) {
-		    MapPartIdIntoName(apart, pname);
 		    fprintf(STDERR,
 			    "*** Warning: Orphaned RO volume %lu exists on %s %s\n",
-                            (unsigned long)volumeinfo->volid,
-                            noresolve ?
-                            afs_inet_ntoa_r(aserver, hoststr) :
-                            hostutil_GetNameByINet(aserver), pname);
+			    (unsigned long)volumeinfo->volid,
+			    servid2str(aserver, &hoststr),
+			    partid2str(apart, &pname));
 		    fprintf(STDERR,
 			    "    VLDB reports its RO volume ID is %u\n",
 			    entry.volumeId[ROVOL]);
@@ -6337,7 +6308,6 @@ UV_SyncVldb(afs_uint32 aserver, afs_int32 apart, int flags, int force)
     /* Step through the array of partitions */
     for (i = 0; i < pcnt; i++) {
 	apart = PartList.partId[i];
-	MapPartIdIntoName(apart, pname);
 
 	volumeInfo.volEntries_val = (volintInfo *) 0;
 	volumeInfo.volEntries_len = 0;
@@ -6364,9 +6334,8 @@ UV_SyncVldb(afs_uint32 aserver, afs_int32 apart, int flags, int force)
 		fprintf(STDOUT,
 			"Processing volume entry %d: %s (%lu) on server %s %s...\n",
 			j + 1, vi->name, (unsigned long)vi->volid,
-                        noresolve ?
-                        afs_inet_ntoa_r(aserver, hoststr) :
-                        hostutil_GetNameByINet(aserver), pname);
+			servid2str(aserver, &hoststr),
+			partid2str(apart, &pname));
 		fflush(STDOUT);
 	    }
 
@@ -6395,9 +6364,8 @@ UV_SyncVldb(afs_uint32 aserver, afs_int32 apart, int flags, int force)
 	if (pfail) {
 	    fprintf(STDERR,
 		    "Could not process entries on server %s partition %s\n",
-                    noresolve ?
-                    afs_inet_ntoa_r(aserver, hoststr) :
-                    hostutil_GetNameByINet(aserver), pname);
+		    servid2str(aserver, &hoststr),
+		    partid2str(apart, &pname));
 	}
 	if (volumeInfo.volEntries_val) {
 	    free(volumeInfo.volEntries_val);
@@ -6510,8 +6478,8 @@ CheckVldbRWBK(struct nvldbentry * entry, afs_int32 * modified)
     int modentry = 0;
     int idx;
     afs_int32 code, error = 0;
-    char pname[10];
-    char hoststr[16];
+    struct partName pname;
+    struct serverName hoststr;
 
     if (modified)
 	*modified = 0;
@@ -6540,14 +6508,11 @@ CheckVldbRWBK(struct nvldbentry * entry, afs_int32 * modified)
 	} else {
 	    /* If VLDB says it didn't exist, then ignore error */
 	    if (entry->flags & VLF_RWEXISTS) {
-		MapPartIdIntoName(entry->serverPartition[idx], pname);
 		fprintf(STDERR,
 			"Transaction call failed for RW volume %u on server %s %s\n",
 			entry->volumeId[RWVOL],
-                        noresolve ?
-                        afs_inet_ntoa_r(entry->serverNumber[idx], hoststr) :
-                        hostutil_GetNameByINet(entry->serverNumber[idx]),
-			pname);
+			servid2str(entry->serverNumber[idx], &hoststr),
+			partid2str(entry->serverPartition[idx], &pname));
 		ERROR_EXIT(code);
 	    }
 	}
@@ -6576,14 +6541,11 @@ CheckVldbRWBK(struct nvldbentry * entry, afs_int32 * modified)
 	} else {
 	    /* If VLDB says it didn't exist, then ignore error */
 	    if (entry->flags & VLF_BACKEXISTS) {
-		MapPartIdIntoName(entry->serverPartition[idx], pname);
 		fprintf(STDERR,
 			"Transaction call failed for BK volume %u on server %s %s\n",
 			entry->volumeId[BACKVOL],
-                        noresolve ?
-                        afs_inet_ntoa_r(entry->serverNumber[idx], hoststr) :
-                        hostutil_GetNameByINet(entry->serverNumber[idx]),
-			pname);
+			servid2str(entry->serverNumber[idx], &hoststr),
+			partid2str(entry->serverPartition[idx], &pname));
 		ERROR_EXIT(code);
 	    }
 	}
@@ -6612,8 +6574,8 @@ CheckVldbRO(struct nvldbentry *entry, afs_int32 * modified)
     int idx;
     int foundro = 0, modentry = 0;
     afs_int32 code, error = 0;
-    char pname[10];
-    char hoststr[16];
+    struct partName pname;
+    struct serverName hoststr;
 
     if (modified)
 	*modified = 0;
@@ -6636,13 +6598,11 @@ CheckVldbRO(struct nvldbentry *entry, afs_int32 * modified)
 	    idx--;
 	    modentry++;
 	} else {
-	    MapPartIdIntoName(entry->serverPartition[idx], pname);
 	    fprintf(STDERR,
 		    "Transaction call failed for RO %u on server %s %s\n",
 		    entry->volumeId[ROVOL],
-                    noresolve ?
-                    afs_inet_ntoa_r(entry->serverNumber[idx], hoststr) :
-                    hostutil_GetNameByINet(entry->serverNumber[idx]), pname);
+		    servid2str(entry->serverNumber[idx], &hoststr),
+		    partid2str(entry->serverPartition[idx], &pname));
 	    ERROR_EXIT(code);
 	}
     }
@@ -6932,7 +6892,7 @@ UV_RenameVolume(struct nvldbentry *entry, char oldname[], char newname[])
     afs_int32 tid;
     struct rx_connection *aconn;
     int islocked;
-    char hoststr[16];
+    struct serverName hoststr;
 
     error = 0;
     aconn = (struct rx_connection *)0;
@@ -7112,10 +7072,8 @@ UV_RenameVolume(struct nvldbentry *entry, char oldname[], char newname[])
 		    if (!code) {
 			VPRINT2("Renamed RO volume %s on host %s\n",
 				nameBuffer,
-                                noresolve ?
-                                afs_inet_ntoa_r(entry->serverNumber[i], hoststr) :
-                                hostutil_GetNameByINet(entry->
-						       serverNumber[i]));
+				servid2str(entry->serverNumber[i],
+				    &hoststr));
 			code = AFSVolEndTrans(aconn, tid, &rcode);
 			tid = 0;
 			if (code) {
