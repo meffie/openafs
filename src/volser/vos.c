@@ -2337,8 +2337,6 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("move", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu moved from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
@@ -2487,8 +2485,6 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("copy", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu copied from %s %s to %s on %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    tovolume, as->parms[4].items->data, toPartName);
@@ -2686,8 +2682,6 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("shadow", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu shadowed from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
@@ -2703,7 +2697,7 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
     afs_uint32 volid, cloneid;
     afs_uint32 server;
     afs_int32 part, voltype;
-    char partName[10], *volname;
+    char *volname;
     afs_int32 code, err, flags;
     struct nvldbentry entry;
     afs_int32 error = 0;
@@ -2798,7 +2792,6 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("clone", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(part, partName);
     fprintf(STDOUT, "Created clone for volume %s\n",
 	    as->parms[0].items->data);
 
@@ -5117,7 +5110,6 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 	}
 
     }
-    MapPartIdIntoName(apart, pname);
     if (totalE)
 	fprintf(STDOUT,
 		"Could not lock %lu VLDB entries of %lu locked entries\n",
