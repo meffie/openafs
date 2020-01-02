@@ -35,8 +35,13 @@ extern afs_int32 GCTrans(void);
 /* vsprocs.c */
 struct nvldbentry;
 struct serverName {
-    char buf[256];
+    char buffer[64];
 };
+struct partName {
+    char buffer[10];
+};
+char *servid2str(afs_uint32 serverId, struct serverName *name);
+char *partid2str(afs_int32 partId, struct partName *name);
 extern int PrintError(char *msg, afs_int32 errcode);
 extern void init_volintInfo(struct volintInfo *vinfo);
 extern void SubEnumerateEntry(struct nvldbentry *entry);

@@ -573,7 +573,7 @@ DisplayFormat(volintInfo *pntr, afs_uint32 server, afs_int32 part,
 	      int longlist, int disp)
 {
     struct serverName hoststr;
-    char pname[10];
+    struct partName pname;
     time_t t;
 
     if (fast) {
@@ -599,9 +599,9 @@ DisplayFormat(volintInfo *pntr, afs_uint32 server, afs_int32 part,
 	    if (pntr->needsSalvaged == 1)
 		fprintf(STDOUT, "**needs salvage**");
 	    fprintf(STDOUT, "\n");
-	    MapPartIdIntoName(part, pname);
-	    fprintf(STDOUT, "    %s %s \n", vs_GetServerNameById(server, &hoststr),
-		    pname);
+	    fprintf(STDOUT, "    %s %s \n",
+		    servid2str(server, &hoststr),
+		    partid2str(part, &pname));
 	    fprintf(STDOUT, "    RWrite %10lu ROnly %10lu Backup %10lu \n",
 		    (unsigned long)pntr->parentID,
 		    (unsigned long)pntr->cloneID,
@@ -720,7 +720,7 @@ XDisplayFormat(volintXInfo *a_xInfoP, afs_uint32 a_servID, afs_int32 a_partID,
 {				/*XDisplayFormat */
     time_t t;
     struct serverName hoststr;
-    char pname[10];
+    struct partName pname;
 
     if (a_fast) {
 	/*
@@ -753,9 +753,9 @@ XDisplayFormat(volintXInfo *a_xInfoP, afs_uint32 a_servID, afs_int32 a_partID,
 		(*a_totalNotOKP)++;
 	    }
 	    fprintf(STDOUT, "\n");
-	    MapPartIdIntoName(a_partID, pname);
-	    fprintf(STDOUT, "    %s %s \n", vs_GetServerNameById(a_servID, &hoststr),
-		    pname);
+	    fprintf(STDOUT, "    %s %s \n",
+		    servid2str(a_servID, &hoststr),
+		    partid2str(a_partID, &pname));
 	    fprintf(STDOUT, "    RWrite %10lu ROnly %10lu Backup %10lu \n",
 		    (unsigned long)a_xInfoP->parentID,
 		    (unsigned long)a_xInfoP->cloneID,
@@ -966,9 +966,9 @@ XDisplayFormat2(volintXInfo *a_xInfoP, afs_uint32 a_servID, afs_int32 a_partID,
 	    /*
 	     * Volume's status is OK - all the fields are valid.
 	     */
-
-		static long server_cache = -1, partition_cache = -1;
-		static char hostname[256], address[32], pname[16];
+		static long server_cache = -1;
+		static char hostname[256], address[32];
+		struct partName pname;
 		int i,ai[] = {VOLINT_STATS_TIME_IDX_0,VOLINT_STATS_TIME_IDX_1,VOLINT_STATS_TIME_IDX_2,
 			      VOLINT_STATS_TIME_IDX_3,VOLINT_STATS_TIME_IDX_4,VOLINT_STATS_TIME_IDX_5};
 
@@ -977,19 +977,15 @@ XDisplayFormat2(volintXInfo *a_xInfoP, afs_uint32 a_servID, afs_int32 a_partID,
 			struct serverName hoststr;
 
 			s.s_addr = a_servID;
-			strcpy(hostname, vs_GetServerNameById(a_servID, &hoststr));
+			strcpy(hostname, servid2str(a_servID, &hoststr));
 			strcpy(address, inet_ntoa(s));
 			server_cache = a_servID;
-		}
-		if (a_partID != partition_cache) {
-			MapPartIdIntoName(a_partID, pname);
-			partition_cache = a_partID;
 		}
 
 		fprintf(STDOUT, "name\t\t%s\n", a_xInfoP->name);
 		fprintf(STDOUT, "id\t\t%lu\n", afs_printable_uint32_lu(a_xInfoP->volid));
 		fprintf(STDOUT, "serv\t\t%s\t%s\n", address, hostname);
-		fprintf(STDOUT, "part\t\t%s\n", pname);
+		fprintf(STDOUT, "part\t\t%s\n", partid2str(a_partID, &pname));
 		fprintf(STDOUT, "status\t\tOK\n");
 		fprintf(STDOUT, "backupID\t%lu\n",
 			afs_printable_uint32_lu(a_xInfoP->backupID));
@@ -1121,8 +1117,9 @@ XDisplayFormat2(volintXInfo *a_xInfoP, afs_uint32 a_servID, afs_int32 a_partID,
 static void
 DisplayFormat2(long server, long partition, volintInfo *pntr)
 {
-    static long server_cache = -1, partition_cache = -1;
-    static char hostname[256], address[32], pname[16];
+    static long server_cache = -1;
+    static char hostname[256], address[32];
+    struct partName pname;
     time_t t;
 
     if (server != server_cache) {
@@ -1130,13 +1127,9 @@ DisplayFormat2(long server, long partition, volintInfo *pntr)
 	struct in_addr s;
 
 	s.s_addr = server;
-	strcpy(hostname, vs_GetServerNameById(server, &hoststr));
+	strcpy(hostname, servid2str(server, &hoststr));
 	strcpy(address, inet_ntoa(s));
 	server_cache = server;
-    }
-    if (partition != partition_cache) {
-	MapPartIdIntoName(partition, pname);
-	partition_cache = partition;
     }
 
     if (pntr->status == VOK)
@@ -1145,7 +1138,7 @@ DisplayFormat2(long server, long partition, volintInfo *pntr)
     fprintf(STDOUT, "id\t\t%lu\n",
 	    afs_printable_uint32_lu(pntr->volid));
     fprintf(STDOUT, "serv\t\t%s\t%s\n", address, hostname);
-    fprintf(STDOUT, "part\t\t%s\n", pname);
+    fprintf(STDOUT, "part\t\t%s\n", partid2str(partition, &pname));
     switch (pntr->status) {
     case VOK:
 	fprintf(STDOUT, "status\t\tOK\n");
@@ -2051,7 +2044,7 @@ static int
 CreateVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 pnum;
-    char part[10];
+    struct partName part;
     afs_uint32 volid = 0, rovolid = 0, bkvolid = 0;
     afs_uint32 *arovolid;
     afs_int32 code;
@@ -2154,9 +2147,10 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("create", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(pnum, part);
     fprintf(STDOUT, "Volume %lu created on partition %s of %s\n",
-	    (unsigned long)volid, part, as->parms[0].items->data);
+	    (unsigned long)volid,
+	    partid2str(pnum, &part),
+	    as->parms[0].items->data);
 
  error_exit:
     if (conn)
@@ -2170,7 +2164,7 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
     afs_int32 err, code = 0;
     afs_int32 partition = -1;
     afs_uint32 volid;
-    char pname[10];
+    struct partName pname;
     afs_int32 idx, j;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
@@ -2291,9 +2285,10 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(code);
     }
 
-    MapPartIdIntoName(partition, pname);
     fprintf(STDOUT, "Volume %lu on partition %s server %s deleted\n",
-	    (unsigned long)volid, pname, vs_GetServerName(conn, &buf));
+	    (unsigned long)volid,
+	    partid2str(partition, &pname),
+	    vs_GetServerName(conn, &buf));
  error_exit:
     if (conn)
 	rx_DestroyConnection(conn);
@@ -2370,8 +2365,16 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
      * check source partition for space to clone volume
      */
 
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
+    code = volutil_PartitionName2_r(topart, toPartName, sizeof(toPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d  into name.\n", topart);
+	ERROR_EXIT(code);
+    }
+    code = volutil_PartitionName2_r(frompart, fromPartName, sizeof(fromPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d into name.\n", frompart);
+	ERROR_EXIT(code);
+    }
 
     /*
      * check target partition for space to move volume
@@ -2417,8 +2420,6 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("move", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu moved from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
@@ -2524,8 +2525,16 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
     if (as->parms[7].items) flags |= RV_RDONLY;
     if (as->parms[8].items) flags |= RV_NOCLONE;
 
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
+    code = volutil_PartitionName2_r(topart, toPartName, sizeof(toPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d  into name.\n", topart);
+	ERROR_EXIT(code);
+    }
+    code = volutil_PartitionName2_r(frompart, fromPartName, sizeof(fromPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d into name.\n", frompart);
+	ERROR_EXIT(code);
+    }
 
     /*
      * check target partition for space to move volume
@@ -2565,8 +2574,6 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("copy", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu copied from %s %s to %s on %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    tovolume, as->parms[4].items->data, toPartName);
@@ -2710,8 +2717,16 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
     if (as->parms[9].items) flags |= RV_NOCLONE;
     if (as->parms[10].items) flags |= RV_CPINCR;
 
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
+    code = volutil_PartitionName2_r(topart, toPartName, sizeof(toPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d  into name.\n", topart);
+	ERROR_EXIT(code);
+    }
+    code = volutil_PartitionName2_r(frompart, fromPartName, sizeof(fromPartName));
+    if (code) {
+	fprintf(STDERR, "vos: Failed to convert partition id %d into name.\n", frompart);
+	ERROR_EXIT(code);
+    }
 
     /*
      * check target partition for space to move volume
@@ -2762,8 +2777,6 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("shadow", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu shadowed from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
@@ -2782,7 +2795,7 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 volid, cloneid;
     afs_int32 part, voltype;
-    char partName[10], *volname;
+    char *volname;
     afs_int32 code, err, flags;
     struct nvldbentry entry;
     afs_int32 error = 0;
@@ -2881,7 +2894,6 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("clone", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(part, partName);
     fprintf(STDOUT, "Created clone for volume %s\n",
 	    as->parms[0].items->data);
 
@@ -3169,7 +3181,8 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
     afs_int32 acreation = 0, alastupdate = 0;
     int restoreflags = 0;
     int readonly = 0, offline = 0, voltype = RWVOL;
-    char afilename[MAXPATHLEN], avolname[VOLSER_MAXVOLNAME + 1], apartName[10];
+    char afilename[MAXPATHLEN], avolname[VOLSER_MAXVOLNAME + 1];
+    struct partName apartName;
     char volname[VOLSER_MAXVOLNAME + 1];
     struct nvldbentry entry;
     afs_int32 error = 0;
@@ -3448,14 +3461,14 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("restore", code);
 	ERROR_EXIT(1);
     }
-    MapPartIdIntoName(apart, apartName);
 
     /*
      * patch typo here - originally "parms[1]", should be "parms[0]"
      */
 
     fprintf(STDOUT, "Restored volume %s on %s %s\n", avolname,
-	    as->parms[0].items->data, apartName);
+	    as->parms[0].items->data,
+	    partid2str(apart, &apartName));
  error_exit:
     if (conn)
 	rx_DestroyConnection(conn);
@@ -3496,7 +3509,8 @@ AddSite(struct cmd_syndesc *as, void *arock)
     afs_uint32 avolid;
     afs_uint32 aserver;
     afs_int32 apart, code, err, arovolid, valid = 0;
-    char apartName[10], avolname[VOLSER_MAXVOLNAME + 1];
+    struct partName apartName;
+    char avolname[VOLSER_MAXVOLNAME + 1];
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
 
@@ -3552,9 +3566,10 @@ AddSite(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("addsite", code);
 	ERROR_EXIT(1);
     }
-    MapPartIdIntoName(apart, apartName);
     fprintf(STDOUT, "Added replication site %s %s for volume %s\n",
-	    as->parms[0].items->data, apartName, as->parms[2].items->data);
+	    as->parms[0].items->data,
+	    partid2str(apart, &apartName),
+	    as->parms[2].items->data);
 
  error_exit:
     if (conn)
@@ -3569,7 +3584,8 @@ RemoveSite(struct cmd_syndesc *as, void *arock)
     afs_uint32 avolid;
     afs_uint32 aserver;
     afs_int32 apart, code, err;
-    char apartName[10], avolname[VOLSER_MAXVOLNAME + 1];
+    struct partName apartName;
+    char avolname[VOLSER_MAXVOLNAME + 1];
     afs_int32 error = 0;
 
     vsu_ExtractName(avolname, as->parms[2].items->data);
@@ -3610,9 +3626,9 @@ RemoveSite(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("remsite", code);
 	ERROR_EXIT(1);
     }
-    MapPartIdIntoName(apart, apartName);
     fprintf(STDOUT, "Removed replication site %s %s for volume %s\n",
-	    as->parms[0].items->data, apartName, as->parms[2].items->data);
+	    as->parms[0].items->data, partid2str(apart, &apartName),
+	    as->parms[2].items->data);
  error_exit:
     return error;
 }
@@ -3623,7 +3639,7 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
     afs_uint32 avolid;
     afs_uint32 aserver;
     afs_int32 apart, code, err;
-    char apartName[10];
+    struct partName apartName;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
 
@@ -3665,9 +3681,9 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
 	PrintDiagnostics("changeloc", code);
 	ERROR_EXIT(1);
     }
-    MapPartIdIntoName(apart, apartName);
     fprintf(STDOUT, "Changed location to %s %s for volume %s\n",
-	    as->parms[0].items->data, apartName, as->parms[2].items->data);
+	    as->parms[0].items->data, partid2str(apart, &apartName),
+	    as->parms[2].items->data);
 
  error_exit:
     if (conn)
@@ -3682,7 +3698,7 @@ ListPartitions(struct cmd_syndesc *as, void *arock)
     afs_int32 code;
     struct partList dummyPartList;
     int i;
-    char pname[10];
+    struct partName pname;
     int total, cnt;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
@@ -3706,9 +3722,7 @@ ListPartitions(struct cmd_syndesc *as, void *arock)
     fprintf(STDOUT, "The partitions on the server are:\n");
     for (i = 0; i < cnt; i++) {
 	if (dummyPartList.partFlags[i] & PARTVALID) {
-	    memset(pname, 0, sizeof(pname));
-	    MapPartIdIntoName(dummyPartList.partId[i], pname);
-	    fprintf(STDOUT, " %10s ", pname);
+	    fprintf(STDOUT, " %10s ", partid2str(dummyPartList.partId[i], &pname));
 	    total++;
 	    if ((i % 5) == 0 && (i != 0))
 		fprintf(STDOUT, "\n");
@@ -3858,7 +3872,7 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
     volintXInfo *origxInfoP = NULL; /*Ptr to current/orig extended vol info */
     int wantExtendedInfo;	/*Do we want extended vol info? */
 
-    char pname[10];
+    struct partName pname;
     struct partList dummyPartList;
     int all;
     int quiet, cnt;
@@ -3968,11 +3982,11 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
 		else
 		    qsort(base, count, sizeof(volintInfo), CompareVolID);
 	    }
-	    MapPartIdIntoName(dummyPartList.partId[i], pname);
 	    if (!quiet)
 		fprintf(STDOUT,
 			"Total number of volumes on server %s partition %s: %lu \n",
-			as->parms[0].items->data, pname,
+			as->parms[0].items->data,
+			partid2str(dummyPartList.partId[i], &pname),
 			(unsigned long)count);
 	    if (wantExtendedInfo) {
 		if (as->parms[6].items)
@@ -4008,7 +4022,7 @@ static int
 SyncVldb(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 pnum = 0, code;	/* part name */
-    char part[10];
+    struct partName part;
     int flags = 0;
     char *volname = 0;
     afs_int32 error = 0;
@@ -4075,8 +4089,7 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
 	fprintf(STDOUT, " with state of server %s", as->parms[0].items->data);
     }
     if (flags & 1) {
-	MapPartIdIntoName(pnum, part);
-	fprintf(STDOUT, " partition %s\n", part);
+	fprintf(STDOUT, " partition %s\n", partid2str(pnum, &part));
     }
     fprintf(STDOUT, "\n");
 
@@ -4090,7 +4103,7 @@ static int
 SyncServer(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 pnum, code;	/* part name */
-    char part[10];
+    struct partName part;
     afs_int32 error = 0;
 
     int flags = 0;
@@ -4129,9 +4142,8 @@ SyncServer(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(1);
     }
     if (flags & 1) {
-	MapPartIdIntoName(pnum, part);
 	fprintf(STDOUT, "Server %s partition %s synchronized with VLDB\n",
-		as->parms[0].items->data, part);
+		as->parms[0].items->data, partid2str(pnum, &part));
     } else
 	fprintf(STDOUT, "Server %s synchronized with VLDB\n",
 		as->parms[0].items->data);
@@ -4271,7 +4283,7 @@ VolserStatus(struct cmd_syndesc *as, void *arock)
     transDebugInfo *pntr, *oldpntr;
     afs_int32 count;
     int i;
-    char pname[10];
+    struct partName pname;
     time_t t;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
@@ -4341,9 +4353,10 @@ VolserStatus(struct cmd_syndesc *as, void *arock)
 	    fprintf(STDOUT, "transactionFlags: ");
 	    fprintf(STDOUT, "delete\n");
 	}
-	MapPartIdIntoName(pntr->partition, pname);
 	fprintf(STDOUT, "volume: %lu  partition: %s  procedure: %s\n",
-		(unsigned long)pntr->volid, pname, pntr->lastProcName);
+		(unsigned long)pntr->volid,
+		partid2str(pntr->partition, &pname),
+		pntr->lastProcName);
 	if (pntr->callValid) {
 	    t = pntr->lastReceiveTime;
 	    fprintf(STDOUT, "packetRead: %lu  lastReceiveTime: %s",
@@ -4601,9 +4614,8 @@ DeleteEntry(struct cmd_syndesc *as, void *arock)
 	fprintf(STDOUT, "server %s ", as->parms[2].items->data);
     }
     if (as->parms[3].items) {
-	char pname[10];
-	MapPartIdIntoName(apart, pname);
-	fprintf(STDOUT, "partition %s ", pname);
+	struct partName pname;
+	fprintf(STDOUT, "partition %s ", partid2str(apart, &pname));
     }
     if (seenprefix) {
 	fprintf(STDOUT, "which are prefixed with %s ", prefix);
@@ -4696,7 +4708,7 @@ ListVLDB(struct cmd_syndesc *as, void *arock)
     afs_int32 tarraysize = 0;
     afs_int32 parraysize;
     int j;
-    char pname[10];
+    struct partName pname;
     int quiet, sort, lock;
     afs_int32 thisindex, nextindex;
     afs_int32 error = 0;
@@ -4758,12 +4770,11 @@ ListVLDB(struct cmd_syndesc *as, void *arock)
 
     /* Print header information */
     if (!quiet) {
-	MapPartIdIntoName(apart, pname);
 	fprintf(STDOUT, "VLDB entries for %s %s%s%s %s\n",
 		(as->parms[1].items ? "server" : "all"),
 		(as->parms[1].items ? as->parms[1].items->data : "servers"),
 		(as->parms[2].items ? " partition " : ""),
-		(as->parms[2].items ? pname : ""),
+		(as->parms[2].items ? partid2str(apart, &pname) : ""),
 		(lock ? "which are locked:" : ""));
     }
 
@@ -4870,7 +4881,7 @@ BackSys(struct cmd_syndesc *as, void *arock)
     struct nvldbentry *vllist;
     afs_int32 nentries;
     int j;
-    char pname[10];
+    struct partName pname;
     int seenprefix, seenxprefix, exclude, ex, exp, noaction;
     afs_int32 totalBack = 0;
     afs_int32 totalFail = 0;
@@ -4992,8 +5003,7 @@ BackSys(struct cmd_syndesc *as, void *arock)
 	}
 
 	if (as->parms[2].items) {
-	    MapPartIdIntoName(apart, pname);
-	    fprintf(STDOUT, " partition %s", pname);
+	    fprintf(STDOUT, " partition %s", partid2str(apart, &pname));
 	}
 
 	if (seenprefix || (!seenprefix && seenxprefix)) {
@@ -5222,7 +5232,7 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
     int j;
     afs_uint32 volid;
     afs_int32 totalE;
-    char pname[10];
+    struct partName pname;
     afs_int32 error = 0;
     struct rx_connection *conn = NULL;
 
@@ -5291,7 +5301,6 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 	}
 
     }
-    MapPartIdIntoName(apart, pname);
     if (totalE)
 	fprintf(STDOUT,
 		"Could not lock %lu VLDB entries of %lu locked entries\n",
@@ -5302,16 +5311,14 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 		    "Unlocked all the VLDB entries for volumes on server %s ",
 		    as->parms[0].items->data);
 	    if (as->parms[1].items) {
-		MapPartIdIntoName(apart, pname);
-		fprintf(STDOUT, "partition %s\n", pname);
+		fprintf(STDOUT, "partition %s\n", partid2str(apart, &pname));
 	    } else
 		fprintf(STDOUT, "\n");
 
 	} else if (as->parms[1].items) {
-	    MapPartIdIntoName(apart, pname);
 	    fprintf(STDOUT,
 		    "Unlocked all the VLDB entries for volumes on partition %s on all servers\n",
-		    pname);
+		    partid2str(apart, &pname));
 	}
     }
 
@@ -5357,7 +5364,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     afs_int32 apart;
     afs_uint32 aserver;
     afs_int32 code;
-    char pname[10];
+    struct partName pname;
     struct diskPartition64 partition;
     struct partList dummyPartList;
     int i, cnt;
@@ -5411,17 +5418,17 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     }
     for (i = 0; i < cnt; i++) {
 	if (dummyPartList.partFlags[i] & PARTVALID) {
-	    MapPartIdIntoName(dummyPartList.partId[i], pname);
-	    code = vs_PartitionInfo64(conn, pname, &partition);
+	    afs_int32 partid = dummyPartList.partId[i];
+	    code = vs_PartitionInfo64(conn, partid2str(partid, &pname), &partition);
 	    if (code) {
 		fprintf(STDERR, "Could not get information on partition %s\n",
-			pname);
+			partid2str(partid, &pname));
 		PrintError("", code);
 		ERROR_EXIT(1);
 	    }
 	    fprintf(STDOUT,
 		    "Free space on partition %s: %" AFS_INT64_FMT " K blocks out of total %" AFS_INT64_FMT "\n",
-		    pname, partition.free, partition.minFree);
+		    partid2str(partid, &pname), partition.free, partition.minFree);
 	    sumPartitions++;
 	    AddUInt64(sumFree,partition.free,&sumFree);
 	    AddUInt64(sumStorage,partition.minFree,&sumStorage);
