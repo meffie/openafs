@@ -286,8 +286,61 @@ GetServer(char *aname)
     return 0;
 }
 
+/**
+ * Create a new rx connection to a volume server by hostname (or numerical
+ * network address).
+ *
+ * @param[in]  name   volume server hostname or numerical network address
+ * @param[out] conn   rx connection to a volume server
+ *
+ * @returns 0 on success
+ *
+ * @note Caller must destroy returned connection when no longer needed.
+ */
 static int
-IsPartValid(afs_int32 partId, afs_uint32 server, afs_int32 *code)
+GetConnByName(char *name, struct rx_connection **conn)
+{
+    int code;
+    struct rx_connection *tc = NULL;
+    struct rx_securityClass *securityClass = vs_GetSecurityClass();
+    afs_int32 securityIndex = vs_GetSecurityIndex();
+    char port[16];
+    struct addrinfo hints;
+    struct addrinfo *results = NULL;
+    struct addrinfo *r = NULL;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_NUMERICSERV;
+
+    snprintf(port, sizeof(port), "%d", AFSCONF_VOLUMEPORT);
+    code = getaddrinfo(name, port, &hints, &results);
+    if (code) {
+	fprintf(STDERR, "Unable to get address of '%s': %s (code=%d)\n",
+		name, gai_strerror(code), code);
+	return code;
+    }
+    for (r = results; r; r = r->ai_next) {
+	if (r->ai_addr->sa_family == AF_INET) {
+	    struct sockaddr_in *sa = (struct sockaddr_in*)r->ai_addr;
+	    tc = rx_NewConnection(sa->sin_addr.s_addr, sa->sin_port,
+				  VOLSERVICE_ID, securityClass, securityIndex);
+	    if (tc)
+		break;
+	}
+    }
+    freeaddrinfo(results);
+    if (!tc) {
+	fprintf(STDERR, "Unable to create connection to '%s'.", name);
+	return 1;
+    }
+    *conn = tc;
+    return 0;
+}
+
+static int
+IsPartValid(afs_int32 partId, struct rx_connection *conn, afs_int32 *code)
 {
     struct partList dummyPartList;
     int i, success, cnt;
@@ -295,7 +348,7 @@ IsPartValid(afs_int32 partId, afs_uint32 server, afs_int32 *code)
     success = 0;
     *code = 0;
 
-    *code = UV_ListPartitions(server, &dummyPartList, &cnt);
+    *code = vs_ListPartitions(conn, &dummyPartList, &cnt);
     if (*code)
 	return success;
     for (i = 0; i < cnt; i++) {
@@ -1530,15 +1583,13 @@ NukeVolume(struct cmd_syndesc *as)
     afs_uint32 volID;
     afs_int32  err;
     afs_int32 partID;
-    afs_uint32 server;
+    struct rx_connection *conn = NULL;
     char *tp;
     afs_int32 error = 0;
 
-
-    server = GetServer(tp = as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n", tp);
-	ERROR_EXIT(1);
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code) {
+	ERROR_EXIT(code);
     }
 
     partID = volutil_GetPartitionID(tp = as->parms[1].items->data);
@@ -1561,7 +1612,7 @@ NukeVolume(struct cmd_syndesc *as)
 	    "vos: forcibly removing all traces of volume %d, please wait...",
 	    volID);
     fflush(STDOUT);
-    code = UV_NukeVolume(server, partID, volID);
+    code = AFSVolNukeVolume(conn, partID, volID);
     if (code == 0)
 	fprintf(STDOUT, "done.\n");
     else {
@@ -1570,6 +1621,8 @@ NukeVolume(struct cmd_syndesc *as)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -1610,6 +1663,9 @@ ExamineVolume(struct cmd_syndesc *as, void *arock)
     int previdx = -1;
     int wantExtendedInfo;	/*Do we want extended vol info? */
     int isSubEnum=0;		/* Keep track whether sub enumerate called. */
+    struct rx_securityClass *securityClass = vs_GetSecurityClass();
+    afs_int32 securityIndex = vs_GetSecurityIndex();
+
     wantExtendedInfo = (as->parms[1].items ? 1 : 0);	/* -extended */
 
     volid = vsu_GetVolumeID(as->parms[0].items->data, cstruct, &err);	/* -id */
@@ -1646,6 +1702,7 @@ ExamineVolume(struct cmd_syndesc *as, void *arock)
 	voltype = ROVOL;
 
     do {			/* do {...} while (voltype == ROVOL) */
+	struct rx_connection *tconn = NULL;
 	/* Get the entry for the volume. If its a RW vol, get the RW entry.
 	 * It its a BK vol, get the RW entry (even if VLDB may say the BK doen't exist).
 	 * If its a RO vol, get the next RO entry.
@@ -1658,17 +1715,25 @@ ExamineVolume(struct cmd_syndesc *as, void *arock)
 	    error = ENOENT;
 	    break;
 	}
-
+	code = VLDB_NewConnByServerId(&tconn, securityClass, securityIndex,
+				      aserver);
+	if (code) {
+	    error = -1;
+	    fprintf(STDERR, "oof.\n");
+	    continue;
+	}
 	/* Get information about the volume from the server */
 	if (verbose) {
+	    struct serverName hoststr;
+
 	    fprintf(STDOUT, "Getting volume listing from the server %s .. ",
-		    hostutil_GetNameByINet(aserver));
+		    vs_GetServerName(tconn, &hoststr));
 	    fflush(STDOUT);
 	}
 	if (wantExtendedInfo)
-	    code = UV_XListOneVolume(aserver, apart, volid, &xInfoP);
+	    code = vs_XListOneVolume(tconn, apart, volid, &xInfoP);
 	else
-	    code = UV_ListOneVolume(aserver, apart, volid, &pntr);
+	    code = vs_ListOneVolume(tconn, apart, volid, &pntr);
 	if (verbose)
 	    fprintf(STDOUT, "done\n");
 
@@ -1713,6 +1778,8 @@ ExamineVolume(struct cmd_syndesc *as, void *arock)
 	    free(pntr);
 	if (xInfoP)
 	    free(xInfoP);
+	if (tconn)
+	    rx_DestroyConnection(tconn);
     } while (voltype == ROVOL);
 
     if (!foundserv) {
@@ -1757,6 +1824,9 @@ SetFields(struct cmd_syndesc *as, void *arock)
     afs_uint32 aserver;
     afs_int32 apart;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
+    struct rx_securityClass *securityClass = vs_GetSecurityClass();
+    afs_int32 securityIndex = vs_GetSecurityIndex();
 
     int previdx = -1;
     int have_field = 0;
@@ -1787,6 +1857,11 @@ SetFields(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(ENOENT);
     }
+    code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver);
+    if (code) {
+	fprintf(STDERR, "Could not get connection to volume server.\n");
+	ERROR_EXIT(code);
+    }
 
     init_volintInfo(&info);
     info.volid = volid;
@@ -1815,7 +1890,7 @@ SetFields(struct cmd_syndesc *as, void *arock)
 	fprintf(STDERR,"Nothing to set.\n");
 	ERROR_EXIT(1);
     }
-    code = UV_SetVolumeInfo(aserver, apart, volid, &info);
+    code = vs_SetVolumeInfo(conn, apart, volid, &info);
     if (code) {
 	fprintf(STDERR,
 		"Could not update volume info fields for volume number %lu\n",
@@ -1824,6 +1899,8 @@ SetFields(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return (error);
 }
 
@@ -1849,16 +1926,14 @@ SetFields(struct cmd_syndesc *as, void *arock)
 static int
 volOnline(struct cmd_syndesc *as, void *arock)
 {
-    afs_uint32 server;
     afs_int32 partition;
     afs_uint32 volid;
     afs_int32 code, err = 0;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
-    server = GetServer(as->parms[0].items->data);
-    if (server == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[0].items->data);
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code) {
 	ERROR_EXIT(-1);
     }
 
@@ -1879,7 +1954,7 @@ volOnline(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(-1);
     }
 
-    code = UV_SetVolume(server, partition, volid, ITOffline, 0 /*online */ ,
+    code = vs_SetVolume(conn, partition, volid, ITOffline, 0 /*online */ ,
 			0 /*sleep */ );
     if (code) {
 	fprintf(STDERR, "Failed to set volume. Code = %d\n", code);
@@ -1887,6 +1962,8 @@ volOnline(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -1912,18 +1989,15 @@ volOnline(struct cmd_syndesc *as, void *arock)
 static int
 volOffline(struct cmd_syndesc *as, void *arock)
 {
-    afs_uint32 server;
+    struct rx_connection *conn = NULL;
     afs_int32 partition;
     afs_uint32 volid;
     afs_int32 code, err = 0;
     afs_int32 transflag, sleeptime, transdone;
     afs_int32 error = 0;
 
-
-    server = GetServer(as->parms[0].items->data);
-    if (server == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[0].items->data);
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code) {
 	ERROR_EXIT(-1);
     }
 
@@ -1953,7 +2027,7 @@ volOffline(struct cmd_syndesc *as, void *arock)
     }
 
     code =
-	UV_SetVolume(server, partition, volid, transflag, transdone,
+	vs_SetVolume(conn, partition, volid, transflag, transdone,
 		     sleeptime);
     if (code) {
 	fprintf(STDERR, "Failed to set volume. Code = %d\n", code);
@@ -1961,6 +2035,8 @@ volOffline(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -1975,18 +2051,15 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
     struct nvldbentry entry;
     afs_int32 vcode;
     afs_int32 quota;
-    afs_uint32 tserver;
     afs_int32 error = 0;
-
+    struct rx_connection *conn = NULL;
 
     arovolid = &rovolid;
-
     quota = 5000;
-    tserver = GetServer(as->parms[0].items->data);
-    if (!tserver) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(ENOENT);
+
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code) {
+	ERROR_EXIT(code);
     }
     pnum = volutil_GetPartitionID(as->parms[1].items->data);
     if (pnum < 0) {
@@ -1994,7 +2067,7 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[1].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    if (!IsPartValid(pnum, tserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(pnum, conn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2068,9 +2141,8 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
 	}
     }
 
-    code =
-	UV_CreateVolume3(tserver, pnum, as->parms[2].items->data, quota, 0,
-			 0, 0, 0, &volid, arovolid, &bkvolid);
+    code = vs_CreateVolume(conn, pnum, as->parms[2].items->data,
+			   quota, &volid, arovolid, &bkvolid);
     if (code) {
 	PrintDiagnostics("create", code);
 	ERROR_EXIT(code);
@@ -2081,6 +2153,8 @@ CreateVolume(struct cmd_syndesc *as, void *arock)
 	    as->parms[0].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -2088,13 +2162,13 @@ static int
 DeleteVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 err, code = 0;
-    afs_uint32 server = 0;
     afs_int32 partition = -1;
     afs_uint32 volid;
     struct partName pname;
     afs_int32 idx, j;
     afs_int32 error = 0;
-
+    struct rx_connection *conn = NULL;
+    struct serverName buf;
 
     if (as->parms[1].items && !as->parms[0].items) {
 	fprintf(STDERR, "vos: The -partition option requires the -server option.\n");
@@ -2102,11 +2176,9 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
     }
 
     if (as->parms[0].items) {
-	server = GetServer(as->parms[0].items->data);
-	if (!server) {
-	    fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		    as->parms[0].items->data);
-	    ERROR_EXIT(ENOENT);
+	code = GetConnByName(as->parms[0].items->data, &conn);
+	if (code) {
+	    ERROR_EXIT(code);
 	}
     }
 
@@ -2119,7 +2191,7 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
 	}
 
 	/* Check for validity of the partition */
-	if (!IsPartValid(partition, server, &code)) {
+	if (!IsPartValid(partition, conn, &code)) {
 	    if (code) {
 		PrintError("", code);
 	    } else {
@@ -2140,11 +2212,14 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(ENOENT);
     }
 
-    /* If the server or partition option are not complete, try to fill
+    /* If the server connection or partition option are not complete, try to fill
      * them in from the VLDB entry.
      */
-    if ((partition == -1) || !server) {
+    if ((partition == -1) || !conn) {
 	struct nvldbentry entry;
+	afs_uint32 server = 0;
+	struct rx_securityClass *securityClass = vs_GetSecurityClass();
+	afs_uint32 securityIndex = vs_GetSecurityIndex();
 
 	code = VLDB_GetEntryByID(volid, -1, &entry);
 	if (code) {
@@ -2195,21 +2270,28 @@ DeleteVolume(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(ENOENT);
 	}
 
-	server = htonl(entry.serverNumber[idx]);
+	server = entry.serverNumber[idx];
+	code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, server);
+	if (code) {
+	    ERROR_EXIT(code);
+	}
 	partition = entry.serverPartition[idx];
     }
 
 
-    code = UV_DeleteVolume(server, partition, volid);
+    code = vs_DeleteVolume(conn, partition, volid);
     if (code) {
 	PrintDiagnostics("remove", code);
 	ERROR_EXIT(code);
     }
 
-    MapPartIdIntoName(partition, pname);
     fprintf(STDOUT, "Volume %lu on partition %s server %s deleted\n",
-	    (unsigned long)volid, pname, hostutil_GetNameByINet(server));
+	    (unsigned long)volid,
+	    partid2str(partition, &pname),
+	    vs_GetServerName(conn, &buf));
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -2219,11 +2301,12 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 {
 
     afs_uint32 volid;
-    afs_uint32 fromserver, toserver;
     afs_int32 frompart, topart;
     afs_int32 flags, code, err;
     char fromPartName[10], toPartName[10];
     afs_int32 error = 0;
+    struct rx_connection *fromconn = NULL;
+    struct rx_connection *toconn = NULL;
 
 
     struct diskPartition64 partition;	/* for space check */
@@ -2238,25 +2321,19 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 		    as->parms[0].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    fromserver = GetServer(as->parms[1].items->data);
-    if (fromserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[1].items->data);
-	ERROR_EXIT(ENOENT);
-    }
-    toserver = GetServer(as->parms[3].items->data);
-    if (toserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[3].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[1].items->data, &fromconn);
+    if (code)
+	ERROR_EXIT(code);
+    code = GetConnByName(as->parms[3].items->data, &toconn);
+    if (code)
+	ERROR_EXIT(code);
     frompart = volutil_GetPartitionID(as->parms[2].items->data);
     if (frompart < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[2].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(frompart, fromserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(frompart, fromconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2271,7 +2348,7 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[4].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(topart, toserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(topart, toconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2303,7 +2380,7 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
      * check target partition for space to move volume
      */
 
-    code = UV_PartitionInfo64(toserver, toPartName, &partition);
+    code = vs_PartitionInfo64(toconn, toPartName, &partition);
     if (code) {
 	fprintf(STDERR, "vos: cannot access partition %s\n", toPartName);
 	ERROR_EXIT(1);
@@ -2313,7 +2390,7 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 		partition.free);
 
     p = (volintInfo *) 0;
-    code = UV_ListOneVolume(fromserver, frompart, volid, &p);
+    code = vs_ListOneVolume(fromconn, frompart, volid, &p);
     if (code) {
 	fprintf(STDERR, "vos:cannot access volume %lu\n",
 		(unsigned long)volid);
@@ -2338,19 +2415,20 @@ MoveVolume(struct cmd_syndesc *as, void *arock)
 
     /* successful move still not guaranteed but shoot for it */
 
-    code =
-	UV_MoveVolume2(volid, fromserver, frompart, toserver, topart, flags);
+    code = vs_MoveVolume(volid, fromconn, frompart, toconn, topart, flags);
     if (code) {
 	PrintDiagnostics("move", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu moved from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
 
  error_exit:
+    if (fromconn)
+	rx_DestroyConnection(fromconn);
+    if (toconn)
+	rx_DestroyConnection(toconn);
     return error;
 }
 
@@ -2358,13 +2436,14 @@ static int
 CopyVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 volid;
-    afs_uint32 fromserver, toserver;
     afs_int32 frompart, topart, code, err, flags;
     char fromPartName[10], toPartName[10], *tovolume;
     struct nvldbentry entry;
     struct diskPartition64 partition;	/* for space check */
     volintInfo *p;
     afs_int32 error = 0;
+    struct rx_connection *fromconn = NULL;
+    struct rx_connection *toconn = NULL;
 
 
     volid = vsu_GetVolumeID(as->parms[0].items->data, cstruct, &err);
@@ -2376,19 +2455,13 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 		    as->parms[0].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    fromserver = GetServer(as->parms[1].items->data);
-    if (fromserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[1].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[1].items->data, &fromconn);
+    if (code)
+	ERROR_EXIT(code);
 
-    toserver = GetServer(as->parms[4].items->data);
-    if (toserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[4].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[4].items->data, &toconn);
+    if (code)
+	ERROR_EXIT(code);
 
     tovolume = as->parms[3].items->data;
     if (!ISNAMEVALID(tovolume)) {
@@ -2421,7 +2494,7 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[2].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(frompart, fromserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(frompart, fromconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2437,7 +2510,7 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[5].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(topart, toserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(topart, toconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2467,7 +2540,7 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
      * check target partition for space to move volume
      */
 
-    code = UV_PartitionInfo64(toserver, toPartName, &partition);
+    code = vs_PartitionInfo64(toconn, toPartName, &partition);
     if (code) {
 	fprintf(STDERR, "vos: cannot access partition %s\n", toPartName);
 	ERROR_EXIT(1);
@@ -2477,7 +2550,7 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 		partition.free);
 
     p = (volintInfo *) 0;
-    code = UV_ListOneVolume(fromserver, frompart, volid, &p);
+    code = vs_ListOneVolume(fromconn, frompart, volid, &p);
     if (code) {
 	fprintf(STDERR, "vos:cannot access volume %lu\n",
 		(unsigned long)volid);
@@ -2495,9 +2568,8 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 
     /* successful copy still not guaranteed but shoot for it */
 
-    code =
-	UV_CopyVolume2(volid, fromserver, frompart, tovolume, toserver,
-		       topart, 0, flags);
+    code = vs_CopyVolume(volid, fromconn, frompart, tovolume, toconn, topart,
+			 0, flags);
     if (code) {
 	PrintDiagnostics("copy", code);
 	ERROR_EXIT(code);
@@ -2507,6 +2579,10 @@ CopyVolume(struct cmd_syndesc *as, void *arock)
 	    tovolume, as->parms[4].items->data, toPartName);
 
  error_exit:
+    if (fromconn)
+	rx_DestroyConnection(fromconn);
+    if (toconn)
+	rx_DestroyConnection(toconn);
     return error;
 }
 
@@ -2515,13 +2591,14 @@ static int
 ShadowVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 volid, tovolid;
-    afs_uint32 fromserver, toserver;
     afs_int32 frompart, topart;
     afs_int32 code, err, flags;
     char fromPartName[10], toPartName[10], toVolName[32], *tovolume;
     struct diskPartition64 partition;	/* for space check */
     volintInfo *p, *q;
     afs_int32 error = 0;
+    struct rx_connection *fromconn = NULL;
+    struct rx_connection *toconn = NULL;
 
     p = (volintInfo *) 0;
     q = (volintInfo *) 0;
@@ -2535,19 +2612,13 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 		    as->parms[0].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    fromserver = GetServer(as->parms[1].items->data);
-    if (fromserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[1].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[1].items->data, &fromconn);
+    if (code)
+	ERROR_EXIT(code);
 
-    toserver = GetServer(as->parms[3].items->data);
-    if (toserver == 0) {
-	fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		as->parms[3].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[3].items->data, &toconn);
+    if (code)
+	ERROR_EXIT(code);
 
     frompart = volutil_GetPartitionID(as->parms[2].items->data);
     if (frompart < 0) {
@@ -2555,7 +2626,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[2].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(frompart, fromserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(frompart, fromconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2571,7 +2642,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 		as->parms[4].items->data);
 	ERROR_EXIT(EINVAL);
     }
-    if (!IsPartValid(topart, toserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(topart, toconn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -2603,7 +2674,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 	}
     } else {
 	/* use actual name of source volume */
-	code = UV_ListOneVolume(fromserver, frompart, volid, &p);
+	code = vs_ListOneVolume(fromconn, frompart, volid, &p);
 	if (code) {
 	    fprintf(STDERR, "vos:cannot access volume %lu\n",
 		(unsigned long)volid);
@@ -2661,7 +2732,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
      * check target partition for space to move volume
      */
 
-    code = UV_PartitionInfo64(toserver, toPartName, &partition);
+    code = vs_PartitionInfo64(toconn, toPartName, &partition);
     if (code) {
 	fprintf(STDERR, "vos: cannot access partition %s\n", toPartName);
 	ERROR_EXIT(1);
@@ -2672,7 +2743,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 
     /* Don't do this again if we did it above */
     if (!p) {
-	code = UV_ListOneVolume(fromserver, frompart, volid, &p);
+	code = vs_ListOneVolume(fromconn, frompart, volid, &p);
 	if (code) {
 	    fprintf(STDERR, "vos:cannot access volume %lu\n",
 		(unsigned long)volid);
@@ -2681,7 +2752,7 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
     }
 
     /* OK if this fails */
-    code = UV_ListOneVolume(toserver, topart, tovolid, &q);
+    code = vs_ListOneVolume(toconn, topart, tovolid, &q);
 
     /* Treat existing volume size as "free" */
     if (q)
@@ -2700,20 +2771,21 @@ ShadowVolume(struct cmd_syndesc *as, void *arock)
 
     /* successful copy still not guaranteed but shoot for it */
 
-    code =
-	UV_CopyVolume2(volid, fromserver, frompart, tovolume, toserver,
-		       topart, tovolid, flags);
+    code = vs_CopyVolume(volid, fromconn, frompart, tovolume, toconn, topart,
+		         tovolid, flags);
     if (code) {
 	PrintDiagnostics("shadow", code);
 	ERROR_EXIT(code);
     }
-    MapPartIdIntoName(topart, toPartName);
-    MapPartIdIntoName(frompart, fromPartName);
     fprintf(STDOUT, "Volume %lu shadowed from %s %s to %s %s \n",
 	    (unsigned long)volid, as->parms[1].items->data, fromPartName,
 	    as->parms[3].items->data, toPartName);
 
  error_exit:
+    if (fromconn)
+	rx_DestroyConnection(fromconn);
+    if (toconn)
+	rx_DestroyConnection(toconn);
     return error;
 }
 
@@ -2722,12 +2794,12 @@ static int
 CloneVolume(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 volid, cloneid;
-    afs_uint32 server;
     afs_int32 part, voltype;
-    char partName[10], *volname;
+    char *volname;
     afs_int32 code, err, flags;
     struct nvldbentry entry;
     afs_int32 error = 0;
+    struct rx_connection *conn;
 
     volid = vsu_GetVolumeID(as->parms[0].items->data, cstruct, &err);
     if (volid == 0) {
@@ -2745,19 +2817,16 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 		    "Must specify both -server and -partition options\n");
 	    ERROR_EXIT(-1);
 	}
-	server = GetServer(as->parms[1].items->data);
-	if (server == 0) {
-	    fprintf(STDERR, "vos: server '%s' not found in host table\n",
-		    as->parms[1].items->data);
-	    ERROR_EXIT(ENOENT);
-	}
+	code = GetConnByName(as->parms[1].items->data, &conn);
+	if (code)
+	    ERROR_EXIT(code);
 	part = volutil_GetPartitionID(as->parms[2].items->data);
 	if (part < 0) {
 	    fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		    as->parms[2].items->data);
 	    ERROR_EXIT(EINVAL);
 	}
-	if (!IsPartValid(part, server, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(part, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -2767,7 +2836,14 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(ENOENT);
 	}
     } else {
+	afs_uint32 server;
+	struct rx_securityClass *securityClass = vs_GetSecurityClass();
+	afs_int32 securityIndex = vs_GetSecurityIndex();
+
 	code = GetVolumeInfo(volid, &server, &part, &voltype, &entry);
+	if (code)
+	    ERROR_EXIT(code);
+	code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, server);
 	if (code)
 	    ERROR_EXIT(code);
     }
@@ -2822,6 +2898,8 @@ CloneVolume(struct cmd_syndesc *as, void *arock)
 	    as->parms[0].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -2838,6 +2916,11 @@ BackupVolume(struct cmd_syndesc *as, void *arock)
     afs_uint32 buserver;
     afs_int32 bupart, butype;
     struct nvldbentry buentry;
+
+    struct rx_connection *conn = NULL;
+    struct rx_securityClass *securityClass = vs_GetSecurityClass();
+    afs_int32 securityIndex = vs_GetSecurityIndex();
+
     afs_int32 error = 0;
 
     avolid = vsu_GetVolumeID(as->parms[0].items->data, cstruct, &err);
@@ -2886,9 +2969,13 @@ BackupVolume(struct cmd_syndesc *as, void *arock)
 	}
     }
 
+    code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver);
+    if (code)
+	ERROR_EXIT(1);
+
     /* nope, carry on */
 
-    code = UV_BackupVolume(aserver, apart, avolid);
+    code = vs_BackupVolume(conn, apart, avolid);
 
     if (code) {
 	PrintDiagnostics("backup", code);
@@ -2898,6 +2985,8 @@ BackupVolume(struct cmd_syndesc *as, void *arock)
 	    as->parms[0].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -2911,6 +3000,9 @@ ReleaseVolume(struct cmd_syndesc *as, void *arock)
     afs_int32 apart, vtype, code, err;
     int flags = 0;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
+    struct rx_securityClass *securityClass = vs_GetSecurityClass();
+    afs_int32 securityIndex = vs_GetSecurityIndex();
 
     if (as->parms[1].items) /* -force */
 	flags |= (REL_COMPLETE | REL_FULLDUMPS);
@@ -2946,7 +3038,11 @@ ReleaseVolume(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(E2BIG);
     }
 
-    code = UV_ReleaseVolume(avolid, aserver, apart, flags);
+    code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver);
+    if (code)
+	ERROR_EXIT(code);
+
+    code = vs_ReleaseVolume(conn, avolid, apart, flags);
 
     if (code) {
 	PrintDiagnostics("release", code);
@@ -2956,6 +3052,8 @@ ReleaseVolume(struct cmd_syndesc *as, void *arock)
 	    as->parms[0].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -2963,11 +3061,12 @@ static int
 DumpVolumeCmd(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 avolid;
-    afs_uint32 aserver;
     afs_int32 apart, voltype, fromdate = 0, code, err, i, flags;
     char filename[MAXPATHLEN];
     struct nvldbentry entry;
     afs_int32 error = 0;
+
+    struct rx_connection *conn = NULL;
 
     rx_SetRxDeadTime(60 * 10);
     for (i = 0; i < MAXSERVERS; i++) {
@@ -2995,10 +3094,9 @@ DumpVolumeCmd(struct cmd_syndesc *as, void *arock)
 		    "Must specify both -server and -partition options\n");
 	    ERROR_EXIT(-1);
 	}
-	aserver = GetServer(as->parms[3].items->data);
-	if (aserver == 0) {
-	    fprintf(STDERR, "Invalid server name\n");
-	    ERROR_EXIT(-1);
+	code = GetConnByName(as->parms[3].items->data, &conn);
+	if (code) {
+	    ERROR_EXIT(code);
 	}
 	apart = volutil_GetPartitionID(as->parms[4].items->data);
 	if (apart < 0) {
@@ -3006,7 +3104,14 @@ DumpVolumeCmd(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(-1);
 	}
     } else {
+	afs_uint32 aserver;
+	struct rx_securityClass *securityClass = vs_GetSecurityClass();
+	afs_int32 securityIndex = vs_GetSecurityIndex();
+
 	code = GetVolumeInfo(avolid, &aserver, &apart, &voltype, &entry);
+	if (code)
+	    ERROR_EXIT(code);
+	code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver);
 	if (code)
 	    ERROR_EXIT(code);
     }
@@ -3025,15 +3130,16 @@ DumpVolumeCmd(struct cmd_syndesc *as, void *arock)
 	strcpy(filename, "");
     }
 
+
     flags = as->parms[6].items ? VOLDUMPV2_OMITDIRS : 0;
 retry_dump:
     if (as->parms[5].items) {
 	code =
-	    UV_DumpClonedVolume(avolid, aserver, apart, fromdate,
+	    vs_DumpClonedVolume(conn, avolid, apart, fromdate,
 				DumpFunction, filename, flags);
     } else {
 	code =
-	    UV_DumpVolume(avolid, aserver, apart, fromdate, DumpFunction,
+	    vs_DumpVolume(conn, avolid, apart, fromdate, DumpFunction,
 			  filename, flags);
     }
     if ((code == RXGEN_OPCODE) && (as->parms[6].items)) {
@@ -3051,6 +3157,8 @@ retry_dump:
 	fprintf(STDERR, "Dumped volume %s in stdout \n",
 		as->parms[0].items->data);
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3078,6 +3186,7 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
     char volname[VOLSER_MAXVOLNAME + 1];
     struct nvldbentry entry;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     aparentid = 0;
     if (as->parms[4].items) {
@@ -3158,13 +3267,16 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     apart = volutil_GetPartitionID(as->parms[1].items->data);
     if (apart < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[1].items->data);
 	ERROR_EXIT(1);
     }
-    if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -3343,7 +3455,7 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
 
 
     code =
-	UV_RestoreVolume2(aserver, apart, avolid, aparentid,
+	vs_RestoreVolume(conn, apart, avolid, aparentid,
 			  avolname, restoreflags, WriteData, afilename);
     if (code) {
 	PrintDiagnostics("restore", code);
@@ -3358,6 +3470,8 @@ RestoreVolumeCmd(struct cmd_syndesc *as, void *arock)
 	    as->parms[0].items->data,
 	    partid2str(apart, &apartName));
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3378,7 +3492,7 @@ LockReleaseCmd(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(1);
     }
 
-    code = UV_LockRelease(avolid);
+    code = vs_LockRelease(avolid);
     if (code) {
 	PrintDiagnostics("unlock", code);
 	ERROR_EXIT(1);
@@ -3398,6 +3512,7 @@ AddSite(struct cmd_syndesc *as, void *arock)
     struct partName apartName;
     char avolname[VOLSER_MAXVOLNAME + 1];
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     vsu_ExtractName(avolname, as->parms[2].items->data);;
     avolid = vsu_GetVolumeID(avolname, cstruct, &err);
@@ -3425,13 +3540,16 @@ AddSite(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     apart = volutil_GetPartitionID(as->parms[1].items->data);
     if (apart < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[1].items->data);
 	ERROR_EXIT(1);
     }
-    if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -3443,7 +3561,7 @@ AddSite(struct cmd_syndesc *as, void *arock)
     if (as->parms[4].items) {
 	valid = 1;
     }
-    code = UV_AddSite2(aserver, apart, avolid, arovolid, valid);
+    code = vs_AddSite(aserver, apart, avolid, arovolid, valid);
     if (code) {
 	PrintDiagnostics("addsite", code);
 	ERROR_EXIT(1);
@@ -3454,6 +3572,8 @@ AddSite(struct cmd_syndesc *as, void *arock)
 	    as->parms[2].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3501,7 +3621,7 @@ RemoveSite(struct cmd_syndesc *as, void *arock)
 	    exit(1);
 	}
 */
-    code = UV_RemoveSite(aserver, apart, avolid);
+    code = vs_RemoveSite(aserver, apart, avolid);
     if (code) {
 	PrintDiagnostics("remsite", code);
 	ERROR_EXIT(1);
@@ -3521,6 +3641,7 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
     afs_int32 apart, code, err;
     struct partName apartName;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     avolid = vsu_GetVolumeID(as->parms[2].items->data, cstruct, &err);
     if (avolid == 0) {
@@ -3537,13 +3658,16 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     apart = volutil_GetPartitionID(as->parms[1].items->data);
     if (apart < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[1].items->data);
 	ERROR_EXIT(1);
     }
-    if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+    if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -3552,7 +3676,7 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
 		    as->parms[1].items->data);
 	ERROR_EXIT(1);
     }
-    code = UV_ChangeLocation(aserver, apart, avolid);
+    code = vs_ChangeLocation(aserver, apart, avolid);
     if (code) {
 	PrintDiagnostics("changeloc", code);
 	ERROR_EXIT(1);
@@ -3562,6 +3686,8 @@ ChangeLocation(struct cmd_syndesc *as, void *arock)
 	    as->parms[2].items->data);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3575,6 +3701,7 @@ ListPartitions(struct cmd_syndesc *as, void *arock)
     struct partName pname;
     int total, cnt;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     aserver = GetServer(as->parms[0].items->data);
     if (aserver == 0) {
@@ -3582,9 +3709,11 @@ ListPartitions(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
 
-
-    code = UV_ListPartitions(aserver, &dummyPartList, &cnt);
+    code = vs_ListPartitions(conn, &dummyPartList, &cnt);
     if (code) {
 	PrintDiagnostics("listpart", code);
 	ERROR_EXIT(1);
@@ -3603,6 +3732,8 @@ ListPartitions(struct cmd_syndesc *as, void *arock)
     fprintf(STDOUT, "Total: %d\n", total);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 
 }
@@ -3745,6 +3876,7 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
     struct partList dummyPartList;
     int all;
     int quiet, cnt;
+    struct rx_connection *conn = NULL;
 
     apart = -1;
     fast = 0;
@@ -3796,9 +3928,12 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
 
     if (apart != -1) {
-	if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -3808,7 +3943,7 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(1);
 	}
     } else {
-	code = UV_ListPartitions(aserver, &dummyPartList, &cnt);
+	code = vs_ListPartitions(conn, &dummyPartList, &cnt);
 	if (code) {
 	    PrintDiagnostics("listvol", code);
 	    ERROR_EXIT(1);
@@ -3818,11 +3953,11 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
 	if (dummyPartList.partFlags[i] & PARTVALID) {
 	    if (wantExtendedInfo)
 		code =
-		    UV_XListVolumes(aserver, dummyPartList.partId[i], all,
+		    vs_XListVolumes(conn, dummyPartList.partId[i], all,
 				    &xInfoP, &count);
 	    else
 		code =
-		    UV_ListVolumes(aserver, dummyPartList.partId[i], all,
+		    vs_ListVolumes(conn, dummyPartList.partId[i], all,
 				   &pntr, &count);
 	    if (code) {
 		PrintDiagnostics("listvol", code);
@@ -3878,6 +4013,8 @@ ListVolumes(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3888,10 +4025,8 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     struct partName part;
     int flags = 0;
     char *volname = 0;
-    afs_uint32 tserver;
     afs_int32 error = 0;
-
-    tserver = 0;
+    struct rx_connection *conn = NULL;
 
     if (as->parms[1].items && !as->parms[0].items) {
 	fprintf(STDERR, "vos: The -partition option requires a -server option.\n");
@@ -3899,12 +4034,9 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     }
 
     if (as->parms[0].items) {
-	tserver = GetServer(as->parms[0].items->data);
-	if (!tserver) {
-	    fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		    as->parms[0].items->data);
-	    ERROR_EXIT(1);
-	}
+	code = GetConnByName(as->parms[0].items->data, &conn);
+	if (code)
+	    ERROR_EXIT(code);
     }
 
     if (as->parms[1].items) {
@@ -3914,7 +4046,7 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
 		    as->parms[1].items->data);
 	    ERROR_EXIT(1);
 	}
-	if (!IsPartValid(pnum, tserver, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(pnum, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -3931,16 +4063,16 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     }
 
     if (as->parms[2].items) {
-	/* Synchronize an individual volume */
+	/* Synchronize an individual volume. Conn may be NULL. */
 	volname = as->parms[2].items->data;
-	code = UV_SyncVolume(tserver, pnum, volname, flags);
+	code = vs_SyncVolume(conn, pnum, volname, flags);
     } else {
-	if (!tserver) {
+	if (!conn) {
 	    fprintf(STDERR,
 		    "Without a -volume option, the -server option is required\n");
 	    ERROR_EXIT(1);
 	}
-	code = UV_SyncVldb(tserver, pnum, flags, 0 /*unused */ );
+	code = vs_SyncVldb(conn, pnum, flags);
     }
 
     if (code) {
@@ -3953,7 +4085,7 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
 	fprintf(STDOUT, "VLDB volume %s synchronized", volname);
     else
 	fprintf(STDOUT, "VLDB synchronized");
-    if (tserver) {
+    if (conn) {
 	fprintf(STDOUT, " with state of server %s", as->parms[0].items->data);
     }
     if (flags & 1) {
@@ -3962,6 +4094,8 @@ SyncVldb(struct cmd_syndesc *as, void *arock)
     fprintf(STDOUT, "\n");
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -3973,13 +4107,11 @@ SyncServer(struct cmd_syndesc *as, void *arock)
     afs_int32 error = 0;
 
     int flags = 0;
+    struct rx_connection *conn = NULL;
 
-    tserver = GetServer(as->parms[0].items->data);
-    if (!tserver) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(1);
-    }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     if (as->parms[1].items) {
 	pnum = volutil_GetPartitionID(as->parms[1].items->data);
 	if (pnum < 0) {
@@ -3987,7 +4119,7 @@ SyncServer(struct cmd_syndesc *as, void *arock)
 		    as->parms[1].items->data);
 	    ERROR_EXIT(1);
 	}
-	if (!IsPartValid(pnum, tserver, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(pnum, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -4004,19 +4136,20 @@ SyncServer(struct cmd_syndesc *as, void *arock)
     if (as->parms[2].items) {
 	flags |= 2; /* don't update */
     }
-    code = UV_SyncServer(tserver, pnum, flags, 0 /*unused */ );
+    code = vs_SyncServer(conn, pnum, flags);
     if (code) {
 	PrintDiagnostics("syncserv", code);
 	ERROR_EXIT(1);
     }
     if (flags & 1) {
-	MapPartIdIntoName(pnum, part);
 	fprintf(STDOUT, "Server %s partition %s synchronized with VLDB\n",
-		as->parms[0].items->data, part);
+		as->parms[0].items->data, partid2str(pnum, &part));
     } else
 	fprintf(STDOUT, "Server %s synchronized with VLDB\n",
 		as->parms[0].items->data);
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 
 }
@@ -4056,6 +4189,7 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
     afs_uint32 volid, zapbackupid = 0, backupid = 0;
     afs_int32 code, server, part, err;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     if (as->parms[3].items) {
 	/* force flag is on, use the other version */
@@ -4087,7 +4221,10 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
-    if (!IsPartValid(part, server, &code)) {	/*check for validity of the partition */
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
+    if (!IsPartValid(part, conn, &code)) {	/*check for validity of the partition */
 	if (code)
 	    PrintError("", code);
 	else
@@ -4108,7 +4245,7 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
 	volintInfo *pntr = (volintInfo *) 0;
 
 	if (!backupid) {
-	    code = UV_ListOneVolume(server, part, volid, &pntr);
+	    code = vs_ListOneVolume(conn, part, volid, &pntr);
 	    if (!code) {
 		if (volid == pntr->parentID)
 		    backupid = pntr->backupID;
@@ -4117,7 +4254,7 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
 	    }
 	}
 	if (backupid) {
-	    code = UV_VolumeZap(server, part, backupid);
+	    code = vs_VolumeZap(conn, part, backupid);
 	    if (code) {
 		PrintDiagnostics("zap", code);
 		ERROR_EXIT(1);
@@ -4126,7 +4263,7 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
 		    (unsigned long)backupid);
 	}
     }
-    code = UV_VolumeZap(server, part, volid);
+    code = vs_VolumeZap(conn, part, volid);
     if (code) {
 	PrintDiagnostics("zap", code);
 	ERROR_EXIT(1);
@@ -4134,13 +4271,14 @@ VolumeZap(struct cmd_syndesc *as, void *arock)
     fprintf(STDOUT, "Volume %lu deleted\n", (unsigned long)volid);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
 static int
 VolserStatus(struct cmd_syndesc *as, void *arock)
 {
-    afs_uint32 server;
     afs_int32 code;
     transDebugInfo *pntr, *oldpntr;
     afs_int32 count;
@@ -4148,14 +4286,13 @@ VolserStatus(struct cmd_syndesc *as, void *arock)
     struct partName pname;
     time_t t;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
-    server = GetServer(as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(1);
-    }
-    code = UV_VolserStatus(server, &pntr, &count);
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
+
+    code = vs_VolserStatus(conn, &pntr, &count);
     if (code) {
 	PrintDiagnostics("status", code);
 	ERROR_EXIT(1);
@@ -4236,6 +4373,8 @@ VolserStatus(struct cmd_syndesc *as, void *arock)
 	free(oldpntr);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -4289,7 +4428,7 @@ RenameVolume(struct cmd_syndesc *as, void *arock)
     }
     MapHostToNetwork(&entry);
     code =
-	UV_RenameVolume(&entry, as->parms[0].items->data,
+	vs_RenameVolume(&entry, as->parms[0].items->data,
 			as->parms[1].items->data);
     if (code) {
 	PrintDiagnostics("rename", code);
@@ -4899,6 +5038,10 @@ BackSys(struct cmd_syndesc *as, void *arock)
     }
 
     for (j = 0; j < nentries; j++) {	/* process each vldb entry */
+	struct rx_connection *conn = NULL;
+	struct rx_securityClass *securityClass = vs_GetSecurityClass();
+	afs_int32 securityIndex = vs_GetSecurityIndex();
+
 	vllist = &arrayEntries.nbulkentries_val[j];
 
 	if (seenprefix) {
@@ -5044,7 +5187,14 @@ BackSys(struct cmd_syndesc *as, void *arock)
 	    fflush(STDOUT);
 	}
 
-	code = UV_BackupVolume(aserver1, apart1, avolid);
+	code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver1);
+	if (code) {
+	    fprintf(STDERR, "Failed to get connection for server %d\n", aserver1);
+	    totalFail++;
+	    continue;
+	}
+
+	code = vs_BackupVolume(conn, apart1, avolid);
 	if (code) {
 	    fprintf(STDOUT, "Could not backup %s\n", vllist->name);
 	    totalFail++;
@@ -5054,6 +5204,9 @@ BackSys(struct cmd_syndesc *as, void *arock)
 	if (verbose)
 	    fprintf(STDOUT, "\n");
 	fflush(STDOUT);
+
+	if (conn)
+	    rx_DestroyConnection(conn);
     }				/* process each vldb entry */
     fprintf(STDOUT, "done\n");
     fprintf(STDOUT, "Total volumes backed up: %lu; failed to backup: %lu\n",
@@ -5081,6 +5234,7 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
     afs_int32 totalE;
     struct partName pname;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     apart = -1;
     totalE = 0;
@@ -5108,7 +5262,10 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 		    as->parms[1].items->data);
 	    ERROR_EXIT(1);
 	}
-	if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+	code = GetConnByName(as->parms[0].items->data, &conn);
+	if (code)
+	    ERROR_EXIT(code);
+	if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -5154,22 +5311,22 @@ UnlockVLDB(struct cmd_syndesc *as, void *arock)
 		    "Unlocked all the VLDB entries for volumes on server %s ",
 		    as->parms[0].items->data);
 	    if (as->parms[1].items) {
-		MapPartIdIntoName(apart, pname);
-		fprintf(STDOUT, "partition %s\n", pname);
+		fprintf(STDOUT, "partition %s\n", partid2str(apart, &pname));
 	    } else
 		fprintf(STDOUT, "\n");
 
 	} else if (as->parms[1].items) {
-	    MapPartIdIntoName(apart, pname);
 	    fprintf(STDOUT,
 		    "Unlocked all the VLDB entries for volumes on partition %s on all servers\n",
-		    pname);
+		    partid2str(apart, &pname));
 	}
     }
 
     xdr_free((xdrproc_t) xdr_nbulkentries, &arrayEntries);
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -5214,6 +5371,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     int printSummary=0, sumPartitions=0;
     afs_uint64 sumFree, sumStorage;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     ZeroInt64(sumFree);
     ZeroInt64(sumStorage);
@@ -5224,6 +5382,9 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
 		as->parms[0].items->data);
 	ERROR_EXIT(1);
     }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     if (as->parms[1].items) {
 	apart = volutil_GetPartitionID(as->parms[1].items->data);
 	if (apart < 0) {
@@ -5239,7 +5400,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
 	printSummary = 1;
     }
     if (apart != -1) {
-	if (!IsPartValid(apart, aserver, &code)) {	/*check for validity of the partition */
+	if (!IsPartValid(apart, conn, &code)) {	/*check for validity of the partition */
 	    if (code)
 		PrintError("", code);
 	    else
@@ -5249,7 +5410,7 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(1);
 	}
     } else {
-	code = UV_ListPartitions(aserver, &dummyPartList, &cnt);
+	code = vs_ListPartitions(conn, &dummyPartList, &cnt);
 	if (code) {
 	    PrintDiagnostics("listpart", code);
 	    ERROR_EXIT(1);
@@ -5284,6 +5445,8 @@ PartitionInfo(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -5714,7 +5877,6 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 partition = -1;
     afs_uint32 volid;
-    afs_uint32 server;
     afs_int32 code, i, same;
     struct nvldbentry entry;
     afs_int32 vcode;
@@ -5725,20 +5887,18 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
     int force = 0;
     int c, dc;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
-    server = GetServer(as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(ENOENT);
-    }
+    code = GetConnByName(as->parms[0].items->data, &conn);
+    if (code)
+	ERROR_EXIT(code);
     partition = volutil_GetPartitionID(as->parms[1].items->data);
     if (partition < 0) {
 	fprintf(STDERR, "vos: could not interpret partition name '%s'\n",
 		as->parms[1].items->data);
 	ERROR_EXIT(ENOENT);
     }
-    if (!IsPartValid(partition, server, &code)) {
+    if (!IsPartValid(partition, conn, &code)) {
 	if (code)
 	    PrintError("", code);
 	else
@@ -5781,6 +5941,14 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
 	    if (roserver)
 		break;
 	} else if ((entry.serverFlags[i] & VLSF_ROVOL) && !roserver) {
+	    afs_uint32 server;
+
+	    code = vs_GetServerId(conn, &server);
+	    if (code) {
+		fprintf(STDERR, "Failed to get server id.\n");
+		ERROR_EXIT(code);
+	    }
+
 	    same = VLDB_IsSameAddrs(server, entry.serverNumber[i], &code);
 	    if (code) {
 		fprintf(STDERR,
@@ -5823,10 +5991,12 @@ ConvertRO(struct cmd_syndesc *as, void *arock)
 	}
     }
 
-    code = UV_ConvertRO(server, partition, volid, &entry);
+    code = vs_ConvertRO(conn, partition, volid, &entry);
 
     error = code;
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
@@ -5834,11 +6004,11 @@ static int
 Sizes(struct cmd_syndesc *as, void *arock)
 {
     afs_uint32 avolid;
-    afs_uint32 aserver;
     afs_int32 apart, voltype, fromdate = 0, code, err, i;
     struct nvldbentry entry;
     volintSize vol_size;
     afs_int32 error = 0;
+    struct rx_connection *conn = NULL;
 
     rx_SetRxDeadTime(60 * 10);
     for (i = 0; i < MAXSERVERS; i++) {
@@ -5866,10 +6036,9 @@ Sizes(struct cmd_syndesc *as, void *arock)
 		    "Must specify both -server and -partition options\n");
 	    ERROR_EXIT(-1);
 	}
-	aserver = GetServer(as->parms[2].items->data);
-	if (aserver == 0) {
-	    fprintf(STDERR, "Invalid server name\n");
-	    ERROR_EXIT(-1);
+	code = GetConnByName(as->parms[2].items->data, &conn);
+	if (code) {
+	    ERROR_EXIT(code);
 	}
 	apart = volutil_GetPartitionID(as->parms[1].items->data);
 	if (apart < 0) {
@@ -5877,7 +6046,14 @@ Sizes(struct cmd_syndesc *as, void *arock)
 	    ERROR_EXIT(-1);
 	}
     } else {
+	afs_uint32 aserver;
+	struct rx_securityClass *securityClass = vs_GetSecurityClass();
+	afs_int32 securityIndex = vs_GetSecurityIndex();
+
 	code = GetVolumeInfo(avolid, &aserver, &apart, &voltype, &entry);
+	if (code)
+	    ERROR_EXIT(code);
+	code = VLDB_NewConnByServerId(&conn, securityClass, securityIndex, aserver);
 	if (code)
 	    ERROR_EXIT(code);
     }
@@ -5897,7 +6073,7 @@ Sizes(struct cmd_syndesc *as, void *arock)
 
     if (as->parms[3].items) {	/* do the dump estimate */
 	vol_size.dump_size = 0;
-	code = UV_GetSize(avolid, aserver, apart, fromdate, &vol_size);
+	code = vs_GetSize(conn, avolid, apart, fromdate, &vol_size);
 	if (code) {
 	    PrintDiagnostics("size", code);
 	    ERROR_EXIT(code);
@@ -5911,23 +6087,17 @@ Sizes(struct cmd_syndesc *as, void *arock)
     /* Display info */
 
  error_exit:
+    if (conn)
+	rx_DestroyConnection(conn);
     return error;
 }
 
 static int
 EndTrans(struct cmd_syndesc *as, void *arock)
 {
-    afs_uint32 server;
     afs_int32 code, tid, rcode;
-    struct rx_connection *aconn;
+    struct rx_connection *aconn = NULL;
     afs_int32 error = 0;
-
-    server = GetServer(as->parms[0].items->data);
-    if (!server) {
-	fprintf(STDERR, "vos: host '%s' not found in host table\n",
-		as->parms[0].items->data);
-	ERROR_EXIT(EINVAL);
-    }
 
     code = util_GetInt32(as->parms[1].items->data, &tid);
     if (code) {
@@ -5935,7 +6105,11 @@ EndTrans(struct cmd_syndesc *as, void *arock)
 	ERROR_EXIT(code);
     }
 
-    aconn = UV_Bind(server, AFSCONF_VOLUMEPORT);
+    code = GetConnByName(as->parms[0].items->data, &aconn);
+    if (code) {
+	ERROR_EXIT(code);
+    }
+
     code = AFSVolEndTrans(aconn, tid, &rcode);
     if (!code) {
 	code = rcode;
@@ -5947,6 +6121,8 @@ EndTrans(struct cmd_syndesc *as, void *arock)
     }
 
  error_exit:
+    if (aconn)
+	rx_DestroyConnection(aconn);
     return error;
 }
 
@@ -6048,7 +6224,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	rxgk_seclevel_str = NULL;
     }
 
-    if ((code = vsu_ClientInit(confdir, tcell, secFlags, UV_SetSecurity,
+    if ((code = vsu_ClientInit(confdir, tcell, secFlags, vs_SetSecurity,
 			       &cstruct))) {
 	fprintf(STDERR, "could not initialize VLDB library (code=%lu) \n",
 		(unsigned long)code);
