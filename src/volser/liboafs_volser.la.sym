@@ -59,3 +59,5 @@ verbose
 vsu_ClientInit
 vsu_ExtractName
 vsu_GetVolumeID
+servid2str
+partid2str
