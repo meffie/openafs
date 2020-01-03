@@ -1515,7 +1515,8 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
 
     if (entry.volumeId[RWVOL] != afromvol) {
 	fprintf(STDERR, "Only RW volume can be moved\n");
-	exit(1);
+	error = EINVAL;
+	goto mfail;
     }
 
     vcode = ubik_VL_SetLock(cstruct, 0, afromvol, RWVOL, VLOP_MOVE);
@@ -2164,7 +2165,7 @@ UV_MoveVolume2(afs_uint32 afromvol, afs_uint32 afromserver, afs_int32 afrompart,
 	fprintf(STDOUT, "cleanup complete - user verify desired result\n");
 	fflush(STDOUT);
     }
-    exit(1);
+    return error;
 }
 
 
@@ -2657,7 +2658,7 @@ cpincr:
 	fprintf(STDOUT, "cleanup complete - user verify desired result\n");
 	fflush(STDOUT);
     }
-    exit(1);
+    return error;
 }
 
 
