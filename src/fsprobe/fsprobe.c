@@ -292,8 +292,14 @@ fsprobe_LWP(void *unused)
 			    rn);
 		for (i = 0; i < curr_conn->partCnt; i++) {
 		    if (curr_conn->partList.partFlags[i] & PARTVALID) {
-			MapPartIdIntoName(curr_conn->partList.partId[i],
-					  pname);
+			afs_int32 partid = curr_conn->partList.partId[i];
+			code = volutil_PartitionName2_r(partid, pname, sizeof(pname));
+			if (code) {
+			    fprintf(stderr,
+				    "Could not convert partition id %d to name: code=%d\n",
+				    partid, code);
+			    continue;
+			}
 			code =
 			    AFSVolPartitionInfo64(curr_conn->rxVolconn, pname,
 						  partition64p);
