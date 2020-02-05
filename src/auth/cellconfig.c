@@ -315,32 +315,32 @@ _afsconf_IsClientConfigDirectory(const char *path)
 
 #ifdef AFS_NT40_ENV
 static void
-_afsconf_CellServDBPath(struct afsconf_dir *adir, char **path)
+_afsconf_CellServDBPath(const char *dirname, char **path)
 {
     char *p;
 
     /* NT client CellServDB has different file name than NT server or Unix */
-    if (_afsconf_IsClientConfigDirectory(adir->name)) {
+    if (_afsconf_IsClientConfigDirectory(dirname)) {
 	if (!afssw_GetClientCellServDBDir(&p)) {
 	    if (asprintf(path, "%s/%s", p, AFSDIR_CELLSERVDB_FILE_NTCLIENT) < 0)
 		*path = NULL;
 	    free(p);
 	} else {
-	    if (asprintf(path, "%s/%s", adir->name,
+	    if (asprintf(path, "%s/%s", dirname,
 			 AFSDIR_CELLSERVDB_FILE_NTCLIENT) < 0)
 		*path = NULL;
 	}
     } else {
-	if (asprintf(path, "%s/%s", adir->name, AFSDIR_CELLSERVDB_FILE) < 0)
+	if (asprintf(path, "%s/%s", dirname, AFSDIR_CELLSERVDB_FILE) < 0)
 	    *path = NULL;
     }
     return;
 }
 #else
 static void
-_afsconf_CellServDBPath(struct afsconf_dir *adir, char **path)
+_afsconf_CellServDBPath(const char *dirname, char **path)
 {
-    if (asprintf(path, "%s/%s", adir->name, AFSDIR_CELLSERVDB_FILE) < 0)
+    if (asprintf(path, "%s/%s", dirname, AFSDIR_CELLSERVDB_FILE) < 0)
 	*path = NULL;
 }
 #endif /* AFS_NT40_ENV */
@@ -732,7 +732,7 @@ LoadConfig(struct afsconf_dir *adir)
     /* now parse the individual lines */
     curEntry = 0;
 
-    _afsconf_CellServDBPath(adir, &adir->cellservDB);
+    _afsconf_CellServDBPath(adir->name, &adir->cellservDB);
 
 #ifdef AFS_NT40_ENV
     if (_afsconf_IsClientConfigDirectory(adir->name))
@@ -1683,4 +1683,215 @@ afsconf_Reopen(struct afsconf_dir *adir)
 	return code;
     code = LoadConfig(adir);
     return code;
+}
+
+/**
+ * Write ThisCell and CellServDB containing exactly one cell's info specified
+ * by acellInfo parm.   Useful only on the server (which describes only one
+ * cell).
+ */
+static int
+VerifyEntries(struct afsconf_cell *aci)
+{
+    int i;
+    struct hostent *th;
+
+    for (i = 0; i < aci->numServers; i++) {
+	if (aci->hostAddr[i].sin_addr.s_addr == 0) {
+	    /* no address spec'd */
+	    if (*(aci->hostName[i]) != 0) {
+		int code;
+		struct addrinfo hints;
+		struct addrinfo *result;
+		struct addrinfo *rp;
+
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_DGRAM;
+
+		code = getaddrinfo(aci->hostName[i], NULL, &hints, &result);
+		if (code) {
+		    printf("Host %s not found in host database...\n",
+			   aci->hostName[i]);
+		    return AFSCONF_FAILURE;
+		}
+		for (rp = result; rp != NULL; rp = rp->ai_next) {
+		    struct sockaddr_in *sa = (struct sockaddr_in *)rp->ai_addr;
+		    if (!rx_IsLoopbackAddr(ntohl(sa->sin_addr.s_addr))) {
+			aci->hostAddr[i].sin_addr.s_addr = sa->sin_addr.s_addr;
+			break;
+		    }
+		}
+		freeaddrinfo(result);
+		if (aci->hostAddr[i].sin_addr.s_addr == 0) {
+		    printf("No non-loopback addresses found for host %s\n",
+			   aci->hostName[i]);
+		    return AFSCONF_FAILURE;
+		}
+	    }
+	    /* otherwise we're deleting this entry */
+	} else {
+	    /* address spec'd, perhaps no name known */
+	    if (aci->hostName[i][0] != 0)
+		continue;	/* name known too */
+	    /* figure out name, if possible */
+	    th = gethostbyaddr((char *)(&aci->hostAddr[i].sin_addr), 4,
+			       AF_INET);
+	    if (!th) {
+		strcpy(aci->hostName[i], "UNKNOWNHOST");
+	    } else {
+		if (strlcpy(aci->hostName[i],
+			    th->h_name,
+			    sizeof(aci->hostName[i]))
+			>= sizeof(aci->hostName[i])) {
+		   strcpy(aci->hostName[i], "UNKNOWNHOST");
+		}
+	    }
+	}
+    }
+    return 0;
+}
+
+/**
+ * Set cell information (deprecated)
+ *
+ * @param adir  cell configuation data; may be NULL
+ * @param apath  cell configuration path
+ * @param acellInfo  cell information
+ *
+ * @note This interface was changed at some point to optionally accept the
+ *       afsconf_dir data structure.  This is a handle to the internal cache
+ *       that is maintained by the bosserver.
+ *
+ * @return 0 on success
+ */
+int
+afsconf_SetCellInfo(struct afsconf_dir *adir, const char *apath,
+		    struct afsconf_cell *acellInfo)
+{
+    afs_int32 code;
+    struct afsconf_dir *tdir = NULL;
+
+    opr_Assert(apath);
+    opr_Assert(acellInfo);
+
+    if (!adir) {
+	/*
+	 * Existing callers may pass a NULL adir. Create a temporary afsconf_dir
+	 * with just enough to keep afsconf_SetExtendedCellInfo() happy.
+	 */
+	tdir = calloc(1, sizeof(*tdir));
+	if (!tdir) {
+	    code = ENOMEM;
+	    goto out;
+	}
+	_afsconf_CellServDBPath(apath, &tdir->cellservDB);
+	if (!tdir->cellservDB) {
+	    code = ENOMEM;
+	    goto out;
+	}
+	adir = tdir;
+    }
+
+    code = afsconf_SetExtendedCellInfo(adir, apath, acellInfo, NULL);
+
+ out:
+    if (tdir)
+        free(tdir->cellservDB);
+    free(tdir);
+    return code;
+}
+
+/**
+ * Set cell information
+ *
+ * @param adir       cell configuation data
+ * @param apath      cell configuration path
+ * @param acellInfo  cell information
+ * @param clones     array of booleans to indicate which hosts are clones
+ *
+ * @return 0 on success
+ */
+int
+afsconf_SetExtendedCellInfo(struct afsconf_dir *adir,
+			    const char *apath,
+			    struct afsconf_cell *acellInfo, char clones[])
+{
+    afs_int32 code;
+    int fd;
+    char tbuffer[1024];
+    FILE *tf;
+    afs_int32 i;
+
+    opr_Assert(adir);
+    opr_Assert(apath);
+    opr_Assert(acellInfo);
+
+    LOCK_GLOBAL_MUTEX;
+    /* write ThisCell file */
+    strcompose(tbuffer, 1024, apath, "/", AFSDIR_THISCELL_FILE, (char *)NULL);
+
+    fd = open(tbuffer, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) {
+	UNLOCK_GLOBAL_MUTEX;
+	return errno;
+    }
+    i = (int)strlen(acellInfo->name);
+    code = write(fd, acellInfo->name, i);
+    if (code != i) {
+	UNLOCK_GLOBAL_MUTEX;
+	return AFSCONF_FAILURE;
+    }
+    if (close(fd) < 0) {
+	UNLOCK_GLOBAL_MUTEX;
+	return errno;
+    }
+
+    /* make sure we have both name and address for each host, looking up other
+     * if need be */
+    code = VerifyEntries(acellInfo);
+    if (code) {
+	UNLOCK_GLOBAL_MUTEX;
+	return code;
+    }
+
+    /* write CellServDB */
+    tf = fopen(adir->cellservDB, "w");
+    if (!tf) {
+	UNLOCK_GLOBAL_MUTEX;
+	return AFSCONF_NOTFOUND;
+    }
+    fprintf(tf, ">%s	#Cell name\n", acellInfo->name);
+    for (i = 0; i < acellInfo->numServers; i++) {
+	code = acellInfo->hostAddr[i].sin_addr.s_addr;	/* net order */
+	if (code == 0)
+	    continue;		/* delete request */
+	code = ntohl(code);	/* convert to host order */
+	if (clones && clones[i])
+	    fprintf(tf, "[%d.%d.%d.%d]  #%s\n", (code >> 24) & 0xff,
+		    (code >> 16) & 0xff, (code >> 8) & 0xff, code & 0xff,
+		    acellInfo->hostName[i]);
+	else
+	    fprintf(tf, "%d.%d.%d.%d    #%s\n", (code >> 24) & 0xff,
+		    (code >> 16) & 0xff, (code >> 8) & 0xff, code & 0xff,
+		    acellInfo->hostName[i]);
+    }
+    if (ferror(tf)) {
+	fclose(tf);
+	UNLOCK_GLOBAL_MUTEX;
+	return AFSCONF_FAILURE;
+    }
+    code = fclose(tf);
+
+    /* Reset the timestamp in the cache, so that
+     * the CellServDB is read into the cache next time.
+     * Resolves the lost update problem due to an inconsistent cache
+     */
+    if (adir)
+	adir->timeRead = 0;
+
+    UNLOCK_GLOBAL_MUTEX;
+    if (code == EOF)
+	return AFSCONF_FAILURE;
+    return 0;
 }
