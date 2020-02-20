@@ -69,6 +69,54 @@ afstest_StartVLServer(char *dirname, pid_t *serverPid)
 }
 
 int
+afstest_StartBosServer(char *dirname, pid_t *serverPid)
+{
+    pid_t pid;
+    int status;
+
+    pid = fork();
+    if (pid == -1) {
+	exit(1);
+	/* Argggggghhhhh */
+    } else if (pid == 0) {
+	char *binPath, *build;
+
+	/* Child */
+	build = getenv("BUILD");
+
+	if (build == NULL)
+	    build = "..";
+
+	if (asprintf(&binPath, "%s/../src/bozo/bosserver", build) < 0) {
+	    fprintf(stderr, "Out of memory building bosserver arguments\n");
+	    exit(1);
+	}
+	/* TODO: We need to add command line options to run the bosserver in a test sandbox. */
+	execl(binPath, "bosserver", "-nofork", "-skip-root-check", NULL);
+	fprintf(stderr, "Running %s failed\n", binPath);
+	exit(1);
+    }
+
+    if (waitpid(pid, &status, WNOHANG) != 0) {
+	fprintf(stderr, "Error starting bosserver\n");
+	return -1;
+    }
+
+    diag("Sleeping for a few seconds to let the bosserver startup");
+    sleep(5);
+
+    if (waitpid(pid, &status, WNOHANG) != 0) {
+	fprintf(stderr, "bosserver died during startup\n");
+	return -1;
+    }
+
+    *serverPid = pid;
+
+    return 0;
+}
+
+
+int
 afstest_StopServer(pid_t serverPid)
 {
     int status;

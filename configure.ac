@@ -193,6 +193,7 @@ AC_CONFIG_FILES([
     src/helper-splint.sh
     tests/Makefile
     tests/auth/Makefile
+    tests/bozo/Makefile
     tests/cmd/Makefile
     tests/common/Makefile
     tests/opr/Makefile
