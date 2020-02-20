@@ -23,6 +23,9 @@ B<bosserver>
     S<<< [B<-transarc-logs>] >>>
     S<<< [B<-pidfiles>[=<I<path>>]] >>>
     S<<< [B<-nofork>] >>>
+    S<<< [B<-config> <I<config path>>] >>>
+    S<<< [B<-bosconfig> <I<bosconfig path>>] >>>
+    S<<< [B<-logfile> <I<log path>>] >>>
     S<<< [B<-help>] >>>
 
 =for html
@@ -228,6 +231,24 @@ names.
 
 Run the BOS Server in the foreground. By default, the BOS Server process will
 fork and detach the stdio, stderr, and stdin streams.
+
+=item B<-config> <I<config path>>
+
+Sets the path for the configuration directory (Transarc-path default
+/usr/afs/etc).  This option is intended primarily to support automated testing,
+and should not be required in normal operation.
+
+=item B<-bosconfig> <I<bosconfig path>>
+
+Sets the path for the bosserver's configuration file (Transarc-path default
+/usr/afs/etc/BosConfig).  This option is intended primarily to support
+automated testing, and should not be required in normal operation.
+
+=item B<-logfile> <I<log path>>
+
+Sets the path for the bosserver log file (Transarc-path default
+/usr/afs/etc/BosLog).  This option is intended primarily to support automated
+testing, and should not be required in normal operation.
 
 =item B<-help>
 

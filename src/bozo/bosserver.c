@@ -60,6 +60,7 @@
 #define BOZO_LWP_STACKSIZE	16000
 extern struct bnode_ops fsbnode_ops, dafsbnode_ops, ezbnode_ops, cronbnode_ops;
 
+char *bozo_configDirPath = NULL;
 struct afsconf_dir *bozo_confdir = 0;	/* bozo configuration dir */
 static PROCESS bozo_pid;
 const char *bozo_fileName;
@@ -825,14 +826,14 @@ CreateLocalCellConfig(void)
 	bozo_Log("try the 'hostname' command\n");
 	exit(1);
     }
-    code = afsconf_SetCellInfo(NULL, AFSDIR_SERVER_ETC_DIRPATH, &tcell);
+    code = afsconf_SetCellInfo(NULL, bozo_configDirPath, &tcell);
     if (code) {
 	bozo_Log
 	    ("could not create cell database in '%s' (code %d), quitting\n",
-	     AFSDIR_SERVER_ETC_DIRPATH, code);
+	     bozo_configDirPath, code);
 	exit(1);
     }
-    tdir = afsconf_Open(AFSDIR_SERVER_ETC_DIRPATH);
+    tdir = afsconf_Open(bozo_configDirPath);
     if (!tdir) {
 	bozo_Log("failed to open newly-created cell database, quitting\n");
 	exit(1);
@@ -860,9 +861,14 @@ enum optionsList {
 #ifndef AFS_NT40_ENV
     OPT_nofork,
     OPT_cores,
-    OPT_syslog
+    OPT_syslog,
 #endif /* AFS_NT40_ENV */
+    OPT_logfile,
+    OPT_config,
+    OPT_bosconfig
 };
+
+char *bozo_logFilePath = NULL;
 
 int
 main(int argc, char **argv, char **envp)
@@ -877,6 +883,7 @@ main(int argc, char **argv, char **envp)
     char *oldlog;
     int rxMaxMTU = -1;
     afs_uint32 host = htonl(INADDR_ANY);
+
     char *auditFileName = NULL;
     char *auditIface = NULL;
     struct rx_securityClass **securityClasses;
@@ -931,7 +938,7 @@ main(int argc, char **argv, char **envp)
     }
 
     /* some path inits */
-    bozo_fileName = AFSDIR_SERVER_BOZCONF_FILEPATH;
+
     DoCore = strdup(AFSDIR_SERVER_LOGS_DIRPATH);
     if (!DoCore) {
 	fprintf(stderr, "bosserver: Failed to allocate memory.\n");
@@ -1010,6 +1017,15 @@ main(int argc, char **argv, char **envp)
     cmd_AddParmAtOffset(opts, OPT_dotted, "-allow-dotted-principals", CMD_FLAG,
 			CMD_OPTIONAL, "permit Kerberos 5 principals with dots");
 
+    /* testing options */
+    cmd_AddParmAtOffset(opts, OPT_logfile, "-logfile", CMD_SINGLE,
+			CMD_OPTIONAL, "path to log file");
+    cmd_AddParmAtOffset(opts, OPT_config, "-config", CMD_SINGLE,
+			CMD_OPTIONAL, "path to config directory");
+    cmd_AddParmAtOffset(opts, OPT_bosconfig, "-bosconfig", CMD_SINGLE,
+			CMD_OPTIONAL, "path to BosConfig file");
+
+
     code = cmd_Parse(argc, argv, &opts);
     if (code == CMD_HELP) {
 	exit(0);
@@ -1087,22 +1103,27 @@ main(int argc, char **argv, char **envp)
 	exit(1);
     }
 
+    if (cmd_OptionPresent(opts, OPT_logfile))
+	cmd_OptionAsString(opts, OPT_logfile, (char**)&bozo_logFilePath);
+    else
+	bozo_logFilePath = (char *) AFSDIR_SERVER_BOZLOG_FILEPATH;
+
     if (!DoSyslog) {
 	/* Support logging to named pipes by not renaming. */
 	if (DoTransarcLogs
-	    && (lstat(AFSDIR_SERVER_BOZLOG_FILEPATH, &sb) == 0)
+	    && (lstat(bozo_logFilePath, &sb) == 0)
 	    && !(S_ISFIFO(sb.st_mode))) {
-	    if (asprintf(&oldlog, "%s.old", AFSDIR_SERVER_BOZLOG_FILEPATH) < 0) {
+	    if (asprintf(&oldlog, "%s.old", bozo_logFilePath) < 0) {
 		printf("bosserver: out of memory\n");
 		exit(1);
 	    }
-	    rk_rename(AFSDIR_SERVER_BOZLOG_FILEPATH, oldlog);
+	    rk_rename(bozo_logFilePath, oldlog);
 	    free(oldlog);
 	}
-	bozo_logFile = fopen(AFSDIR_SERVER_BOZLOG_FILEPATH, "a");
+	bozo_logFile = fopen(bozo_logFilePath, "a");
 	if (!bozo_logFile) {
 	    printf("bosserver: can't initialize log file (%s).\n",
-		   AFSDIR_SERVER_BOZLOG_FILEPATH);
+		   bozo_logFilePath);
 	    exit(1);
 	}
 	/* keep log closed normally, so can be removed */
@@ -1117,6 +1138,7 @@ main(int argc, char **argv, char **envp)
      * go into the background and remove our controlling tty, close open
      * file desriptors
      */
+    bozo_Log("Test me\n");
 
 #ifndef AFS_NT40_ENV
     if (!nofork) {
@@ -1139,13 +1161,20 @@ main(int argc, char **argv, char **envp)
 	exit(1);
     }
 
+    if (cmd_OptionPresent(opts, OPT_config))
+	cmd_OptionAsString(opts, OPT_config, (char**)&bozo_configDirPath);
+    else
+	bozo_configDirPath = (char *) AFSDIR_SERVER_ETC_DIRPATH;
+
     /* try to read the key from the config file */
-    tdir = afsconf_Open(AFSDIR_SERVER_ETC_DIRPATH);
+    tdir = afsconf_Open(bozo_configDirPath);
     if (!tdir) {
 	tdir = CreateLocalCellConfig();
     }
     /* opened the cell databse */
     bozo_confdir = tdir;
+
+    bozo_Log("Test me 2\n");
 
     code = bnode_Init();
     if (code) {
@@ -1171,6 +1200,10 @@ main(int argc, char **argv, char **envp)
       bozo_Log("Core limits now %d %d\n",(int)rlp.rlim_cur,(int)rlp.rlim_max);
     }
 #endif
+    if (cmd_OptionPresent(opts, OPT_bosconfig))
+	cmd_OptionAsString(opts, OPT_bosconfig, (char**)&bozo_fileName);
+    else
+	bozo_fileName = (char *) AFSDIR_SERVER_BOZCONF_FILEPATH;
 
     /* Read init file, starting up programs. Also starts watcher threads. */
     if ((code = ReadBozoFile(0))) {
@@ -1278,10 +1311,10 @@ bozo_Log(const char *format, ...)
 
 	/* log normally closed, so can be removed */
 
-	bozo_logFile = fopen(AFSDIR_SERVER_BOZLOG_FILEPATH, "a");
+	bozo_logFile = fopen(bozo_logFilePath, "a");
 	if (bozo_logFile == NULL) {
 	    printf("bosserver: WARNING: problem with %s\n",
-		   AFSDIR_SERVER_BOZLOG_FILEPATH);
+		   bozo_logFilePath);
 	    printf("%s ", tdate);
 	    vprintf(format, ap);
 	    fflush(stdout);
