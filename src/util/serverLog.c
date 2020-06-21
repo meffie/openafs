@@ -508,9 +508,22 @@ SetupLogSignals(void)
 
 #if defined(AFS_PTHREAD_ENV)
 static void
+atfork_lock(void)
+{
+    LOCK_SERVERLOG();
+}
+
+static void
+atfork_unlock(void)
+{
+    UNLOCK_SERVERLOG();
+}
+
+static void
 InitServerLogMutex(void)
 {
     opr_Verify(pthread_mutex_init(&serverLogMutex, NULL) == 0);
+    opr_Verify(pthread_atfork(atfork_lock, atfork_unlock, atfork_unlock) == 0);
 }
 #endif /* AFS_PTHREAD_ENV */
 
