@@ -1128,6 +1128,7 @@ SBOZO_GetStatus(struct rx_call *acall, char *ainstance, afs_int32 *astat,
 {
     struct bnode *tb;
     afs_int32 code;
+    char *desc = NULL;
 
     tb = bnode_FindInstance(ainstance);
     if (!tb) {
@@ -1142,16 +1143,21 @@ SBOZO_GetStatus(struct rx_call *acall, char *ainstance, afs_int32 *astat,
 	goto fail;
     }
 
-    *astatDescr = malloc(BOZO_BSSIZE);
-    code = bnode_GetString(tb, *astatDescr, BOZO_BSSIZE);
+    code = bnode_GetString(tb, &desc);
+    if (code != 0 || desc == NULL) {
+	desc = strdup("");  /* Empty string means no further info. */
+	if (desc == NULL) {
+	    bnode_Release(tb);
+	    goto fail;
+	}
+    }
+
+    *astatDescr = desc;
     bnode_Release(tb);
-    if (code)
-	(*astatDescr)[0] = 0;	/* null string means no further info */
     return 0;
 
   fail:
-    *astatDescr = malloc(1);
-    **astatDescr = 0;
+    *astatDescr = strdup("");
     return code;
 }
 
@@ -1167,7 +1173,7 @@ eifunc(struct bnode *abnode, void *param)
 
     if (arock->counter-- == 0) {
 	/* done */
-	strcpy(arock->iname, abnode->name);
+	arock->iname = abnode->name;
 	return 1;
     } else {
 	/* not there yet */
@@ -1246,15 +1252,17 @@ SBOZO_EnumerateInstance(struct rx_call *acall, afs_int32 anum,
 {
     struct eidata tdata;
 
-    *ainstance = malloc(BOZO_BSSIZE);
-    **ainstance = 0;
     tdata.counter = anum;
-    tdata.iname = *ainstance;
+    tdata.iname = NULL;
     bnode_ApplyInstance(eifunc, &tdata);
-    if (tdata.counter >= 0)
+    if (tdata.counter >= 0 || tdata.iname == NULL) {
+	*ainstance = strdup("");
 	return BZDOM;		/* anum > # of actual instances */
-    else
-	return 0;
+    }
+    *ainstance = strdup(tdata.iname);
+    if (*ainstance == NULL)
+	return ENOMEM;
+    return 0;
 }
 
 struct bozo_bosEntryStats bozo_bosEntryStats[] = {
@@ -1387,14 +1395,16 @@ SBOZO_GetInstanceInfo(IN struct rx_call *acall,
     struct bnode *tb;
 
     tb = bnode_FindInstance(ainstance);
-    *atype = malloc(BOZO_BSSIZE);
-    **atype = 0;
-    if (!tb)
+    if (!tb) {
+	*atype = strdup("");	/* empty string */
 	return BZNOENT;
+    }
     if (tb->type)
-	strcpy(*atype, tb->type->name);
+	*atype = strdup(tb->type->name);
     else
-	(*atype)[0] = 0;	/* null string */
+	*atype = strdup("");	/* empty string */
+    if (*atype == NULL)
+	return ENOMEM;
     memset(astatus, 0, sizeof(struct bozo_status));	/* good defaults */
     astatus->goal = tb->goal;
     astatus->fileGoal = tb->fileGoal;
@@ -1420,28 +1430,33 @@ SBOZO_GetInstanceParm(struct rx_call *acall,
 		      char **aparm)
 {
     struct bnode *tb;
-    char *tp;
+    char *parm;
     afs_int32 code;
 
-    tp = malloc(BOZO_BSSIZE);
-    *aparm = tp;
-    *tp = 0;			/* null-terminate string in error case */
     tb = bnode_FindInstance(ainstance);
-    if (!tb)
+    if (!tb) {
+	*aparm = strdup("");
 	return BZNOENT;
+    }
+
     bnode_Hold(tb);
     if (anum == 999) {
 	if (tb->notifier) {
-	    memcpy(tp, tb->notifier, strlen(tb->notifier) + 1);
+	    parm = strdup(tb->notifier);
 	    code = 0;
 	} else
-	    code = BZNOENT;	/* XXXXX */
+	    code = BZNOENT;
     } else
-	code = bnode_GetParm(tb, anum, tp, BOZO_BSSIZE);
+	code = bnode_GetParm(tb, anum, &parm);
+    if (code != 0 || parm == NULL) {
+	*aparm = strdup("");
+	bnode_Release(tb);
+	return code;
+    }
+    *aparm = parm;
     bnode_Release(tb);
-
     /* Not Currently Audited */
-    return code;
+    return 0;
 }
 
 afs_int32
