@@ -71,13 +71,7 @@ struct cronbnode {
 static int
 cron_hascore(struct bnode *abnode)
 {
-    char tbuffer[256];
-
-    bnode_CoreName(abnode, NULL, tbuffer);
-    if (access(tbuffer, 0) == 0)
-	return 1;
-    else
-	return 0;
+    return bnode_HasCoreName(abnode, NULL);
 }
 
 /* run at creation or after process exit.  figures out if we're all done (if a

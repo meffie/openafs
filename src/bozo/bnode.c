@@ -66,24 +66,50 @@ RememberProcName(struct bnode_proc *ap)
 	tbnodep->lastErrorName = strdup(ap->coreName);
 }
 
-/* utility for use by BOP_HASCORE functions to determine where a core file might
+/**
+ * Utility to format the core file path.
+ * The caller must free the output string.
+ */
+int
+bnode_CoreName(struct bnode *abnode, char *acoreName, char **path)
+{
+    int code;
+    char *tpath;
+
+    if (DoCore && acoreName)
+	code = asprintf(&tpath, "%s/%s%s.%s",
+	                DoCore, AFSDIR_CORE_FILE, acoreName, abnode->name);
+    else if (DoCore && !acoreName)
+	code = asprintf(&tpath, "%s/%s%s",
+	                DoCore, AFSDIR_CORE_FILE, abnode->name);
+    else if (!DoCore && acoreName)
+	code = asprintf(&tpath, "%s%s.%s",
+	                AFSDIR_SERVER_CORELOG_FILEPATH, acoreName, abnode->name);
+    else
+	code = asprintf(&tpath, "%s%s",
+	                AFSDIR_SERVER_CORELOG_FILEPATH, abnode->name);
+    if (code < 0)
+	return ENOMEM;
+    *path = tpath;
+    return 0;
+}
+
+/**
+ * Utility for use by BOP_HASCORE functions to determine where a core file might
  * be stored.
  */
 int
-bnode_CoreName(struct bnode *abnode, char *acoreName, char *abuffer)
+bnode_HasCoreName(struct bnode *abnode, char *acoreName)
 {
-    if (DoCore) {
-	strcpy(abuffer, DoCore);
-	strcat(abuffer, "/");
-	strcat(abuffer, AFSDIR_CORE_FILE);
-    } else
-	strcpy(abuffer, AFSDIR_SERVER_CORELOG_FILEPATH);
-    if (acoreName) {
-	strcat(abuffer, acoreName);
-	strcat(abuffer, ".");
-    }
-    strcat(abuffer, abnode->name);
-    return 0;
+    int code;
+    char *path;
+
+    code = bnode_CoreName(abnode, acoreName, &path);
+    if (code)
+	return 0;
+    code = access(path, 0);
+    free(path);
+    return (code == 0) ? 1 : 0;
 }
 
 /* save core file, if any */
@@ -91,22 +117,24 @@ static void
 SaveCore(struct bnode *abnode, struct bnode_proc
 	 *aproc)
 {
-    char tbuffer[256];
+    char *path;
     struct stat tstat;
     afs_int32 code = 0;
     char *corefile = NULL;
 #ifdef BOZO_SAVE_CORES
     struct timeval Start;
     struct tm *TimeFields;
-    char FileName[256];
+    char *FileName;
 #endif
 
     /* Linux always appends the PID to core dumps from threaded processes, so
      * we have to scan the directory to find core files under another name. */
     if (DoCore) {
-	strcpy(tbuffer, DoCore);
-	strcat(tbuffer, "/");
-	strcat(tbuffer, AFSDIR_CORE_FILE);
+	code = asprintf(&corefile, "%s/%s", DoCore, AFSDIR_CORE_FILE);
+	if (code < 0) {
+	    bozo_Log("Out of memory.");
+	    return;
+	}
     } else
 	code = stat(AFSDIR_SERVER_CORELOG_FILEPATH, &tstat);
     if (code) {
@@ -138,22 +166,32 @@ SaveCore(struct bnode *abnode, struct bnode_proc
             }
         }
         closedir(logdir);
-    } else {
-	corefile = strdup(tbuffer);
     }
-    if (code)
+    if (code) {
+	free(corefile);
 	return;
+    }
 
-    bnode_CoreName(abnode, aproc->coreName, tbuffer);
+    code = bnode_CoreName(abnode, aproc->coreName, &path);
+    if (code) {
+	bozo_Log("Out of memory.\n");
+	return;
+    }
 #ifdef BOZO_SAVE_CORES
     FT_GetTimeOfDay(&Start, 0);
     TimeFields = localtime(&Start.tv_sec);
-    sprintf(FileName, "%s.%d%02d%02d%02d%02d%02d", tbuffer,
+    code = asprintf(FileName, "%s.%d%02d%02d%02d%02d%02d", path,
 	    TimeFields->tm_year + 1900, TimeFields->tm_mon + 1, TimeFields->tm_mday,
 	    TimeFields->tm_hour, TimeFields->tm_min, TimeFields->tm_sec);
-    strcpy(tbuffer, FileName);
+    if (code < 0) {
+	bozo_Log("Out of memory.\n");
+	return;
+    }
+    free(path);
+    path = FileName;
 #endif
-    rk_rename(corefile, tbuffer);
+    rk_rename(corefile, path);
+    free(path);
     free(corefile);
 }
 
