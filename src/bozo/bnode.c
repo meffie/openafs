@@ -289,7 +289,7 @@ bnode_SetFileGoal(struct bnode *abnode, int agoal)
     if (abnode->fileGoal == agoal)
 	return 0;		/* already done */
     abnode->fileGoal = agoal;
-    WriteBozoFile(0);
+    WriteBozoFile(AFSDIR_SERVER_BOZCONF_FILEPATH);
     return 0;
 }
 
@@ -406,7 +406,7 @@ bnode_Create(char *atype, char *ainstance, struct bnode ** abp, char *ap1,
     bnode_SetStat(tb, tb->goal);	/* nudge it once */
 
     if (rewritefile != 0)
-	WriteBozoFile(0);
+	WriteBozoFile(AFSDIR_SERVER_BOZCONF_FILEPATH);
 
     return 0;
 }
@@ -465,7 +465,7 @@ bnode_Delete(struct bnode *abnode)
     opr_queue_Remove(&abnode->q);
     free(abnode->name);		/* do this first, since bnode fields may be bad after BOP_DELETE */
     code = BOP_DELETE(abnode);	/* don't play games like holding over this one */
-    WriteBozoFile(0);
+    WriteBozoFile(AFSDIR_SERVER_BOZCONF_FILEPATH);
     return code;
 }
 
