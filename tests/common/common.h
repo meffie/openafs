@@ -54,6 +54,8 @@ extern char *afstest_mkdtemp(void);
 extern void afstest_rmdtemp(char *path);
 extern char *afstest_src_path(char *path);
 extern char *afstest_obj_path(char *path);
+extern void afstest_writefile(const char *filename, const char *contents);
+extern char *afstest_readfile(const char *filename);
 
 /* rxkad.c */
 
@@ -88,3 +90,4 @@ extern char *afstest_GetProgname(char **argv);
 extern char *afstest_vasprintf(const char *fmt, va_list ap);
 extern char *afstest_asprintf(const char *fmt, ...)
 	AFS_ATTRIBUTE_FORMAT(__printf__, 1, 2);
+extern char *afstest_makestring(size_t n, char c);

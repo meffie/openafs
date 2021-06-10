@@ -122,3 +122,46 @@ afstest_obj_path(char *path)
 {
     return path_from_tdir("C_TAP_BUILD", path);
 }
+
+/**
+ * Write a string to a file.
+ */
+void
+afstest_writefile(const char *filename, const char *contents)
+{
+    int code;
+    FILE *fp;
+
+    fp = fopen(filename, "w");
+    if (fp == NULL)
+	sysbail("failed to open file %s", filename);
+    code = fprintf(fp, "%s", contents);
+    if (code < 0)
+	sysbail("failed to write file %s; code=%d", filename, code);
+    code = fclose(fp);
+    if (code < 0)
+	sysbail("failed close file %s; code=%d", filename, code);
+}
+
+/**
+ * Read the contents of a file.
+ */
+char *
+afstest_readfile(const char *filename)
+{
+    int code;
+    FILE *fp;
+    struct stat st;
+    char *contents;
+
+    fp = fopen(filename, "r");
+    if (fp == NULL)
+	sysbail("failed to open file %s", filename);
+    code = fstat(fileno(fp), &st);
+    if (code < 0)
+	sysbail("failed to stat file %s", filename);
+    contents = bcalloc(st.st_size + 1, sizeof(char)); /* Bails on failure. */
+    if (fread(contents, 1, st.st_size, fp) != st.st_size)
+        sysbail("failed to read file %s", filename);
+    return contents;
+}

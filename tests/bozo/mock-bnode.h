@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2019 Sine Nomine Associates. All rights reserved.
+ * Copyright 2021, Sine Nomine Associates and others.
+ * All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,63 +23,18 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*!
- * Common misc functions for testing programs
+void mock_bnode_register(void);
+void mock_bnode_dump(void);
+int mock_bnode_count(void);
+struct mock_bnode* mock_bnode_find(int index);
+void mock_bnode_free(void);
+
+/*
+ * The mock bnode just saves the BosConfig file bnode data.
  */
-
-#include <afsconfig.h>
-#include <afs/param.h>
-#include <roken.h>
-#include <tests/tap/basic.h>
-
-#include "common.h"
-
-char *
-afstest_GetProgname(char **argv)
-{
-    char *argv0;
-
-    /* For invocations like ./foo/bar/prog, strip out everything but the
-     * trailing 'prog'. */
-    argv0 = strrchr(argv[0], '/');
-    if (argv0 != NULL) {
-        argv0++;
-        return argv0;
-    }
-    return argv[0];
-}
-
-char *
-afstest_vasprintf(const char *fmt, va_list ap)
-{
-    char *str;
-    if (vasprintf(&str, fmt, ap) < 0) {
-	sysbail("vasprintf");
-    }
-    return str;
-}
-
-char *
-afstest_asprintf(const char *fmt, ...)
-{
-    char *str;
-    va_list ap;
-    va_start(ap, fmt);
-    str = afstest_vasprintf(fmt, ap);
-    va_end(ap);
-    return str;
-}
-
-/**
- * Create a string filled with the given character.
- */
-char *
-afstest_makestring(size_t n, char c)
-{
-    char *str;
-
-    str = bcalloc(n + 1, sizeof(*str)); /* Bails on failure. */
-    if (c != '\0')
-	memset(str, c, n);
-    return str;
-}
+struct mock_bnode {
+    struct bnode b;
+    int status;
+    char *name;
+    char *args[5];
+};
