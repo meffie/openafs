@@ -249,28 +249,34 @@ test_read_bosconfig(char *tmpdir)
     is_bnode_count(0);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid tag", -1, "bogus\n");
+    READ_TEST_SETUP("invalid tag", BZSYNTAX, "bogus\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("invalid tag: bogus");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid bool", -1, "restrictmode 2\n");
+    READ_TEST_SETUP("invalid bool", BZSYNTAX, "restrictmode 2\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("invalid boolean value: 2");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid integer", -1, "restrictmode foo\n");
+    READ_TEST_SETUP("invalid integer", BZSYNTAX, "restrictmode foo\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("invalid integer value: foo");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid integer", 0, "restrictmode 1foo\n"); /* silently fails */
+    READ_TEST_SETUP("invalid integer", BZSYNTAX, "restrictmode 1foo\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("invalid integer value: 1foo");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("truncated ktime", -1, "restarttime 16\n");
+    READ_TEST_SETUP("invalid ktime", BZSYNTAX, "restarttime 16\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("unable to parse time values");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid ktime", 0, "restarttime 16 99 0 0 0\n"); /* silently fails */
+    READ_TEST_SETUP("invalid ktime", BZSYNTAX, "restarttime 16 99 0 0 0\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("day is out of range");
     READ_TEST_TEARDOWN();
 
     READ_TEST_SETUP("bnode type simple", 0,
@@ -335,14 +341,17 @@ test_read_bosconfig(char *tmpdir)
 
     READ_TEST_SETUP("invalid bnode type", BZBADTYPE, "bnode bogus foo 1\nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("Failed to create bnode 'foo'");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("missing bnode type", -1, "bnode \nend\n");
+    READ_TEST_SETUP("missing bnode type", BZSYNTAX, "bnode \nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("missing type");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("missing bnode instance", -1, "bnode test\n\nend");
+    READ_TEST_SETUP("missing bnode instance", BZSYNTAX, "bnode test\n\nend");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("missing instance");
     READ_TEST_TEARDOWN();
 
     READ_TEST_SETUP("bnode goal 0", 0, "bnode test foo 0\nend\n");
@@ -360,12 +369,14 @@ test_read_bosconfig(char *tmpdir)
     is_bnode(0, "test", "foo", 1, NULL, NULL, NULL, NULL, NULL, NULL);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("missing bnode goal", -1, "bnode test foo\nend\n");
+    READ_TEST_SETUP("missing bnode goal", BZSYNTAX, "bnode test foo\nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("missing goal");
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("invalid bnode goal", -1, "bnode test foo bogus\nend\n");
+    READ_TEST_SETUP("invalid bnode goal", BZSYNTAX, "bnode test foo bogus\nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
+    is_log_contains("invalid integer value: bogus");
     READ_TEST_TEARDOWN();
 
     /* Notifier tests take a bit more effort since bnode_Create() verifies the
@@ -384,19 +395,19 @@ test_read_bosconfig(char *tmpdir)
     }
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("missing end tag", -1, "bnode test foo 1\n");
+    READ_TEST_SETUP("missing end tag", BZSYNTAX, "bnode test foo 1\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("unexpected end tag", -1, "end\n");
+    READ_TEST_SETUP("unexpected end tag", BZSYNTAX, "end\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("unexpected parm tag", -1, "parm foo\nend\n");
+    READ_TEST_SETUP("unexpected parm tag", BZSYNTAX, "parm foo\nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("characters after end tag", 0, "bnode test foo 1\nend \n");
+    READ_TEST_SETUP("characters after end tag", BZSYNTAX, "bnode test foo 1\nend \n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
     READ_TEST_TEARDOWN();
 
@@ -407,7 +418,7 @@ test_read_bosconfig(char *tmpdir)
     is_bnode(0, "test", "foo", 1, "one", "two", "three", "four", "five", NULL);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("too many parm tags", 0, /* Silent truncation. */
+    READ_TEST_SETUP("too many parm tags", BZSYNTAX,
 	"bnode test foo 1\n"
 	"parm one\nparm two\nparm three\nparm four\nparm five\nparm six\nend\n");
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
@@ -419,7 +430,7 @@ test_read_bosconfig(char *tmpdir)
     is_bnode(0, "test", "foo", 1, "", NULL, NULL, NULL, NULL, NULL);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("out of order tags", -1,
+    READ_TEST_SETUP("out of order tags", BZSYNTAX,
 	"bnode dafs dafs 1\n"
 	"restrictmode 0\n"
 	"restarttime 16 0 0 0 0\n"
@@ -491,7 +502,7 @@ main(int argc, char **argv)
     if (getenv("C_TAP_VERBOSE") != NULL)
 	verbose = 1;
 
-    plan(189);
+    plan(200);
     tmpdir = afstest_mkdtemp();
     code = bnode_Init();
     if (code)
