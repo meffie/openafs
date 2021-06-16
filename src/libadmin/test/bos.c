@@ -17,8 +17,21 @@
 #include <roken.h>
 
 #include <ctype.h>
+#include <afs/ktime.h>
+#include <afs/afsutil.h>
+#include <afs/afsutil_prototypes.h>
 
 #include "bos.h"
+
+static char *day[] = {
+    "sun",
+    "mon",
+    "tue",
+    "wed",
+    "thu",
+    "fri",
+    "sat"
+};
 
 /*
  * Utility functions
@@ -42,232 +55,6 @@ GetIntFromString(const char *int_str, const char *error_msg)
     }
 
     ERR_EXT(error_msg);
-}
-
-/*
- * Functions for reading and displaying bos restart times.  These are copied
- * from util/ktime.c and changed to handle the bos types.
- */
-
-struct token {
-    struct token *next;
-    char *key;
-};
-
-static char *day[] = {
-    "sun",
-    "mon",
-    "tue",
-    "wed",
-    "thu",
-    "fri",
-    "sat"
-};
-
-static int
-LocalFreeTokens(struct token *alist)
-{
-    struct token *nlist;
-    for (; alist; alist = nlist) {
-	nlist = alist->next;
-	free(alist->key);
-	free(alist);
-    }
-    return 0;
-}
-
-static int
-space(int x)
-{
-    if (x == 0 || x == ' ' || x == '\t' || x == '\n')
-	return 1;
-    else
-	return 0;
-}
-
-static int
-LocalParseLine(char *aline, struct token **alist)
-{
-    char tbuffer[256];
-    char *tptr = NULL;
-    int inToken;
-    struct token *first, *last;
-    struct token *ttok;
-    int tc;
-
-    inToken = 0;		/* not copying token chars at start */
-    first = NULL;
-    last = NULL;
-    while (1) {
-	tc = *aline++;
-	if (tc == 0 || space(tc)) {
-	    if (inToken) {
-		inToken = 0;	/* end of this token */
-		*tptr++ = 0;
-		ttok = malloc(sizeof(struct token));
-		ttok->next = NULL;
-		ttok->key = strdup(tbuffer);
-		if (last) {
-		    last->next = ttok;
-		    last = ttok;
-		} else
-		    last = ttok;
-		if (!first)
-		    first = ttok;
-	    }
-	} else {
-	    /* an alpha character */
-	    if (!inToken) {
-		tptr = tbuffer;
-		inToken = 1;
-	    }
-	    if (tptr - tbuffer >= sizeof(tbuffer))
-		return -1;
-	    *tptr++ = tc;
-	}
-	if (tc == 0) {
-	    /* last token flushed 'cause space(0) --> true */
-	    if (last)
-		last->next = NULL;
-	    *alist = first;
-	    return 0;
-	}
-    }
-}
-
-/* keyword database for periodic date parsing */
-static struct ptemp {
-    char *key;
-    afs_int32 value;
-} ptkeys[] = {
-	{"sun", 0x10000}, {"mon", 0x10001}, {"tue", 0x10002},
-	{"wed", 0x10003}, {"thu", 0x10004}, {"fri", 0x10005},
-	{"sat", 0x10006},
-	{"sunday", 0x10000}, {"monday", 0x10001},
-	{"tuesday", 0x10002}, {"wednesday", 0x10003},
-	{"thursday", 0x10004}, {"thur", 0x10004},
-	{"friday", 0x10005}, {"saturday", 0x10006},
-	{"am", 0x20000}, {"pm", 0x20001},
-	{"a.m.", 0x20000}, {"p.m.", 0x20001}, {0, 0}};
-
-static int
-ParseTime(bos_RestartTime_p ak, char *astr)
-{
-    int field;
-    short temp;
-    char *tp;
-    int tc;
-
-    field = 0;			/* 0=hour, 1=min, 2=sec */
-    temp = 0;
-
-    ak->mask |=
-	(BOS_RESTART_TIME_HOUR | BOS_RESTART_TIME_MINUTE |
-	 BOS_RESTART_TIME_SECOND);
-    for (tp = astr;;) {
-	tc = *tp++;
-	if (tc == 0 || tc == ':') {
-	    if (field == 0)
-		ak->hour = temp;
-	    else if (field == 1)
-		ak->min = temp;
-	    else if (field == 2)
-		ak->sec = temp;
-	    temp = 0;
-	    field++;
-	    if (tc == 0)
-		break;
-	    continue;
-	} else if (!isdigit(tc))
-	    return -1;		/* syntax error */
-	else {
-	    /* digit */
-	    temp *= 10;
-	    temp += tc - '0';
-	}
-    }
-    if (ak->hour >= 24 || ak->min >= 60 || ak->sec >= 60)
-	return -1;
-    return 0;
-}
-
-int
-ktime_ParsePeriodic(char *adate, bos_RestartTime_p ak)
-{
-    struct token *tt;
-    afs_int32 code;
-    struct ptemp *tp;
-
-    memset(ak, 0, sizeof(*ak));
-    code = LocalParseLine(adate, &tt);
-    if (code)
-	return -1;
-    for (; tt; tt = tt->next) {
-	/* look at each token */
-	if (strcmp(tt->key, "now") == 0) {
-	    ak->mask |= BOS_RESTART_TIME_NOW;
-	    LocalFreeTokens(tt);
-	    return 0;
-	}
-	if (strcmp(tt->key, "never") == 0) {
-	    ak->mask |= BOS_RESTART_TIME_NEVER;
-	    LocalFreeTokens(tt);
-	    return 0;
-	}
-	if (strcmp(tt->key, "at") == 0)
-	    continue;
-	if (strcmp(tt->key, "every") == 0)
-	    continue;
-	if (isdigit(tt->key[0])) {
-	    /* parse a time */
-	    code = ParseTime(ak, tt->key);
-	    if (code) {
-		LocalFreeTokens(tt);
-		return -1;
-	    }
-	    continue;
-	}
-	/* otherwise use keyword table */
-	for (tp = ptkeys;; tp++) {
-	    if (tp->key == NULL) {
-		LocalFreeTokens(tt);
-		return -1;
-	    }
-	    if (strcmp(tp->key, tt->key) == 0)
-		break;
-	}
-	/* now look at tp->value to see what we've got */
-	if ((tp->value >> 16) == 1) {
-	    /* a day */
-	    ak->mask |= BOS_RESTART_TIME_DAY;
-	    ak->day = tp->value & 0xff;
-	}
-	if ((tp->value >> 16) == 2) {
-	    /* am or pm token */
-	    if ((tp->value & 0xff) == 1) {
-		/* pm */
-		if (!(ak->mask & BOS_RESTART_TIME_HOUR))
-		    return -1;
-		if (ak->hour < 12)
-		    ak->hour += 12;
-		/* 12 is 12 PM */
-		else if (ak->hour != 12) {
-		    LocalFreeTokens(tt);
-		    return -1;
-		}
-	    } else {
-		/* am is almost a noop, except that we map 12:01 am to 0:01 */
-		if (ak->hour > 12) {
-		    LocalFreeTokens(tt);
-		    return -1;
-		}
-		if (ak->hour == 12)
-		    ak->hour = 0;
-	    }
-	}
-    }
-    LocalFreeTokens(tt);
-    return 0;
 }
 
 int
@@ -1470,9 +1257,16 @@ DoBosExecutableRestartTimeSet(struct cmd_syndesc *as, void *arock)
     }
 
     if (as->parms[TIME].items) {
-	if (ktime_ParsePeriodic(as->parms[TIME].items->data, &time) == -1) {
+	struct ktime ktime;
+	if (ktime_ParsePeriodic(as->parms[TIME].items->data, &ktime) == -1) {
 	    ERR_EXT("error parsing time");
 	}
+	memset(&time, 0, sizeof(time));
+	time.mask = ktime.mask;
+	time.hour = ktime.hour;
+	time.min = ktime.min;
+	time.sec = ktime.sec;
+	time.day = ktime.day;
     } else {
 	ERR_EXT("Mandatory time argument not supplied");
     }
