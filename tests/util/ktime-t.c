@@ -61,6 +61,77 @@ static struct testTime {
     { NULL,                 0,  0 }
 };
 
+static struct testPeriodic {
+    char *date;
+    int code;
+    struct ktime kt;
+} testPeriodics[] = {
+    /* Special now and never. */
+    {"now", 0, {KTIME_NOW, 0, 0, 0, 0}},
+    {"never", 0, {KTIME_NEVER, 0, 0, 0, 0}},
+    {"  never  ", 0, {KTIME_NEVER, 0, 0, 0, 0}},
+
+    /* 24 hour times */
+    {"1", 0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 1, 0, 0, 0}},
+    {"12:00", 0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 12, 0, 0, 0}},
+    {"23:59:59",  0, {KTIME_HOUR | KTIME_MIN| KTIME_SEC, 23, 59, 59, 0}},
+
+    /* 12 hour times */
+    {"2:00 am",  0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 2, 0, 0, 0}},
+    {"2:00 a.m.",  0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 2, 0, 0, 0}},
+    {"2:00 pm",  0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 14, 0, 0, 0}},
+    {"2:00 p.m.",  0, {KTIME_HOUR | KTIME_MIN | KTIME_SEC, 14, 0, 0, 0}},
+
+    /* Days */
+    {"sun", 0, {KTIME_DAY, 0, 0, 0, 0}},
+    {"mon", 0, {KTIME_DAY, 0, 0, 0, 1}},
+    {"tue", 0, {KTIME_DAY, 0, 0, 0, 2}},
+    {"wed", 0, {KTIME_DAY, 0, 0, 0, 3}},
+    {"thu", 0, {KTIME_DAY, 0, 0, 0, 4}},
+    {"thur", 0, {KTIME_DAY, 0, 0, 0, 4}},
+    {"fri", 0, {KTIME_DAY, 0, 0, 0, 5}},
+    {"sat", 0, {KTIME_DAY, 0, 0, 0, 6}},
+    {"sunday", 0, {KTIME_DAY, 0, 0, 0, 0}},
+    {"monday", 0, {KTIME_DAY, 0, 0, 0, 1}},
+    {"tuesday", 0, {KTIME_DAY, 0, 0, 0, 2}},
+    {"wednesday", 0, {KTIME_DAY, 0, 0, 0, 3}},
+    {"thursday", 0, {KTIME_DAY, 0, 0, 0, 4}},
+    {"friday", 0, {KTIME_DAY, 0, 0, 0, 5}},
+    {"saturday", 0, {KTIME_DAY, 0, 0, 0, 6}},
+    {"every saturday", 0, {KTIME_DAY, 0, 0, 0, 6}},
+
+    /* Compound */
+    {"every tuesday at 2:15 am", 0,
+	{KTIME_DAY | KTIME_HOUR | KTIME_MIN | KTIME_SEC, 2, 15, 0, 2}},
+    {"friday at 8:00 pm", 0,
+	{KTIME_DAY | KTIME_HOUR | KTIME_MIN | KTIME_SEC, 20, 0, 0, 5}},
+
+    /* Syntax errors, but silently fail. */
+    {"", 0, {0, 0, 0, 0, 0}},
+    {"  ", 0, {0, 0, 0, 0, 0}},
+
+    /* Syntax */
+    {"bogus", -1, {0, 0, 0, 0, 0}},
+    {"99:99",  -1, {KTIME_HOUR | KTIME_MIN| KTIME_SEC, 99, 99, 0, 0}},
+
+    /* End of tests. */
+    {NULL, 0, {0, 0, 0, 0, 0}}
+};
+
+
+/**
+ * Compare ktime.
+ */
+void
+is_ktime(struct ktime *expect, struct ktime *got)
+{
+    is_int(expect->mask, got->mask, ".. mask is 0x%02d", expect->mask);
+    is_int(expect->hour, got->hour, ".. hour is %d", expect->hour);
+    is_int(expect->min, got->min, ".. min is %d", expect->min);
+    is_int(expect->sec, got->sec, ".. sec is %d", expect->sec);
+    is_int(expect->day, got->day, ".. day is %d", expect->day);
+}
+
 int
 main(void)
 {
@@ -68,8 +139,9 @@ main(void)
     afs_int32 temp;
     time_t t;
     struct testTime *tt;
+    struct testPeriodic *tp;
 
-    plan((sizeof(testTimes) / sizeof(testTimes[0]) - 1) * 2);
+    plan(246);
 
     /* should do timezone and daylight savings time correction so this program
      * work in other than EST */
@@ -86,6 +158,14 @@ main(void)
             is_int(tt->code, code, "ktime_DateToLong return for %s", tt->time);
             is_int(tt->sec, t, "ktime_DateToLong result for %s", tt->time);
         }
+    }
+
+    for (tp = testPeriodics; tp->date; tp++) {
+	struct ktime kt;
+	memset(&kt, -1, sizeof(kt));
+	code = ktime_ParsePeriodic(tp->date, &kt);
+	is_int(tp->code, code, "ktime_ParsePeriodic return for '%s'", tp->date);
+	is_ktime(&tp->kt, &kt);
     }
 
     return 0;
