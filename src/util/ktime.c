@@ -21,11 +21,6 @@
 
 /* some date parsing routines */
 
-struct token {
-    struct token *next;
-    char *key;
-};
-
 static char *day[] = {
     "sun",
     "mon",
@@ -35,78 +30,6 @@ static char *day[] = {
     "fri",
     "sat"
 };
-
-/* free token list returned by parseLine */
-static void
-LocalFreeTokens(struct token *alist)
-{
-    struct token *nlist;
-    for (; alist; alist = nlist) {
-	nlist = alist->next;
-	free(alist->key);
-	free(alist);
-    }
-    return;
-}
-
-static int
-space(int x)
-{
-    if (x == 0 || x == ' ' || x == '\t' || x == '\n')
-	return 1;
-    else
-	return 0;
-}
-
-static int
-LocalParseLine(char *aline, struct token **alist)
-{
-    char tbuffer[256];
-    char *tptr = NULL;
-    int inToken;
-    struct token *first, *last;
-    struct token *ttok;
-    int tc;
-
-    inToken = 0;		/* not copying token chars at start */
-    first = NULL;
-    last = NULL;
-    while (1) {
-	tc = *aline++;
-	if (tc == 0 || space(tc)) {	/* terminating null gets us in here, too */
-	    if (inToken) {
-		inToken = 0;	/* end of this token */
-		*tptr++ = 0;
-		ttok = malloc(sizeof(struct token));
-		ttok->next = NULL;
-		ttok->key = strdup(tbuffer);
-		if (last) {
-		    last->next = ttok;
-		    last = ttok;
-		} else
-		    last = ttok;
-		if (!first)
-		    first = ttok;
-	    }
-	} else {
-	    /* an alpha character */
-	    if (!inToken) {
-		tptr = tbuffer;
-		inToken = 1;
-	    }
-	    if (tptr - tbuffer >= sizeof(tbuffer))
-		return -1;	/* token too long */
-	    *tptr++ = tc;
-	}
-	if (tc == 0) {
-	    /* last token flushed 'cause space(0) --> true */
-	    if (last)
-		last->next = NULL;
-	    *alist = first;
-	    return 0;
-	}
-    }
-}
 
 /* keyword database for periodic date parsing */
 static struct ptemp {
@@ -235,31 +158,39 @@ ktime_Str2int32(char *astr)
 int
 ktime_ParsePeriodic(char *adate, struct ktime *ak)
 {
-    struct token *tt;
+    char *token;
     afs_int32 code;
     struct ptemp *tp;
+    const char *sep = " \t\r\n";
+    char *save = NULL;
+    char *date;
 
     memset(ak, 0, sizeof(*ak));
-    code = LocalParseLine(adate, &tt);
-    if (code)
-	return -1;
-    for (; tt; tt = tt->next) {
+    date = strdup(adate);
+    if (date == NULL)
+	return ENOMEM;
+
+    for (token = strtok_r(date, sep, &save);
+	 token != NULL;
+	 token = strtok_r(NULL, sep, &save)) {
 	/* look at each token */
-	if (strcmp(tt->key, "now") == 0) {
+	if (strcmp(token, "now") == 0) {
 	    ak->mask |= KTIME_NOW;
+	    code = 0;
 	    goto out;
 	}
-	if (strcmp(tt->key, "never") == 0) {
+	if (strcmp(token, "never") == 0) {
 	    ak->mask |= KTIME_NEVER;
+	    code = 0;
 	    goto out;
 	}
-	if (strcmp(tt->key, "at") == 0)
+	if (strcmp(token, "at") == 0)
 	    continue;
-	if (strcmp(tt->key, "every") == 0)
+	if (strcmp(token, "every") == 0)
 	    continue;
-	if (isdigit(tt->key[0])) {
+	if (isdigit(token[0])) {
 	    /* parse a time */
-	    code = ParseTime(ak, tt->key);
+	    code = ParseTime(ak, token);
 	    if (code) {
 		code = -1;
 		goto out;
@@ -272,7 +203,7 @@ ktime_ParsePeriodic(char *adate, struct ktime *ak)
 		code = -1;
 		goto out;
 	    }
-	    if (strcmp(tp->key, tt->key) == 0)
+	    if (strcmp(tp->key, token) == 0)
 		break;
 	}
 	/* now look at tp->value to see what we've got */
@@ -307,8 +238,9 @@ ktime_ParsePeriodic(char *adate, struct ktime *ak)
 	    }
 	}
     }
+    code = 0;
 out:
-    LocalFreeTokens(tt);
+    free(date);
     return code;
 }
 
