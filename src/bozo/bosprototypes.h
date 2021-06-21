@@ -37,6 +37,7 @@ int bnode_ParseLine(char *aline, struct bnode_token **alist);
 int bnode_NewProc(struct bnode *abnode, char *aexecString, char *coreName,
 		  struct bnode_proc **aproc);
 int bnode_StopProc(struct bnode_proc *aproc, int asignal);
+int bnode_IsRestartRequired(char *command_line, time_t last_start);
 
 /* bosserver.c */
 void bozo_Log(const char *format, ... );
