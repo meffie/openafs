@@ -71,26 +71,7 @@ static int
 ez_restartp(struct bnode *bn)
 {
     struct ezbnode *abnode = (struct ezbnode *)bn;
-    struct bnode_token *tt;
-    afs_int32 code;
-    struct stat tstat;
-
-    code = bnode_ParseLine(abnode->command, &tt);
-    if (code)
-	return 0;
-    if (!tt)
-	return 0;
-    code = stat(tt->key, &tstat);
-    if (code) {
-	bnode_FreeTokens(tt);
-	return 0;
-    }
-    if (tstat.st_ctime > abnode->lastStart)
-	code = 1;
-    else
-	code = 0;
-    bnode_FreeTokens(tt);
-    return code;
+    return bnode_IsRestartRequired(abnode->command, abnode->lastStart);
 }
 
 static int
