@@ -995,3 +995,41 @@ bnode_StopProc(struct bnode_proc *aproc, int asignal)
     bnode_Check(aproc->bnode);
     return code;
 }
+
+/**
+ * Returns true if the process for this command-line should be restarted.
+ *
+ * Stat the program file for the given command line and determine if the
+ * ctime (status) has been changed since the last time the process has been
+ * started (or restarted).
+ *
+ * @param[in] command_line  command-line of bosserver managed program
+ * @param[in] last_start    last time this process was started (or restarted)
+ * @returns
+ *   @retval 1 the process should be restarted
+ *   @retval 0 the process should not be restarted
+ */
+int
+bnode_IsRestartRequired(char *command_line, time_t last_start)
+{
+    struct bnode_token *tt;
+    afs_int32 code;
+    struct stat tstat;
+
+    code = bnode_ParseLine(command_line, &tt);
+    if (code)
+	return 0;
+    if (!tt)
+	return 0;
+    code = stat(tt->key, &tstat);
+    if (code) {
+	bnode_FreeTokens(tt);
+	return 0;
+    }
+    if (tstat.st_ctime > last_start)
+	code = 1;
+    else
+	code = 0;
+    bnode_FreeTokens(tt);
+    return code;
+}

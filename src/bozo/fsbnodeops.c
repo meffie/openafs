@@ -193,83 +193,27 @@ static int
 fs_restartp(struct bnode *bn)
 {
     struct fsbnode *abnode = (struct fsbnode *)bn;
-    struct bnode_token *tt;
-    afs_int32 code;
-    struct stat tstat;
+    int code;
 
-    code = bnode_ParseLine(abnode->filecmd, &tt);
-    if (code)
-	return 0;
-    if (!tt)
-	return 0;
-    code = stat(tt->key, &tstat);
-    if (code) {
-	bnode_FreeTokens(tt);
-	return 0;
-    }
-    if (tstat.st_ctime > abnode->lastFileStart)
-	code = 1;
-    else
-	code = 0;
-    bnode_FreeTokens(tt);
+    code = bnode_IsRestartRequired(abnode->filecmd, abnode->lastFileStart);
     if (code)
 	return code;
 
     /* now do same for volcmd */
-    code = bnode_ParseLine(abnode->volcmd, &tt);
-    if (code)
-	return 0;
-    if (!tt)
-	return 0;
-    code = stat(tt->key, &tstat);
-    if (code) {
-	bnode_FreeTokens(tt);
-	return 0;
-    }
-    if (tstat.st_ctime > abnode->lastVolStart)
-	code = 1;
-    else
-	code = 0;
-    bnode_FreeTokens(tt);
+    code = bnode_IsRestartRequired(abnode->volcmd, abnode->lastVolStart);
     if (code)
 	return code;
 
     if (abnode->salsrvcmd) {    /* only in demand attach fs */
 	/* now do same for salsrvcmd (demand attach fs) */
-	code = bnode_ParseLine(abnode->salsrvcmd, &tt);
+	code = bnode_IsRestartRequired(abnode->salsrvcmd, abnode->lastSalsrvStart);
 	if (code)
-	    return 0;
-	if (!tt)
-	    return 0;
-	code = stat(tt->key, &tstat);
-	if (code) {
-	    bnode_FreeTokens(tt);
-	    return 0;
-	}
-	if (tstat.st_ctime > abnode->lastSalsrvStart)
-	    code = 1;
-	else
-	    code = 0;
-	bnode_FreeTokens(tt);
+	    return code;
     }
 
     if (abnode->scancmd) {	/* Only in MR-AFS */
 	/* now do same for scancmd (MR-AFS) */
-	code = bnode_ParseLine(abnode->scancmd, &tt);
-	if (code)
-	    return 0;
-	if (!tt)
-	    return 0;
-	code = stat(tt->key, &tstat);
-	if (code) {
-	    bnode_FreeTokens(tt);
-	    return 0;
-	}
-	if (tstat.st_ctime > abnode->lastScanStart)
-	    code = 1;
-	else
-	    code = 0;
-	bnode_FreeTokens(tt);
+	code = bnode_IsRestartRequired(abnode->scancmd, abnode->lastScanStart);
     }
 
     return code;
