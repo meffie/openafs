@@ -20,6 +20,7 @@
 #include <opr/queue.h>
 
 #include "bnode.h"
+#include "bosint.h"
 #include "bnode_internal.h"
 #include "bosprototypes.h"
 
@@ -92,6 +93,13 @@ ez_create(char *ainstance, char *acommand, char *unused1, char *unused2,
 
     if (ConstructLocalBinPath(acommand, &cmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", acommand);
+	return NULL;
+    }
+
+    /* Parm string must fit on the wire. */
+    if (strlen(cmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", cmdpath);
+	free(cmdpath);
 	return NULL;
     }
 

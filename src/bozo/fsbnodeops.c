@@ -20,6 +20,7 @@
 #include <opr/queue.h>
 
 #include "bnode.h"
+#include "bosint.h"
 #include "bnode_internal.h"
 #include "bosprototypes.h"
 
@@ -362,19 +363,39 @@ fs_create(char *ainstance, char *afilecmd, char *avolcmd, char *asalcmd,
     fileCmdpath = volCmdpath = salCmdpath = scanCmdpath = NULL;
     te = NULL;
 
-    /* construct local paths from canonical (wire-format) paths */
+    /*
+     * Construct local paths from canonical (wire-format) paths.
+     * Parm strings must fit on the wire.
+     */
     if (ConstructLocalBinPath(afilecmd, &fileCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", afilecmd);
 	bailout = 1;
 	goto done;
     }
+    if (strlen(fileCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", fileCmdpath);
+	bailout = 1;
+	goto done;
+    }
+
     if (ConstructLocalBinPath(avolcmd, &volCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", avolcmd);
 	bailout = 1;
 	goto done;
     }
+    if (strlen(volCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", volCmdpath);
+	bailout = 1;
+	goto done;
+    }
+
     if (ConstructLocalBinPath(asalcmd, &salCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", asalcmd);
+	bailout = 1;
+	goto done;
+    }
+    if (strlen(salCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", salCmdpath);
 	bailout = 1;
 	goto done;
     }
@@ -382,6 +403,11 @@ fs_create(char *ainstance, char *afilecmd, char *avolcmd, char *asalcmd,
     if (ascancmd && strlen(ascancmd)) {
 	if (ConstructLocalBinPath(ascancmd, &scanCmdpath)) {
 	    bozo_Log("BNODE: command path invalid '%s'\n", ascancmd);
+	    bailout = 1;
+	    goto done;
+	}
+	if (strlen(scanCmdpath) > BOZO_BSSIZE) {
+	    bozo_Log("BNODE: file command exceeds length limit: %s\n", scanCmdpath);
 	    bailout = 1;
 	    goto done;
 	}
@@ -497,24 +523,50 @@ dafs_create(char *ainstance, char *afilecmd, char *avolcmd,
     fileCmdpath = volCmdpath = salsrvCmdpath = salCmdpath = scanCmdpath = NULL;
     te = NULL;
 
-    /* construct local paths from canonical (wire-format) paths */
+    /*
+     * Construct local paths from canonical (wire-format) paths.
+     * Parm strings must fit on the wire.
+     */
     if (ConstructLocalBinPath(afilecmd, &fileCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", afilecmd);
 	bailout = 1;
 	goto done;
     }
+    if (strlen(fileCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", fileCmdpath);
+	bailout = 1;
+	goto done;
+    }
+
     if (ConstructLocalBinPath(avolcmd, &volCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", avolcmd);
 	bailout = 1;
 	goto done;
     }
+    if (strlen(volCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", volCmdpath);
+	bailout = 1;
+	goto done;
+    }
+
     if (ConstructLocalBinPath(asalsrvcmd, &salsrvCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", asalsrvcmd);
 	bailout = 1;
 	goto done;
     }
+    if (strlen(salsrvCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", salsrvCmdpath);
+	bailout = 1;
+	goto done;
+    }
+
     if (ConstructLocalBinPath(asalcmd, &salCmdpath)) {
 	bozo_Log("BNODE: command path invalid '%s'\n", asalcmd);
+	bailout = 1;
+	goto done;
+    }
+    if (strlen(salCmdpath) > BOZO_BSSIZE) {
+	bozo_Log("BNODE: command exceeds length limit: %s\n", salCmdpath);
 	bailout = 1;
 	goto done;
     }
@@ -522,6 +574,11 @@ dafs_create(char *ainstance, char *afilecmd, char *avolcmd,
     if (ascancmd && strlen(ascancmd)) {
 	if (ConstructLocalBinPath(ascancmd, &scanCmdpath)) {
 	    bozo_Log("BNODE: command path invalid '%s'\n", ascancmd);
+	    bailout = 1;
+	    goto done;
+	}
+	if (strlen(scanCmdpath) > BOZO_BSSIZE) {
+	    bozo_Log("BNODE: command exceeds length limit: %s\n", scanCmdpath);
 	    bailout = 1;
 	    goto done;
 	}
