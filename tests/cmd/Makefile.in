@@ -13,12 +13,15 @@ LIBS = ../tap/libtap.a \
        $(abs_top_builddir)/src/opr/liboafs_opr.la \
        $(abs_top_builddir)/src/opr/liboafs_opr.la
 
-BINS = command-t
+BINS = command-t tokens-t
 
 all check test tests: $(BINS)
 
 command-t: command-t.o $(LIBS)
 	$(LT_LDRULE_static) command-t.o $(LIBS) $(LIB_roken) $(XLIBS)
+
+tokens-t: tokens-t.o $(LIBS)
+	$(LT_LDRULE_static) tokens-t.o $(LIBS) $(LIB_roken) $(XLIBS)
 
 install:
 
