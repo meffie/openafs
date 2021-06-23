@@ -685,70 +685,68 @@ bproc(void *unused)
 static afs_int32
 SendNotifierData(int fd, struct bnode_proc *tp)
 {
+    int code;
     struct bnode *tb = tp->bnode;
-    char buffer[1000], *bufp = buffer, *buf1;
-    int len;
+    char *buffer = NULL;
 
     /*
-     * First sent out the bnode_proc struct
+     * First sent out the bnode_proc struct.
      */
-    (void)sprintf(bufp, "BEGIN bnode_proc\n");
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "comLine: %s\n", tp->comLine);
-    bufp += strlen(bufp);
-    if (!(buf1 = tp->coreName))
-	buf1 = "(null)";
-    (void)sprintf(bufp, "coreName: %s\n", buf1);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "pid: %ld\n", afs_printable_int32_ld(tp->pid));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastExit: %ld\n", afs_printable_int32_ld(tp->lastExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "flags: %ld\n", afs_printable_int32_ld(tp->flags));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "END bnode_proc\n");
-    bufp += strlen(bufp);
-    len = (int)(bufp - buffer);
-    if (write(fd, buffer, len) < 0) {
+    code = asprintf(&buffer,
+	    "BEGIN bnode_proc\n"
+	    "comLine: %s\n"
+	    "coreName: %s\n"
+	    "pid: %ld\n"
+	    "lastExit: %ld\n"
+	    "flags: %ld\n"
+	    "END bnode_proc\n",
+	    tp->comLine,
+	    (tp->coreName == NULL ? "(null)" : tp->coreName),
+	    afs_printable_int32_ld(tp->pid),
+	    afs_printable_int32_ld(tp->lastExit),
+	    afs_printable_int32_ld(tp->flags));
+    if (code < 0)
+	return ENOMEM;
+    if (write(fd, buffer, strlen(buffer)) < 0) {
+	free(buffer);
 	return -1;
     }
+    free(buffer);
+    buffer = NULL;
 
     /*
-     * Now sent out the bnode struct
+     * Now sent out the bnode struct.
      */
-    bufp = buffer;
-    (void)sprintf(bufp, "BEGIN bnode\n");
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "name: %s\n", tb->name);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "rsTime: %ld\n", afs_printable_int32_ld(tb->rsTime));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "rsCount: %ld\n", afs_printable_int32_ld(tb->rsCount));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "procStartTime: %ld\n", afs_printable_int32_ld(tb->procStartTime));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "procStarts: %ld\n", afs_printable_int32_ld(tb->procStarts));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastAnyExit: %ld\n", afs_printable_int32_ld(tb->lastAnyExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastErrorExit: %ld\n", afs_printable_int32_ld(tb->lastErrorExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "errorCode: %ld\n", afs_printable_int32_ld(tb->errorCode));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "errorSignal: %ld\n", afs_printable_int32_ld(tb->errorSignal));
-    bufp += strlen(bufp);
-/*
-    (void) sprintf(bufp, "lastErrorName: %s\n", tb->lastErrorName);
-    bufp += strlen(bufp);
-*/
-    (void)sprintf(bufp, "goal: %d\n", tb->goal);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "END bnode\n");
-    bufp += strlen(bufp);
-    len = (int)(bufp - buffer);
-    if (write(fd, buffer, len) < 0) {
+    code = asprintf(&buffer,
+	    "BEGIN bnode\n"
+	    "name: %s\n"
+	    "rsTime: %ld\n"
+	    "rsCount: %ld\n"
+	    "procStartTime: %ld\n"
+	    "procStarts: %ld\n"
+	    "lastAnyExit: %ld\n"
+	    "lastErrorExit: %ld\n"
+	    "errorCode: %ld\n"
+	    "errorSignal: %ld\n"
+	    "goal: %d\n"
+	    "END bnode\n",
+	    tb->name,
+	    afs_printable_int32_ld(tb->rsTime),
+	    afs_printable_int32_ld(tb->rsCount),
+	    afs_printable_int32_ld(tb->procStartTime),
+	    afs_printable_int32_ld(tb->procStarts),
+	    afs_printable_int32_ld(tb->lastAnyExit),
+	    afs_printable_int32_ld(tb->lastErrorExit),
+	    afs_printable_int32_ld(tb->errorCode),
+	    afs_printable_int32_ld(tb->errorSignal),
+	    tb->goal);
+    if (code < 0)
+	return ENOMEM;
+    if (write(fd, buffer, strlen(buffer)) < 0) {
+	free(buffer);
 	return -1;
     }
+    free(buffer);
     return 0;
 }
 
