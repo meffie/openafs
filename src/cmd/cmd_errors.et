@@ -22,4 +22,6 @@ error_table CMD
   ec CMD_BADFORMAT, "Improper format of configuration file"
   ec CMD_HELP, "Help requested"
   ec CMD_BADNAME, "Invalid parameter name specified"
+  ec CMD_MISSINGQUOTE, "Missing closing quote"
+  ec CMD_BADESCAPE, "Bad escape sequence"
 end
