@@ -443,10 +443,9 @@ test_read_bosconfig(char *tmpdir)
     is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
     READ_TEST_TEARDOWN();
 
-    READ_TEST_SETUP("max parm length", 0, NULL);
+    READ_TEST_SETUP("large parm length", 0, NULL);
     {
-        /* The longest bnode parm value currently supported; only 249 chars! */
-	char *parm = afstest_makestring(249, 'x');
+	char *parm = afstest_makestring(65536, 'x');
 	char *config = afstest_asprintf("bnode test foo 1\nparm %s\nend\n", parm);
 	afstest_writefile(test_file, config);
 	is_int(ReadBozoFile(test_file), test_code, "read: %s", test_name);
