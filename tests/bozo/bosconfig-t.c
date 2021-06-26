@@ -521,16 +521,15 @@ test_read_bosconfig(void)
     }
     READ_TEST_TEARDOWN();
 
-    /* The longest bnode parm value supported is only 249 chars! */
     READ_TEST_SETUP("max parm length", 0, "");
     {
 	char *parm;
 	char *config = NULL;
 
-	parm = calloc(250, sizeof(*parm));
+	parm = calloc(BOZO_BSSIZE, sizeof(*parm));
 	if (parm == NULL)
 	    sysbail("out of memory");
-	memset(parm, 'x', 249);
+	memset(parm, 'x', BOZO_BSSIZE - 1);
 	if (asprintf(&config, "bnode test foo 1\nparm %s\nend\n", parm) < 0)
 	    sysbail("out of memory");
 	write_file(test_file, config);
