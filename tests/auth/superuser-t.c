@@ -58,8 +58,7 @@ testOriginalIterator(struct afsconf_dir *dir, int num, char *user) {
     ok((afsconf_GetNthUser(dir, num, buffer, sizeof buffer) == 0),
        "User %d successfully returned as %s", num, buffer);
 
-    ok(strcmp(user, buffer) == 0,
-       "User %d matches", num);
+    is_string(user, buffer, "User %d matches", num);
 }
 
 static void
@@ -90,8 +89,13 @@ startClient(char *configPath)
     afs_uint32 addr;
     afs_int32 result;
     char *string = NULL;
+    char *shortestName = "1";
+    char *longestName =
+	"123456789012345678901234567890123456789012345678901234567890123";
+    char *tooLongName =
+	"1234567890123456789012345678901234567890123456789012345678901234";
 
-    plan(63);
+    plan(75);
 
     dir = afsconf_Open(configPath);
     ok(dir!=NULL,
@@ -153,23 +157,34 @@ startClient(char *configPath)
     ok(afsconf_AddIdentity(dir, extendedId) == EEXIST,
        "Adding GSSAPI identity twice fails");
 
-    /* Add a final normal user, so we can check that iteration works */
-    /* Add a normal user to the super user file */
-    ok(afsconf_AddUser(dir, "test2") == 0,
-       "Adding another simple user works");
+    /* Add a more normal users, so we can check that iteration and length
+     * checks work. */
+    is_int(afsconf_AddUser(dir, "test2"), 0, "Adding another simple user works");
+    is_int(afsconf_AddUser(dir, ""), EINVAL, "Adding empty name fails");
+    is_int(afsconf_AddUser(dir, shortestName), 0, "Adding shortest name works");
+    is_int(afsconf_AddUser(dir, longestName), 0, "Adding longest username works");
+    is_int(afsconf_AddUser(dir, tooLongName), EINVAL, "Adding too long name fails");
 
     testOriginalIterator(dir, 0, "test");
     testOriginalIterator(dir, 1, "another");
     testOriginalIterator(dir, 2, "test2");
-    ok(afsconf_GetNthUser(dir, 3, ubuffer, sizeof ubuffer) != 0,
+    testOriginalIterator(dir, 3, shortestName);
+    testOriginalIterator(dir, 4, longestName);
+
+    ok(afsconf_GetNthUser(dir, 5, ubuffer, sizeof ubuffer) != 0,
        "Reading past the end of the superuser list fails");
 
     testNewIterator(dir, 0, testId);
     testNewIterator(dir, 1, anotherId);
     testNewIterator(dir, 2, extendedId);
-    testNewIterator(dir, 3, rx_identity_new(RX_ID_KRB4, "test2",
-					    "test2", strlen("test2")));
-    ok(afsconf_GetNthIdentity(dir, 4, &dummy) != 0,
+    testNewIterator(dir, 3,
+	rx_identity_new(RX_ID_KRB4, "test2", "test2", strlen("test2")));
+    testNewIterator(dir, 4,
+	rx_identity_new(RX_ID_KRB4, shortestName, shortestName, strlen(shortestName)));
+    testNewIterator(dir, 5,
+	rx_identity_new(RX_ID_KRB4, longestName, longestName, strlen(longestName)));
+
+    ok(afsconf_GetNthIdentity(dir, 6, &dummy) != 0,
        "Reading past the end of the superuser list fails");
 
     ok(afsconf_DeleteUser(dir, "notthere") != 0,

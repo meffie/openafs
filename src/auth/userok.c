@@ -279,8 +279,12 @@ afsconf_DeleteUser(struct afsconf_dir *adir, char *name)
 {
     struct rx_identity *user;
     int code;
+    size_t len = strlen(name);
 
-    user = rx_identity_new(RX_ID_KRB4, name, name, strlen(name));
+    if (len < 1 || MAXKTCNAMELEN - 1 < len)
+	return EINVAL;
+
+    user = rx_identity_new(RX_ID_KRB4, name, name, len);
     if (!user)
 	return ENOMEM;
 
@@ -452,10 +456,14 @@ ParseLine(char *buffer, struct rx_identity *user)
     char *ename;
     char *displayName;
     char *decodedName;
-    char name[64+1];
     int len;
     int kind;
     int code;
+
+    /* Strip the newline, when present. */
+    ptr = strchr(buffer, '\n');
+    if (ptr != NULL)
+	*ptr = '\0';
 
     if (buffer[0] == ' ') { /* extended names have leading space */
 	ptr = buffer + 1;
@@ -486,11 +494,11 @@ ParseLine(char *buffer, struct rx_identity *user)
     }
 
     /* No extended name, try for a legacy name */
-    code = sscanf(buffer, "%64s", name);
-    if (code != 1)
+    len = strlen(buffer);
+    if (len < 1 || MAXKTCNAMELEN - 1 < len)
 	return EINVAL;
 
-    rx_identity_populate(user, RX_ID_KRB4, name, name, strlen(name));
+    rx_identity_populate(user, RX_ID_KRB4, buffer, buffer, len);
     return 0;
 }
 
@@ -593,8 +601,12 @@ afsconf_AddUser(struct afsconf_dir *adir, char *aname)
 {
     struct rx_identity *user;
     int code;
+    size_t len = strlen(aname);
 
-    user = rx_identity_new(RX_ID_KRB4, aname, aname, strlen(aname));
+    if (len < 1 || MAXKTCNAMELEN - 1 < len)
+	return EINVAL;
+
+    user = rx_identity_new(RX_ID_KRB4, aname, aname, len);
     if (user == NULL)
 	return ENOMEM;
 
