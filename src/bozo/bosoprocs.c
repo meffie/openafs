@@ -739,13 +739,14 @@ afs_int32
 SBOZO_ListSUsers(struct rx_call *acall, afs_int32 an, char **aname)
 {
     afs_int32 code;
-    char *tp;
+    char name[MAXKTCNAMELEN]; /* Includes terminating nul. */
 
-    tp = *aname = malloc(256);
-    *tp = 0;			/* in case getnthuser doesn't null-terminate the string */
-    code = afsconf_GetNthUser(bozo_confdir, an, tp, 256);
+    memset(name, 0, sizeof(name));
+    code = afsconf_GetNthUser(bozo_confdir, an, name, sizeof(name));
+    *aname = strdup(name);
+    if (*aname == NULL)
+	code = ENOMEM;
 
-  /* fail: */
     osi_auditU(acall, BOS_ListSUserEvent, code, AUD_END);
     return code;
 }
