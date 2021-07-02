@@ -42,11 +42,100 @@
 
 static int ParseLine(char *buffer, struct rx_identity *user);
 
-static void
-UserListFileName(struct afsconf_dir *adir,
-		 char *buffer, size_t len)
+/**
+ * Read the UserList file.
+ * 
+ * Read the UserList file and return the contents as string.
+ */
+static int
+ReadUserList(struct afsconf_dir *dir, char **contents)
 {
-    strcompose(buffer, len, adir->name, "/", AFSDIR_ULIST_FILE, (char *)NULL);
+    int code;
+    char *filename = NULL;
+    char *buffer = NULL;
+    FILE *fp = NULL;
+    struct stat st;
+
+    code = asprintf(&filename, "%s/%s", dir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
+	code = ENOMEM;
+	goto fail;
+    }
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+	code = errno;
+	if (code == ENOENT) {
+	    /* Treat a missing file the same as an emtpy file. */
+	    buffer = strdup("");
+	    if (buffer == NULL) {
+		code = ENOMEM;
+		goto fail;
+	    }
+	    *contents = buffer;
+	    return 0;
+	}
+	goto fail;
+    }
+    code = fstat(fileno(fp), &st);
+    if (code < 0) {
+	code = errno;
+	goto fail;
+    }
+    buffer = calloc(st.st_size + 1, sizeof(char));
+    if (buffer == NULL) {
+	code = ENOMEM;
+	goto fail;
+    }
+    if (fread(buffer, 1, st.st_size, fp) != st.st_size) {
+	code = errno;
+	free(buffer);
+	goto fail;
+    }
+    *contents = buffer;
+    code = 0;
+
+  fail:
+    free(filename);
+    if (fp != NULL)
+	fclose(fp);
+    return code;
+}
+
+/**
+ * Write the UserList file.
+ *
+ */
+static int
+WriteUserList(struct afsconf_dir *dir, char *contents)
+{
+    int code;
+    char *filename = NULL;
+    FILE *fp = NULL;
+    size_t size = strlen(contents);
+    size_t written;
+
+    code = asprintf(&filename, "%s/%s", dir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
+	code = ENOMEM;
+	goto fail;
+    }
+    fp = fopen(filename, "w");
+    if (fp == NULL) {
+	code = errno;
+	goto fail;
+    }
+    written = fwrite(contents, 1, size, fp);
+    if (written != size) {
+	code = errno;
+	goto fail;
+    }
+    code = 0;
+
+  fail:
+    free(filename);
+    if (fp != NULL)
+	code = fclose(fp);
+    return code;
 }
 
 int
@@ -128,131 +217,67 @@ afsconf_SetNoAuthFlag(struct afsconf_dir *adir, int aflag)
 int
 afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 {
-    char *filename, *nfilename;
-    char *buffer;
-    char *copy;
-    FILE *tf;
-    FILE *nf;
-    int flag;
-    char *tp;
-    int found;
-    struct stat tstat;
+    char *copy = NULL;
+    int found = 0;
     struct rx_identity identity;
     afs_int32 code;
+    size_t size;
+    char *userlist = NULL;
+    char *newlist;
+    char *line;
+    char *save = NULL;
 
     memset(&identity, 0, sizeof(struct rx_identity));
 
-    buffer = malloc(AFSDIR_PATH_MAX);
-    if (buffer == NULL)
-	return ENOMEM;
-    filename = malloc(AFSDIR_PATH_MAX);
-    if (filename == NULL) {
-	free(buffer);
-	return ENOMEM;
-    }
-
     LOCK_GLOBAL_MUTEX;
-    UserListFileName(adir, filename, AFSDIR_PATH_MAX);
-#ifndef AFS_NT40_ENV
-    {
-	/*
-	 * We attempt to fully resolve this pathname, so that the rename
-	 * of the temporary file will work even if UserList is a symlink
-	 * into a different filesystem.
-	 */
-	nfilename = malloc(AFSDIR_PATH_MAX);
-	if (nfilename == NULL) {
-	    UNLOCK_GLOBAL_MUTEX;
-	    free(filename);
-	    free(buffer);
-	    return ENOMEM;
-	}
-	if (realpath(filename, nfilename)) {
-	    free(filename);
-	    filename = nfilename;
-	} else {
-	    free(nfilename);
-	}
-    }
-#endif /* AFS_NT40_ENV */
-    if (asprintf(&nfilename, "%s.NXX", filename) < 0) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(buffer);
-	return -1;
-    }
-    tf = fopen(filename, "r");
-    if (!tf) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return -1;
-    }
-    code = stat(filename, &tstat);
-    if (code < 0) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return code;
-    }
-    nf = fopen(nfilename, "w+");
-    if (!nf) {
-	fclose(tf);
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return EIO;
-    }
-    flag = 0;
-    found = 0;
-    while (1) {
-	/* check for our user id */
-	tp = fgets(buffer, AFSDIR_PATH_MAX, tf);
-	if (tp == NULL)
-	    break;
+    code = ReadUserList(adir, &userlist);
+    if (code != 0)
+	goto fail;
+    size = strlen(userlist) + 1;
+    newlist = calloc(size, sizeof(*newlist));
 
-	copy = strdup(buffer);
-	if (copy == NULL) {
-	    flag = 1;
-	    break;
-	}
-	code = ParseLine(copy, &identity);
-	if (code == 0 && rx_identity_match(user, &identity)) {
-	    /* found the guy, don't copy to output file */
-	    found = 1;
-	} else {
-	    /* otherwise copy original line to output */
-	    fprintf(nf, "%s", buffer);
-	}
+    for (line = strtok_r(userlist, "\r\n", &save);
+	 line != NULL;
+	 line = strtok_r(NULL, "\r\n", &save)) {
+
+	/* Free previous iteration. */
 	free(copy);
 	rx_identity_freeContents(&identity);
-    }
-    fclose(tf);
-    free(buffer);
-    if (ferror(nf))
-	flag = 1;
-    if (fclose(nf) == EOF)
-	flag = 1;
-    if (flag == 0) {
-	/* try the rename */
-	flag = rk_rename(nfilename, filename);
-	if (flag == 0)
-	    flag = chmod(filename, tstat.st_mode);
-    } else
-	unlink(nfilename);
 
-    /* finally, decide what to return to the caller */
+	/* Save the original before ParseLine(). */
+	copy = strdup(line);
+	if (copy == NULL) {
+	    code = ENOMEM;
+	    goto fail;
+	}
+
+	/* Check for our user id. */
+	code = ParseLine(copy, &identity);
+	if (code == 0 && rx_identity_match(user, &identity)) {
+	    found = 1; /* Found the guy, don't copy to output file */
+	} else {
+	    /* Otherwise copy original line to output. */
+	    if (strlcat(newlist, line, sizeof(newlist)) >= size) {
+		code = EIO;
+		goto fail;
+	    }
+	    if (strlcat(newlist, "\n", sizeof(newlist)) >= size) {
+		code = EIO;
+		goto fail;
+	    }
+	}
+    }
+    if (found)
+	code = WriteUserList(adir, newlist);
+    else
+	code = ENOENT;  /* Entry wasn't found, no changes made. */
+
+  fail:
     UNLOCK_GLOBAL_MUTEX;
-    free(filename);
-    free(nfilename);
-    if (flag)
-	return EIO;		/* something mysterious went wrong */
-    if (!found)
-	return ENOENT;		/* entry wasn't found, no changes made */
-    return 0;			/* everything was fine */
+    rx_identity_freeContents(&identity);
+    free(copy);
+    free(userlist);
+    return code;
 }
 
 /*!
@@ -283,11 +308,8 @@ afsconf_DeleteUser(struct afsconf_dir *adir, char *name)
     user = rx_identity_new(RX_ID_KRB4, name, name, strlen(name));
     if (!user)
 	return ENOMEM;
-
     code = afsconf_DeleteIdentity(adir, user);
-
     rx_identity_free(&user);
-
     return code;
 }
 
@@ -301,52 +323,43 @@ static int
 GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 		     struct rx_identity **identity, int id)
 {
-    bufio_p bp;
-    char *tbuffer;
     struct rx_identity fileUser;
     afs_int32 code;
+    char *userlist = NULL;
+    char *line;
+    char *save = NULL;
+    int found = 0;
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
-    if (tbuffer == NULL)
-	return ENOMEM;
-
+    memset(&fileUser, 0, sizeof(fileUser));
     LOCK_GLOBAL_MUTEX;
-    UserListFileName(dir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
-    if (!bp) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(tbuffer);
-	return -1;
-    }
-    while (1) {
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
-	if (code < 0) {
-	    code = -1;
-	    break;
-	}
+    code = ReadUserList(dir, &userlist);
+    if (code != 0)
+	goto done;
 
-	code = ParseLine(tbuffer, &fileUser);
+    for (line = strtok_r(userlist, "\r\n", &save);
+	 line != NULL;
+	 line = strtok_r(NULL, "\r\n", &save)) {
+
+	rx_identity_freeContents(&fileUser);
+	code = ParseLine(line, &fileUser);
 	if (code != 0)
 	    break;
 
 	if (id || fileUser.kind == RX_ID_KRB4)
 	    count--;
 
-	if (count < 0)
+	if (count < 0) {
+	    *identity = rx_identity_copy(&fileUser);
+	    found = 1;
 	    break;
-        else
-	    rx_identity_freeContents(&fileUser);
-    }
-    if (code == 0) {
-	*identity = rx_identity_copy(&fileUser);
-	rx_identity_freeContents(&fileUser);
+	}
     }
 
-    BufioClose(bp);
-
+  done:
     UNLOCK_GLOBAL_MUTEX;
-    free(tbuffer);
-    return code;
+    free(userlist);
+    rx_identity_freeContents(&fileUser);
+    return found ? 0 : -1;
 }
 
 /*!
@@ -452,7 +465,6 @@ ParseLine(char *buffer, struct rx_identity *user)
     char *ename;
     char *displayName;
     char *decodedName;
-    char name[64+1];
     int len;
     int kind;
     int code;
@@ -485,12 +497,8 @@ ParseLine(char *buffer, struct rx_identity *user)
 	return 0; /* Success ! */
     }
 
-    /* No extended name, try for a legacy name */
-    code = sscanf(buffer, "%64s", name);
-    if (code != 1)
-	return EINVAL;
-
-    rx_identity_populate(user, RX_ID_KRB4, name, name, strlen(name));
+    /* No extended name, this is a legacy name. */
+    rx_identity_populate(user, RX_ID_KRB4, buffer, buffer, strlen(buffer));
     return 0;
 }
 
@@ -510,41 +518,39 @@ int
 afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 			struct rx_identity *user)
 {
-    bufio_p bp;
-    char *tbuffer;
     struct rx_identity fileUser;
-    int match;
+    int match = 0;
     afs_int32 code;
+    char *userlist = NULL;
+    char *line;
+    char *save = NULL;
 
     if (user->kind == RX_ID_SUPERUSER)
 	return 1;
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
-    if (tbuffer == NULL)
-	return 0;
+    memset(&fileUser, 0, sizeof(fileUser));
+    code = ReadUserList(adir, &userlist);
+    if (code != 0)
+	goto done;
 
-    UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
-    if (!bp) {
-	free(tbuffer);
-	return 0;
-    }
-    match = 0;
-    while (!match) {
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
-        if (code < 0)
-	    break;
+    for (line = strtok_r(userlist, "\r\n", &save);
+	 match == 0 && line != NULL;
+	 line = strtok_r(NULL, "\r\n", &save)) {
 
-	code = ParseLine(tbuffer, &fileUser);
+        rx_identity_freeContents(&fileUser);
+
+	code = ParseLine(line, &fileUser);
 	if (code != 0)
 	   break;
 
 	match = rx_identity_match(user, &fileUser);
-
-	rx_identity_freeContents(&fileUser);
+	if (match)
+	    goto done;
     }
-    BufioClose(bp);
-    free(tbuffer);
+
+  done:
+    free(userlist);
+    rx_identity_freeContents(&fileUser);
     return match;
 }
 
@@ -552,38 +558,38 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 int
 afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 {
-    FILE *tf;
     afs_int32 code;
-    char *ename;
-    char *tbuffer;
+    char *ename = NULL;
+    char *userlist = NULL;
+    char *newlist = NULL;
 
     LOCK_GLOBAL_MUTEX;
     if (afsconf_IsSuperIdentity(adir, user)) {
-	UNLOCK_GLOBAL_MUTEX;
-	return EEXIST;		/* already in the list */
+	code = EEXIST;		/* already in the list */
+	goto done;
     }
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
-    UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
-    tf = fopen(tbuffer, "a+");
-    free(tbuffer);
-    if (!tf) {
-	UNLOCK_GLOBAL_MUTEX;
-	return EIO;
+    code = ReadUserList(adir, &userlist);
+    if (code != 0) {
+	goto done;
     }
     if (user->kind == RX_ID_KRB4) {
-	fprintf(tf, "%s\n", user->displayName);
+	code = asprintf(&newlist, "%s%s\n", userlist, user->displayName);
     } else {
-	base64_encode(user->exportedName.val, user->exportedName.len,
-		      &ename);
-	fprintf(tf, " %d %s %s\n", user->kind, ename, user->displayName);
-	free(ename);
+	base64_encode(user->exportedName.val, user->exportedName.len, &ename);
+	code = asprintf(&newlist, "%s %d %s %s\n",
+			userlist, user->kind, ename, user->displayName);
     }
-    code = 0;
-    if (ferror(tf))
-	code = EIO;
-    if (fclose(tf))
-	code = EIO;
+    if (code < 0) {
+	code = ENOMEM;
+	goto done;
+    }
+    code = WriteUserList(adir, newlist);
+
+  done:
+    free(ename);
+    free(userlist);
+    free(newlist);
     UNLOCK_GLOBAL_MUTEX;
     return code;
 }
@@ -597,11 +603,8 @@ afsconf_AddUser(struct afsconf_dir *adir, char *aname)
     user = rx_identity_new(RX_ID_KRB4, aname, aname, strlen(aname));
     if (user == NULL)
 	return ENOMEM;
-
     code = afsconf_AddIdentity(adir, user);
-
     rx_identity_free(&user);
-
     return code;
 }
 

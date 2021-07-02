@@ -76,7 +76,7 @@ testNewIterator(struct afsconf_dir *dir, int num, struct rx_identity *id) {
 
 
 void
-startClient(char *configPath)
+startClient(char *configPath, int client_only)
 {
     struct afsconf_dir *dir;
     struct rx_identity *testId, *anotherId, *extendedId, *dummy;
@@ -91,7 +91,10 @@ startClient(char *configPath)
     afs_int32 result;
     char *string = NULL;
 
-    plan(63);
+    if (client_only)
+	plan_lazy();
+    else
+	plan(63);
 
     dir = afsconf_Open(configPath);
     ok(dir!=NULL,
@@ -100,6 +103,7 @@ startClient(char *configPath)
     /* Add a normal user to the super user file */
     ok(afsconf_AddUser(dir, "test") == 0,
        "Adding a simple user works");
+
 
     testId = rx_identity_new(RX_ID_KRB4, "test", "test", strlen("test"));
 
@@ -191,6 +195,9 @@ startClient(char *configPath)
 
     ok(!afsconf_IsSuperIdentity(dir, extendedId),
        "Deleted identity is no longer special");
+
+    if (client_only)
+	return;
 
     /* Now, what happens if we're doing something over the network instead */
 
@@ -407,6 +414,11 @@ int main(int argc, char **argv)
     afstest_SkipTestsIfBadHostname();
 
     /* Start the client and the server if requested */
+    if (argc == 2 && strcmp(argv[1], "-client-only") == 0) {
+	dirname = afstest_BuildTestConfig();
+	startClient(dirname, 1);
+	goto out;
+    }
 
     if (argc == 3 ) {
         if (strcmp(argv[1], "-server") == 0) {
@@ -415,7 +427,7 @@ int main(int argc, char **argv)
 					TEST_SERVICE_ID, TEST_ExecuteRequest);
             exit(0);
         } else if (strcmp(argv[1], "-client") == 0) {
-            startClient(argv[2]);
+            startClient(argv[2], 0);
             exit(0);
         } else {
             printf("Bad option %s\n", argv[1]);
