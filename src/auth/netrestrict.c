@@ -27,7 +27,6 @@
 
 #define AFS_IPINVALID		 -1	/* invalid IP address */
 #define AFS_IPINVALIDIGNORE	 -2	/* no input given to extractAddr */
-#define MAX_NETFILE_LINE       2048	/* length of a line in the NetRestrict file */
 #define MAXIPADDRS             1024	/* from afsd.c */
 
 static int ParseNetInfoFile_int(afs_uint32 *, afs_uint32 *, afs_uint32 *,
@@ -177,7 +176,9 @@ parseNetRestrictFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[],
 			 const char *fileName, const char *fileName_ni)
 {
     FILE *fp;
-    char line[MAX_NETFILE_LINE];
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len;
     int lineNo, usedfile = 0;
     afs_uint32 i, neaddrs, nOutaddrs;
     afs_uint32 addr, mask, eAddrs[MAXIPADDRS], eMask[MAXIPADDRS], eMtu[MAXIPADDRS];
@@ -220,7 +221,7 @@ parseNetRestrictFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[],
     /* For each line in the NetRestrict file */
     lineNo = 0;
     usedfile = 0;
-    while (fgets(line, MAX_NETFILE_LINE, fp) != NULL) {
+    while ((len = getline(&line, &size, fp)) != -1) {
 	lineNo++;		/* input line number */
 	retval = extract_Addr(line, strlen(line), &addr, &mask);
 	if (retval == AFS_IPINVALID) {	/* syntactically invalid */
@@ -251,6 +252,7 @@ parseNetRestrictFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[],
     }
 
   done:
+    free(line);
     /* Collect the addresses we have left to return */
     nOutaddrs = 0;
     for (i = 0; i < neaddrs; i++) {
@@ -315,7 +317,9 @@ ParseNetInfoFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[], afs_uint32 out
 
     afs_uint32 existingAddr[MAXIPADDRS], existingMask[MAXIPADDRS],
 	existingMtu[MAXIPADDRS];
-    char line[MAX_NETFILE_LINE];
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len;
     FILE *fp;
     int i, existNu, count = 0;
     afs_uint32 addr, mask;
@@ -352,7 +356,7 @@ ParseNetInfoFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[], afs_uint32 out
     }
 
     /* For each line in the NetInfo file */
-    while (fgets(line, MAX_NETFILE_LINE, fp) != NULL) {
+    while ((len = getline(&line, &size, fp)) != -1) {
 	int fake = 0;
 
 	/* See if first char is an 'F' for fake */
@@ -421,6 +425,7 @@ ParseNetInfoFile_int(afs_uint32 outAddrs[], afs_uint32 outMask[], afs_uint32 out
 	    count++;
 	}
     }				/* while */
+    free(line);
 
     /* in case of any error, we use all the interfaces present */
     if (count <= 0) {

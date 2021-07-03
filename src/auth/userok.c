@@ -130,11 +130,13 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 {
     char *filename, *nfilename;
     char *buffer;
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len;
     char *copy;
     FILE *tf;
     FILE *nf;
     int flag;
-    char *tp;
     int found;
     struct stat tstat;
     struct rx_identity identity;
@@ -210,11 +212,11 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
     found = 0;
     while (1) {
 	/* check for our user id */
-	tp = fgets(buffer, AFSDIR_PATH_MAX, tf);
-	if (tp == NULL)
+	len = getline(&line, &size, tf);
+	if (len < 0)
 	    break;
 
-	copy = strdup(buffer);
+	copy = strdup(line);
 	if (copy == NULL) {
 	    flag = 1;
 	    break;
@@ -225,13 +227,14 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	    found = 1;
 	} else {
 	    /* otherwise copy original line to output */
-	    fprintf(nf, "%s", buffer);
+	    fprintf(nf, "%s", line);
 	}
 	free(copy);
 	rx_identity_freeContents(&identity);
     }
     fclose(tf);
     free(buffer);
+    free(line);
     if (ferror(nf))
 	flag = 1;
     if (fclose(nf) == EOF)
@@ -301,8 +304,11 @@ static int
 GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 		     struct rx_identity **identity, int id)
 {
-    bufio_p bp;
+    FILE *fp;
     char *tbuffer;
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len;
     struct rx_identity fileUser;
     afs_int32 code;
 
@@ -312,20 +318,20 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 
     LOCK_GLOBAL_MUTEX;
     UserListFileName(dir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
-    if (!bp) {
+    fp = fopen(tbuffer, "r");
+    if (fp == NULL) {
 	UNLOCK_GLOBAL_MUTEX;
 	free(tbuffer);
 	return -1;
     }
     while (1) {
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
-	if (code < 0) {
+	len = getline(&line, &size, fp);
+	if (len < 0) {
 	    code = -1;
 	    break;
 	}
 
-	code = ParseLine(tbuffer, &fileUser);
+	code = ParseLine(line, &fileUser);
 	if (code != 0)
 	    break;
 
@@ -342,9 +348,10 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 	rx_identity_freeContents(&fileUser);
     }
 
-    BufioClose(bp);
+    fclose(fp);
 
     UNLOCK_GLOBAL_MUTEX;
+    free(line);
     free(tbuffer);
     return code;
 }
@@ -510,8 +517,11 @@ int
 afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 			struct rx_identity *user)
 {
-    bufio_p bp;
+    FILE *fp;
     char *tbuffer;
+    char *line = NULL;
+    size_t size = 0;
+    ssize_t len;
     struct rx_identity fileUser;
     int match;
     afs_int32 code;
@@ -524,18 +534,18 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 	return 0;
 
     UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
-    if (!bp) {
+    fp = fopen(tbuffer, "r");
+    if (fp == NULL) {
 	free(tbuffer);
 	return 0;
     }
     match = 0;
     while (!match) {
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
-        if (code < 0)
+	len = getline(&line, &size, fp);
+	if (len < 0)
 	    break;
 
-	code = ParseLine(tbuffer, &fileUser);
+	code = ParseLine(line, &fileUser);
 	if (code != 0)
 	   break;
 
@@ -543,7 +553,8 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 
 	rx_identity_freeContents(&fileUser);
     }
-    BufioClose(bp);
+    fclose(fp);
+    free(line);
     free(tbuffer);
     return match;
 }

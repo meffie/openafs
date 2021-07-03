@@ -19,8 +19,6 @@
 #include "cellconfig.h"
 #include "internal.h"
 
-#define MAXLINESIZE 2047
-
 /* Can be set during initialization, overriding the krb.conf file. */
 static struct opr_queue *lrealms = NULL;
 
@@ -261,6 +259,8 @@ read_local_realms(struct afsconf_realms *entries, const char *path)
     struct stat tstat;
     FILE *cnffile = NULL;
     char *linebuf = NULL;
+    size_t size = 0;
+    ssize_t len;
     char *p;
 
     opr_queue_Init(&temp);
@@ -283,16 +283,10 @@ read_local_realms(struct afsconf_realms *entries, const char *path)
 	code = (errno == ENOENT ? 0 : errno);	/* this file is optional */
 	goto done;
     }
-    linebuf = malloc(sizeof(char) * (MAXLINESIZE + 1));
-    if (!linebuf) {
-	code = ENOMEM;
+    len = getline(&linebuf, &size, cnffile);
+    if (len < 0) {
 	goto done;
     }
-    if (fgets(linebuf, MAXLINESIZE, cnffile) == NULL) {
-	code = errno;
-	goto done;
-    }
-    linebuf[MAXLINESIZE] = '\0';
     for (p = linebuf; *p;) {
 	p = parse_str(p, realm, AFS_REALM_SZ);
 	if (*realm) {
@@ -334,6 +328,8 @@ read_local_exclusions(struct afsconf_realms *entries, const char *path)
 {
     int code = 0;
     char *linebuf = NULL;
+    size_t size = 0;
+    ssize_t len;
     char *filename = NULL;
     char name[256];
     FILE *cnffile = NULL;
@@ -359,16 +355,11 @@ read_local_exclusions(struct afsconf_realms *entries, const char *path)
 	code = (errno != ENOENT ? errno : 0);	/* this file is optional */
 	goto done;
     }
-    linebuf = malloc(sizeof(char) * (MAXLINESIZE + 1));
-    if (!linebuf) {
-	code = ENOMEM;
-	goto done;
-    }
     for (;;) {
-	if (fgets(linebuf, MAXLINESIZE, cnffile) == NULL) {
+	len = getline(&linebuf, &size, cnffile);
+	if (len < 0) {
 	    break;
 	}
-	linebuf[MAXLINESIZE] = '\0';
 	parse_str(linebuf, name, sizeof(name));
 	if (*name) {
 	    code = add_entry(&temp, name);

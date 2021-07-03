@@ -1,7 +1,4 @@
 Add_RelDate_to_Time
-BufioClose
-BufioGets
-BufioOpen
 FSLog
 Int32To_ktimeRelDate
 LogCommandLine
