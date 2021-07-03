@@ -452,10 +452,14 @@ ParseLine(char *buffer, struct rx_identity *user)
     char *ename;
     char *displayName;
     char *decodedName;
-    char name[64+1];
     int len;
     int kind;
     int code;
+
+    /* Trim the trailing newline, if present. */
+    ptr = strchr(buffer, '\n');
+    if (ptr != NULL)
+	*ptr = '\0';
 
     if (buffer[0] == ' ') { /* extended names have leading space */
 	ptr = buffer + 1;
@@ -485,12 +489,8 @@ ParseLine(char *buffer, struct rx_identity *user)
 	return 0; /* Success ! */
     }
 
-    /* No extended name, try for a legacy name */
-    code = sscanf(buffer, "%64s", name);
-    if (code != 1)
-	return EINVAL;
-
-    rx_identity_populate(user, RX_ID_KRB4, name, name, strlen(name));
+    /* No extended name. This is a legacy name. */
+    rx_identity_populate(user, RX_ID_KRB4, buffer, buffer, strlen(buffer));
     return 0;
 }
 
