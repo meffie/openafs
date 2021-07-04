@@ -323,7 +323,6 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 #define MAXRECURSION 20
 extern int dontExecute;		/* declared in commands.c */
 extern char *loadFile;		/* declared in commands.c */
-char lineBuffer[1024];		/* Line typed in by user or read from load file */
 
 /*
  * This will dispatch a command.  It holds a recursive loop for the
@@ -354,6 +353,9 @@ doDispatch(afs_int32 targc,
     int lineNumber;
     int noExecute;		/* local capy of global variable */
     char *internalLoadFile;
+    char *lineBuffer = NULL;	/* Line read from load file */
+    size_t bufsize = 0;
+    ssize_t len;
 
     lock_Dispatch();
 
@@ -383,7 +385,7 @@ doDispatch(afs_int32 targc,
 	    printf("Would have executed the following commands:\n");
 
 	lineNumber = 0;
-	while (fgets(lineBuffer, sizeof(lineBuffer) - 1, fd)) {	/* Get commands from file */
+	while((len = getline(&lineBuffer, &bufsize, fd)) != -1) { /* Get commands from file */
 	    lineNumber++;
 
 	    i = strlen(lineBuffer) - 1;
@@ -412,6 +414,7 @@ doDispatch(afs_int32 targc,
     }
 
   done:
+    free(lineBuffer);
     if (internalLoadFile)
 	free(internalLoadFile);
     return (code);
@@ -443,6 +446,9 @@ main(int argc, char **argv)
     afs_int32 code;		/*Return code */
     struct cmd_syndesc *ts;	/*Ptr to parsed command line */
     int i;
+    char *lineBuffer = NULL;	/* Line typed in by user. */
+    size_t bufsize = 0;
+    ssize_t len;
 
 
 #ifdef	AFS_AIX32_ENV
@@ -757,16 +763,11 @@ main(int argc, char **argv)
 
     /* Iterate on command lines, interpreting user commands (interactive mode) */
     while (1) {
-	int ret;
-
 	printf("backup> ");
 	fflush(stdout);
 
-
-	while ((ret = LWP_GetLine(lineBuffer, sizeof(lineBuffer))) == 0)
-	    printf("%s: Command line too long\n", whoami);	/* line too long */
-
-	if (ret == -1)
+	len = getline(&lineBuffer, &bufsize, stdin);
+	if (len == -1)
 	    return 0;		/* Got EOF */
 
 	if (!LineIsBlank(lineBuffer)) {
@@ -780,4 +781,5 @@ main(int argc, char **argv)
 	    }
 	}
     }
+    free(lineBuffer);
 }				/*main */
