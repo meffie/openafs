@@ -1061,7 +1061,9 @@ main(int argc, char **argv)
     afs_int32 code;
     struct cmd_syndesc *ts;
 
-    char line[2048];
+    char *line = NULL;
+    size_t bufsize = 0;
+    ssize_t len;
     char *cp, *lastp;
     int parsec;
     char *parsev[CMD_MAXPARMS];
@@ -1204,7 +1206,8 @@ main(int argc, char **argv)
     while (source && !finished) {
 	if (isatty(fileno(source)))
 	    fprintf(stderr, "pts> ");
-	if (!fgets(line, sizeof line, source)) {
+	len = getline(&line, &bufsize, source);
+	if (len == -1) {
 	    if (!popsource())
 		break;
 	    continue;
@@ -1232,6 +1235,7 @@ main(int argc, char **argv)
 	parsev[0] = savec;
 	cmd_FreeArgv(parsev);
     }
+    free(line);
     CleanUp(NULL, NULL);
     exit(0);
 }
