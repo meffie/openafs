@@ -42,13 +42,6 @@
 
 static int ParseLine(char *buffer, struct rx_identity *user);
 
-static void
-UserListFileName(struct afsconf_dir *adir,
-		 char *buffer, size_t len)
-{
-    strcompose(buffer, len, adir->name, "/", AFSDIR_ULIST_FILE, (char *)NULL);
-}
-
 int
 afsconf_CheckAuth(void *arock, struct rx_call *acall)
 {
@@ -150,13 +143,12 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	code = ENOMEM;
 	goto out;
     }
-    filename = malloc(AFSDIR_PATH_MAX);
-    if (filename == NULL) {
+
+    code = asprintf(&filename, "%s/%s", adir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
 	code = ENOMEM;
 	goto out;
     }
-
-    UserListFileName(adir, filename, AFSDIR_PATH_MAX);
 #ifndef AFS_NT40_ENV
     {
 	/*
@@ -296,6 +288,7 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 		     struct rx_identity **identity, int id)
 {
     bufio_p bp = NULL;
+    char *filename = NULL;
     char *tbuffer = NULL;
     struct rx_identity fileUser;
     afs_int32 code;
@@ -309,8 +302,12 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 	goto out;
     }
 
-    UserListFileName(dir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
+    code = asprintf(&filename, "%s/%s", dir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
+	code = ENOMEM;
+	goto out;
+    }
+    bp = BufioOpen(filename, O_RDONLY, 0);
     if (!bp) {
 	code = -1;
 	goto out;
@@ -340,6 +337,7 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
     if (bp)
 	BufioClose(bp);
     rx_identity_freeContents(&fileUser);
+    free(filename);
     free(tbuffer);
     UNLOCK_GLOBAL_MUTEX;
     return code;
@@ -507,6 +505,7 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 			struct rx_identity *user)
 {
     bufio_p bp = NULL;
+    char *filename = NULL;
     char *tbuffer = NULL;
     struct rx_identity fileUser;
     int match;
@@ -521,8 +520,12 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 	goto out;
     }
 
-    UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
-    bp = BufioOpen(tbuffer, O_RDONLY, 0);
+    code = asprintf(&filename, "%s/%s", adir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
+	match = 0;
+	goto out;
+    }
+    bp = BufioOpen(filename, O_RDONLY, 0);
     if (!bp) {
 	match = 0;
 	goto out;
@@ -545,6 +548,7 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
   out:
     if (bp != NULL)
 	BufioClose(bp);
+    free(filename);
     free(tbuffer);
     return match;
 }
@@ -556,7 +560,7 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
     FILE *tf = NULL;
     afs_int32 code;
     char *ename = NULL;
-    char *tbuffer = NULL;
+    char *filename = NULL;
 
     LOCK_GLOBAL_MUTEX;
     if (afsconf_IsSuperIdentity(adir, user)) {
@@ -564,9 +568,12 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	goto out;
     }
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
-    UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
-    tf = fopen(tbuffer, "a+");
+    code = asprintf(&filename, "%s/%s", adir->name, AFSDIR_ULIST_FILE);
+    if (code < 0) {
+	code = ENOMEM;
+	goto out;
+    }
+    tf = fopen(filename, "a+");
     if (!tf) {
 	code = EIO;
 	goto out;
@@ -587,7 +594,7 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	if (fclose(tf))
 	    code = EIO;
     }
-    free(tbuffer);
+    free(filename);
     free(ename);
     UNLOCK_GLOBAL_MUTEX;
     return code;
