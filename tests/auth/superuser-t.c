@@ -95,6 +95,7 @@ startClient(char *configPath)
     afs_uint32 addr;
     afs_int32 result;
     char *string = NULL;
+    char *long_name = NULL;
 
     dir = afsconf_Open(configPath);
     ok(dir!=NULL,
@@ -109,6 +110,22 @@ startClient(char *configPath)
     /* Check that they are a super user */
     ok(afsconf_IsSuperIdentity(dir, testId),
        "User added with old i/face is identitifed as super user");
+
+    ok(afsconf_AddUser(dir, "") == EINVAL,
+       "Adding an empty user fails");
+
+    ok(afsconf_AddUser(dir, "foo\nbar") == EINVAL,
+       "Adding a user containing a newline fails");
+
+    ok(afsconf_AddUser(dir, " bogus") == EINVAL,
+       "Adding a user that starts with a space fails");
+
+    long_name = malloc(2048);
+    memset(long_name, 'x', 2047);
+    long_name[2047] = '\0';
+    ok(afsconf_AddUser(dir, long_name) == EINVAL,
+       "Adding a user that exceeds the line length fails");
+    free(long_name);
 
     /* Check that nobody else is */
     ok(!afsconf_IsSuperIdentity(dir,
@@ -450,7 +467,7 @@ int main(int argc, char **argv)
      * the tests.
      */
 
-    plan(63);
+    plan(67);
 
     /*
      * Register a handlers to cleanup on process exit.

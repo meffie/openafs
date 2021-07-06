@@ -40,6 +40,12 @@
 #define AFS_NOAUTH_NAME "<NoAuth>"
 #define AFS_NOAUTH_LEN  (sizeof(AFS_NOAUTH_NAME)-1)
 
+/*
+ * Maximum UserList file line buffer size. Includes a truncation check
+ * character, optional newline, and terminating nul character.
+ */
+#define USERLIST_MAXLINESIZE 2048
+
 static int ParseLine(char *buffer, struct rx_identity *user);
 
 int
@@ -138,7 +144,7 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 
     LOCK_GLOBAL_MUTEX;
 
-    buffer = malloc(AFSDIR_PATH_MAX);
+    buffer = calloc(USERLIST_MAXLINESIZE, sizeof(*buffer));
     if (buffer == NULL) {
 	code = ENOMEM;
 	goto out;
@@ -191,10 +197,14 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
     found = 0;
     while (1) {
 	/* check for our user id */
-	tp = fgets(buffer, AFSDIR_PATH_MAX, tf);
+	tp = fgets(buffer, USERLIST_MAXLINESIZE, tf);
 	if (tp == NULL)
 	    break;
-
+	if (strlen(buffer) > USERLIST_MAXLINESIZE - 2) {
+	    code = ERANGE;
+	    flag = 1;
+	    break;
+	}
 	copy = strdup(buffer);
 	if (copy == NULL) {
 	    flag = 1;
@@ -296,7 +306,7 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
     memset(&fileUser, 0, sizeof(fileUser));
 
     LOCK_GLOBAL_MUTEX;
-    tbuffer = malloc(AFSDIR_PATH_MAX);
+    tbuffer = calloc(USERLIST_MAXLINESIZE, sizeof(*tbuffer));
     if (tbuffer == NULL) {
 	code = ENOMEM;
 	goto out;
@@ -314,9 +324,14 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
     }
     while (1) {
 	rx_identity_freeContents(&fileUser);
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
+	code = BufioGets(bp, tbuffer, USERLIST_MAXLINESIZE);
 	if (code < 0) {
 	    code = -1;
+	    break;
+	}
+
+	if (strlen(tbuffer) > USERLIST_MAXLINESIZE - 2) {
+	    code = ERANGE;
 	    break;
 	}
 
@@ -514,7 +529,7 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
     if (user->kind == RX_ID_SUPERUSER)
 	return 1;
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
+    tbuffer = calloc(USERLIST_MAXLINESIZE, sizeof(*tbuffer));
     if (tbuffer == NULL) {
 	match = 0;
 	goto out;
@@ -532,9 +547,14 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
     }
     match = 0;
     while (!match) {
-	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
+	code = BufioGets(bp, tbuffer, USERLIST_MAXLINESIZE);
         if (code < 0)
 	    break;
+
+	if (strlen(tbuffer) > USERLIST_MAXLINESIZE - 2) {
+	    code = ERANGE;
+	    break;
+	}
 
 	code = ParseLine(tbuffer, &fileUser);
 	if (code != 0)
@@ -561,6 +581,8 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
     afs_int32 code;
     char *ename = NULL;
     char *filename = NULL;
+    char *buffer = NULL;
+    size_t len;
 
     LOCK_GLOBAL_MUTEX;
     if (afsconf_IsSuperIdentity(adir, user)) {
@@ -579,11 +601,44 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	goto out;
     }
     if (user->kind == RX_ID_KRB4) {
+	/* Do not allow empty names and do not exceed the maximum supported
+	 * line size. */
+	len = strlen(user->displayName);
+	if (len < 1 || len > USERLIST_MAXLINESIZE - 2) {
+	    code = EINVAL;
+	    goto out;
+	}
+	/* Do not allow newlines, since those are identity separators. */
+	if (strcspn(user->displayName, "\r\n") != len) {
+	    code = EINVAL;
+	    goto out;
+	}
+	/* Do not allow the first char to be a space, since we use a space
+	 * in the first position to indicates a new style identity. */
+	if (user->displayName[0] == ' ') {
+	    code = EINVAL;
+	    goto out;
+	}
 	fprintf(tf, "%s\n", user->displayName);
     } else {
-	base64_encode(user->exportedName.val, user->exportedName.len,
-		      &ename);
-	fprintf(tf, " %d %s %s\n", user->kind, ename, user->displayName);
+	base64_encode(user->exportedName.val, user->exportedName.len, &ename);
+	code = asprintf(&buffer, " %d %s %s", user->kind, ename, user->displayName);
+	if (code < 0) {
+	    code = ENOMEM;
+	    goto out;
+	}
+	len = strlen(buffer);
+	/* Do not exceed the maximum supported line size. */
+	if (len > USERLIST_MAXLINESIZE - 2) {
+	    code = EINVAL;
+	    goto out;
+	}
+	/* Do not allow newlines, since those are identity separators. */
+	if (strcspn(buffer, "\r\n") != len) {
+	    code = EINVAL;
+	    goto out;
+	}
+	fprintf(tf, "%s\n", buffer);
     }
     code = 0;
 
@@ -594,6 +649,7 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	if (fclose(tf))
 	    code = EIO;
     }
+    free(buffer);
     free(filename);
     free(ename);
     UNLOCK_GLOBAL_MUTEX;
