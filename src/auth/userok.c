@@ -128,11 +128,12 @@ afsconf_SetNoAuthFlag(struct afsconf_dir *adir, int aflag)
 int
 afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 {
-    char *filename, *nfilename;
-    char *buffer;
+    char *filename = NULL;
+    char *nfilename = NULL;
+    char *buffer = NULL;
     char *copy;
-    FILE *tf;
-    FILE *nf;
+    FILE *tf = NULL;
+    FILE *nf = NULL;
     int flag;
     char *tp;
     int found;
@@ -142,16 +143,19 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 
     memset(&identity, 0, sizeof(struct rx_identity));
 
+    LOCK_GLOBAL_MUTEX;
+
     buffer = malloc(AFSDIR_PATH_MAX);
-    if (buffer == NULL)
-	return ENOMEM;
+    if (buffer == NULL) {
+	code = ENOMEM;
+	goto out;
+    }
     filename = malloc(AFSDIR_PATH_MAX);
     if (filename == NULL) {
-	free(buffer);
-	return ENOMEM;
+	code = ENOMEM;
+	goto out;
     }
 
-    LOCK_GLOBAL_MUTEX;
     UserListFileName(adir, filename, AFSDIR_PATH_MAX);
 #ifndef AFS_NT40_ENV
     {
@@ -162,10 +166,8 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	 */
 	nfilename = malloc(AFSDIR_PATH_MAX);
 	if (nfilename == NULL) {
-	    UNLOCK_GLOBAL_MUTEX;
-	    free(filename);
-	    free(buffer);
-	    return ENOMEM;
+	    code = ENOMEM;
+	    goto out;
 	}
 	if (realpath(filename, nfilename)) {
 	    free(filename);
@@ -176,35 +178,22 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
     }
 #endif /* AFS_NT40_ENV */
     if (asprintf(&nfilename, "%s.NXX", filename) < 0) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(buffer);
-	return -1;
+	code = -1;
+	goto out;
     }
     tf = fopen(filename, "r");
     if (!tf) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return -1;
+	code = -1;
+	goto out;
     }
     code = stat(filename, &tstat);
     if (code < 0) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return code;
+	goto out;
     }
     nf = fopen(nfilename, "w+");
     if (!nf) {
-	fclose(tf);
-	UNLOCK_GLOBAL_MUTEX;
-	free(filename);
-	free(nfilename);
-	free(buffer);
-	return EIO;
+	code = EIO;
+	goto out;
     }
     flag = 0;
     found = 0;
@@ -230,8 +219,6 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	free(copy);
 	rx_identity_freeContents(&identity);
     }
-    fclose(tf);
-    free(buffer);
     if (ferror(nf))
 	flag = 1;
     if (fclose(nf) == EOF)
@@ -245,14 +232,21 @@ afsconf_DeleteIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	unlink(nfilename);
 
     /* finally, decide what to return to the caller */
+    if (flag)
+	code = EIO;		/* something mysterious went wrong */
+    else if (!found)
+	code = ENOENT;		/* entry wasn't found, no changes made */
+    else
+	code = 0;		/* everything was fine */
+
+  out:
+    if (tf != NULL)
+	fclose(tf);
     UNLOCK_GLOBAL_MUTEX;
     free(filename);
     free(nfilename);
-    if (flag)
-	return EIO;		/* something mysterious went wrong */
-    if (!found)
-	return ENOENT;		/* entry wasn't found, no changes made */
-    return 0;			/* everything was fine */
+    free(buffer);
+    return code;
 }
 
 /*!
@@ -301,24 +295,28 @@ static int
 GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 		     struct rx_identity **identity, int id)
 {
-    bufio_p bp;
-    char *tbuffer;
+    bufio_p bp = NULL;
+    char *tbuffer = NULL;
     struct rx_identity fileUser;
     afs_int32 code;
 
-    tbuffer = malloc(AFSDIR_PATH_MAX);
-    if (tbuffer == NULL)
-	return ENOMEM;
+    memset(&fileUser, 0, sizeof(fileUser));
 
     LOCK_GLOBAL_MUTEX;
+    tbuffer = malloc(AFSDIR_PATH_MAX);
+    if (tbuffer == NULL) {
+	code = ENOMEM;
+	goto out;
+    }
+
     UserListFileName(dir, tbuffer, AFSDIR_PATH_MAX);
     bp = BufioOpen(tbuffer, O_RDONLY, 0);
     if (!bp) {
-	UNLOCK_GLOBAL_MUTEX;
-	free(tbuffer);
-	return -1;
+	code = -1;
+	goto out;
     }
     while (1) {
+	rx_identity_freeContents(&fileUser);
 	code = BufioGets(bp, tbuffer, AFSDIR_PATH_MAX);
 	if (code < 0) {
 	    code = -1;
@@ -332,20 +330,18 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 	if (id || fileUser.kind == RX_ID_KRB4)
 	    count--;
 
-	if (count < 0)
+	if (count < 0) {
+	    *identity = rx_identity_copy(&fileUser);
 	    break;
-        else
-	    rx_identity_freeContents(&fileUser);
-    }
-    if (code == 0) {
-	*identity = rx_identity_copy(&fileUser);
-	rx_identity_freeContents(&fileUser);
+	}
     }
 
-    BufioClose(bp);
-
-    UNLOCK_GLOBAL_MUTEX;
+  out:
+    if (bp)
+	BufioClose(bp);
+    rx_identity_freeContents(&fileUser);
     free(tbuffer);
+    UNLOCK_GLOBAL_MUTEX;
     return code;
 }
 
@@ -510,8 +506,8 @@ int
 afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 			struct rx_identity *user)
 {
-    bufio_p bp;
-    char *tbuffer;
+    bufio_p bp = NULL;
+    char *tbuffer = NULL;
     struct rx_identity fileUser;
     int match;
     afs_int32 code;
@@ -520,14 +516,16 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 	return 1;
 
     tbuffer = malloc(AFSDIR_PATH_MAX);
-    if (tbuffer == NULL)
-	return 0;
+    if (tbuffer == NULL) {
+	match = 0;
+	goto out;
+    }
 
     UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
     bp = BufioOpen(tbuffer, O_RDONLY, 0);
     if (!bp) {
-	free(tbuffer);
-	return 0;
+	match = 0;
+	goto out;
     }
     match = 0;
     while (!match) {
@@ -543,7 +541,10 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 
 	rx_identity_freeContents(&fileUser);
     }
-    BufioClose(bp);
+
+  out:
+    if (bp != NULL)
+	BufioClose(bp);
     free(tbuffer);
     return match;
 }
@@ -552,24 +553,23 @@ afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 int
 afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 {
-    FILE *tf;
+    FILE *tf = NULL;
     afs_int32 code;
-    char *ename;
-    char *tbuffer;
+    char *ename = NULL;
+    char *tbuffer = NULL;
 
     LOCK_GLOBAL_MUTEX;
     if (afsconf_IsSuperIdentity(adir, user)) {
-	UNLOCK_GLOBAL_MUTEX;
-	return EEXIST;		/* already in the list */
+	code = EEXIST;		/* already in the list */
+	goto out;
     }
 
     tbuffer = malloc(AFSDIR_PATH_MAX);
     UserListFileName(adir, tbuffer, AFSDIR_PATH_MAX);
     tf = fopen(tbuffer, "a+");
-    free(tbuffer);
     if (!tf) {
-	UNLOCK_GLOBAL_MUTEX;
-	return EIO;
+	code = EIO;
+	goto out;
     }
     if (user->kind == RX_ID_KRB4) {
 	fprintf(tf, "%s\n", user->displayName);
@@ -577,13 +577,18 @@ afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *user)
 	base64_encode(user->exportedName.val, user->exportedName.len,
 		      &ename);
 	fprintf(tf, " %d %s %s\n", user->kind, ename, user->displayName);
-	free(ename);
     }
     code = 0;
-    if (ferror(tf))
-	code = EIO;
-    if (fclose(tf))
-	code = EIO;
+
+  out:
+    if (tf != NULL) {
+	if (ferror(tf))
+	    code = EIO;
+	if (fclose(tf))
+	    code = EIO;
+    }
+    free(tbuffer);
+    free(ename);
     UNLOCK_GLOBAL_MUTEX;
     return code;
 }
@@ -777,41 +782,45 @@ afsconf_SuperIdentity(struct afsconf_dir *adir, struct rx_call *acall,
 
     LOCK_GLOBAL_MUTEX;
     if (!adir) {
-	UNLOCK_GLOBAL_MUTEX;
-	return 0;
+	code = 0;
+	goto out;
     }
 
     if (afsconf_GetNoAuthFlag(adir)) {
 	if (identity)
 	    *identity = rx_identity_new(RX_ID_KRB4, AFS_NOAUTH_NAME,
 	                                AFS_NOAUTH_NAME, AFS_NOAUTH_LEN);
-	UNLOCK_GLOBAL_MUTEX;
-	return 1;
+	code = 1;
+	goto out;
     }
 
     tconn = rx_ConnectionOf(acall);
     code = rx_SecurityClassOf(tconn);
     if (code == RX_SECIDX_NULL) {
-	UNLOCK_GLOBAL_MUTEX;
-	return 0;		/* not authenticated at all, answer is no */
+	code = 0;		/* not authenticated at all, answer is no */
+	goto out;
     } else if (code == RX_SECIDX_VAB) {
 	/* bcrypt tokens */
-	UNLOCK_GLOBAL_MUTEX;
-	return 0;		/* not supported any longer */
+	code = 0;		/* not supported any longer */
+	goto out;
     } else if (code == RX_SECIDX_KAD) {
 	flag = rxkadSuperUser(adir, acall, identity);
-	UNLOCK_GLOBAL_MUTEX;
-	return flag;
+	code = flag;
+	goto out;
 #ifdef AFS_RXGK_ENV
     } else if (code == RX_SECIDX_GK) {
 	flag = rxgkSuperUser(adir, acall, identity);
-	UNLOCK_GLOBAL_MUTEX;
-	return flag;
+	code = flag;
+	goto out;
 #endif
     } else {			/* some other auth type */
-	UNLOCK_GLOBAL_MUTEX;
-	return 0;		/* mysterious, just say no */
+	code = 0;		/* mysterious, just say no */
+	goto out;
     }
+
+  out:
+    UNLOCK_GLOBAL_MUTEX;
+    return code;
 }
 
 /*!
