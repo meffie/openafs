@@ -156,3 +156,4 @@ ugen_ClientInitServer
 xdr_idlist
 xdr_namelist
 xdr_prlist
+afsconf_GetIdentity

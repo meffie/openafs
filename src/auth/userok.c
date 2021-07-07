@@ -47,6 +47,38 @@
 #define USERLIST_MAXLINESIZE 2048
 
 static int ParseLine(char *buffer, struct rx_identity *user);
+static int GetIdentity(struct afsconf_dir *dir,
+		       struct rx_identity **identity,
+		       int (*compare)(struct rx_identity *id, void *rock),
+		       void *rock);
+
+struct cursor {
+    int count;
+    int target;
+};
+
+static int
+id_at_index(struct rx_identity *id, void *rock)
+{
+    struct cursor *cursor = rock;
+    return (cursor->count++ == cursor->target);
+}
+
+static int
+user_at_index(struct rx_identity *id, void *rock)
+{
+    struct cursor *cursor = rock;
+    if (id->kind != RX_ID_KRB4)
+	return 0;  /* Count legacy entries only. */
+    return (cursor->count++ == cursor->target);
+}
+
+static int
+id_matches(struct rx_identity *id, void *rock)
+{
+    struct rx_identity *target = rock;
+    return rx_identity_match(id, target);
+}
 
 int
 afsconf_CheckAuth(void *arock, struct rx_call *acall)
@@ -287,25 +319,62 @@ afsconf_DeleteUser(struct afsconf_dir *adir, char *name)
     return code;
 }
 
-/* This is a multi-purpose funciton for use by either
- * GetNthIdentity or GetNthUser. The parameter 'id' indicates
- * whether we are counting all identities (if true), or just
- * ones which can be represented by the old-style interfaces
- * We return -1 for EOF, 0 for success, and >0 for all errors.
+/**
+ * Lookup an identity using a caller supplied comparison function.
+ *
+ * Find an identity by scanning the UserList in order and calling the caller
+ * supplied comparison function on each entry until a match is found or the end
+ * of the UserList is reached. The comparison function should return non-zero
+ * on a match or zero otherwise.
+ *
+ * @param[in]  dir       afsconf directory
+ * @param[out] identity  lookup result, if found
+ *                       The caller must call rx_free_identity to free
+ *                       the result.
+ * @param[in]  compare   caller specified comparison function.
+ * @param[in]  rock      comparison context
+ *
+ * @returns
+ *   @retval 0 success
+ *   @retval ENOENT identity not found
+ *   @retval ENOMEM out of memory
+ */
+int
+afsconf_GetIdentity(struct afsconf_dir *dir,
+		    struct rx_identity **identity,
+		    int (*compare)(struct rx_identity *id, void *rock),
+		    void *rock)
+{
+    int code;
+
+    LOCK_GLOBAL_MUTEX;
+    code = GetIdentity(dir, identity, compare, rock);
+    UNLOCK_GLOBAL_MUTEX;
+    return code;
+}
+
+/**
+ * Lookup an identity in the UserList
+ *
+ * This is a multi-purpose function used by afsconf_GetIdentity,
+ * afsconf_GetNthIdentity, afsconf_GetNthUser, and afsconf_IsSuperIdentity.
+ *
+ * The global lock must be held when this function is called.
  */
 static int
-GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
-		     struct rx_identity **identity, int id)
+GetIdentity(struct afsconf_dir *dir,
+	    struct rx_identity **identity,
+	    int (*compare)(struct rx_identity *id, void *rock),
+	    void *rock)
 {
     bufio_p bp = NULL;
     char *filename = NULL;
     char *tbuffer = NULL;
     struct rx_identity fileUser;
     afs_int32 code;
+    int found = 0;
 
     memset(&fileUser, 0, sizeof(fileUser));
-
-    LOCK_GLOBAL_MUTEX;
     tbuffer = calloc(USERLIST_MAXLINESIZE, sizeof(*tbuffer));
     if (tbuffer == NULL) {
 	code = ENOMEM;
@@ -339,14 +408,18 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
 	if (code != 0)
 	    break;
 
-	if (id || fileUser.kind == RX_ID_KRB4)
-	    count--;
-
-	if (count < 0) {
+	if (compare(&fileUser, rock)) {
 	    *identity = rx_identity_copy(&fileUser);
+	    if (*identity == NULL) {
+		code = ENOMEM;
+		break;
+	    }
+	    found = 1;
 	    break;
 	}
     }
+    if (code == 0 && !found)
+	code = ENOENT;
 
   out:
     if (bp)
@@ -354,7 +427,6 @@ GetNthIdentityOrUser(struct afsconf_dir *dir, int count,
     rx_identity_freeContents(&fileUser);
     free(filename);
     free(tbuffer);
-    UNLOCK_GLOBAL_MUTEX;
     return code;
 }
 
@@ -379,7 +451,8 @@ int
 afsconf_GetNthIdentity(struct afsconf_dir *dir, int count,
 		       struct rx_identity **identity)
 {
-   return GetNthIdentityOrUser(dir, count, identity, 1);
+   struct cursor cursor = {0, count};
+   return afsconf_GetIdentity(dir, identity, id_at_index, &cursor);
 }
 
 /*!
@@ -417,19 +490,17 @@ int
 afsconf_GetNthUser(struct afsconf_dir *adir, afs_int32 an, char *abuffer,
 		   afs_int32 abufferLen)
 {
-    struct rx_identity *identity;
+    struct rx_identity *identity = NULL;
     int code;
+    struct cursor cursor = {0, an};
 
-    code = GetNthIdentityOrUser(adir, an, &identity, 0);
+    code = afsconf_GetIdentity(adir, &identity, user_at_index, &cursor);
     if (code == 0) {
 	strlcpy(abuffer, identity->displayName, abufferLen);
-	rx_identity_free(&identity);
+    } else if (code == ENOENT) {
+	code = 1; /* afsconf_GetNthUser() returns 1 to indicate EOF. */
     }
-    if (code == -1) {
-	/* The new functions use -1 to indicate EOF, but the old interface
-	 * uses 1 to indicate EOF. */
-	code = 1;
-    }
+    rx_identity_free(&identity);
     return code;
 }
 
@@ -519,58 +590,15 @@ int
 afsconf_IsSuperIdentity(struct afsconf_dir *adir,
 			struct rx_identity *user)
 {
-    bufio_p bp = NULL;
-    char *filename = NULL;
-    char *tbuffer = NULL;
-    struct rx_identity fileUser;
-    int match;
-    afs_int32 code;
+    struct rx_identity *fileUser = NULL;
+    int code;
 
     if (user->kind == RX_ID_SUPERUSER)
 	return 1;
 
-    tbuffer = calloc(USERLIST_MAXLINESIZE, sizeof(*tbuffer));
-    if (tbuffer == NULL) {
-	match = 0;
-	goto out;
-    }
-
-    code = asprintf(&filename, "%s/%s", adir->name, AFSDIR_ULIST_FILE);
-    if (code < 0) {
-	match = 0;
-	goto out;
-    }
-    bp = BufioOpen(filename, O_RDONLY, 0);
-    if (!bp) {
-	match = 0;
-	goto out;
-    }
-    match = 0;
-    while (!match) {
-	code = BufioGets(bp, tbuffer, USERLIST_MAXLINESIZE);
-        if (code < 0)
-	    break;
-
-	if (strlen(tbuffer) > USERLIST_MAXLINESIZE - 2) {
-	    code = ERANGE;
-	    break;
-	}
-
-	code = ParseLine(tbuffer, &fileUser);
-	if (code != 0)
-	   break;
-
-	match = rx_identity_match(user, &fileUser);
-
-	rx_identity_freeContents(&fileUser);
-    }
-
-  out:
-    if (bp != NULL)
-	BufioClose(bp);
-    free(filename);
-    free(tbuffer);
-    return match;
+    code = GetIdentity(adir, &fileUser, id_matches, user);
+    rx_identity_free(&fileUser);
+    return (code == 0);
 }
 
 /* add a user to the user list, checking for duplicates */
