@@ -11,7 +11,7 @@ LIBS = ../tap/libtap.a \
        $(abs_top_builddir)/lib/util.a \
        $(abs_top_builddir)/lib/libopr.a
 
-BINS = ktime-t exec-alt-t volutil-t
+BINS = ktime-t exec-alt-t volutil-t getline-t
 
 all check test tests: $(BINS)
 
@@ -23,6 +23,9 @@ exec-alt-t: exec-alt-t.o $(LIBS)
 
 volutil-t: volutil-t.o $(LIBS)
 	$(AFS_LDRULE) volutil-t.o $(LIBS) $(LIB_roken) $(XLIBS)
+
+getline-t: getline-t.o $(LIBS)
+	$(AFS_LDRULE) getline-t.o $(LIBS) $(LIB_roken) $(XLIBS)
 
 install:
 
