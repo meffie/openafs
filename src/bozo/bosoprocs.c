@@ -20,6 +20,7 @@
 #include <rx/xdr.h>
 #include <rx/rx.h>
 #include <rx/rxkad.h>
+#include <rx/rx_identity.h>
 #include <afs/cellconfig.h>
 #include <afs/keys.h>
 #include <afs/afsutil.h>
@@ -734,18 +735,38 @@ SBOZO_DeleteKey(struct rx_call *acall, afs_int32 an)
     return code;
 }
 
+struct cursor {
+    int count;
+    int target;
+};
+
+static int
+user_at_index(struct rx_identity *id, void *rock)
+{
+    struct cursor *cursor = rock;
+    if (id->kind != RX_ID_KRB4)
+	return 0;  /* Count legacy entries only. */
+    return (cursor->count++ == cursor->target);
+}
 
 afs_int32
 SBOZO_ListSUsers(struct rx_call *acall, afs_int32 an, char **aname)
 {
     afs_int32 code;
-    char *tp;
+    struct rx_identity *identity = NULL;
+    struct cursor cursor = {0, an};
 
-    tp = *aname = malloc(256);
-    *tp = 0;			/* in case getnthuser doesn't null-terminate the string */
-    code = afsconf_GetNthUser(bozo_confdir, an, tp, 256);
+    code = afsconf_GetIdentity(bozo_confdir, &identity, user_at_index, &cursor);
+    if (code != 0)
+	*aname = strdup("");
+    else
+	*aname = strdup(identity->displayName);
+    if (*aname == NULL)
+	code = ENOMEM;
+    if (code == ENOENT)
+	code = 1; /* ListSUsers returns 1 to indicate not found. */
 
-  /* fail: */
+    rx_identity_free(&identity);
     osi_auditU(acall, BOS_ListSUserEvent, code, AUD_END);
     return code;
 }
