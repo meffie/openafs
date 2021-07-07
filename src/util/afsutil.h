@@ -126,6 +126,15 @@ extern int re_exec(const char *p1);
 #define AFS_STRINGIZE_(s) #s
 #define AFS_STRINGIZE(s) AFS_STRINGIZE_(s)
 
+/*
+ * Supply an implementation of POSIX getdelim() and getline() if one is
+ * not available.
+ */
+#ifndef HAVE_GETLINE
+#define getdelim afs_getdelim
+#define getline afs_getline
+#endif
+
 #include <afs/ktime.h>
 #include "afsutil_prototypes.h"
 
