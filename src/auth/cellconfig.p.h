@@ -268,6 +268,10 @@ extern int afsconf_GetNthUser(struct afsconf_dir *adir, afs_int32 an,
 			      char *abuffer, afs_int32 abufferLen);
 extern int afsconf_GetNthIdentity(struct afsconf_dir *, int,
 				  struct rx_identity **);
+extern int afsconf_GetIdentity(struct afsconf_dir *dir,
+			       struct rx_identity **identity,
+			       int (*compare)(struct rx_identity *id, void *rock),
+			       void *rock);
 extern int afsconf_AddUser(struct afsconf_dir *adir, char *aname);
 extern int afsconf_AddIdentity(struct afsconf_dir *adir, struct rx_identity *);
 extern int afsconf_SuperUser(struct afsconf_dir *adir, struct rx_call *acall,
