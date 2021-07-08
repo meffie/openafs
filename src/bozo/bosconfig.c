@@ -76,8 +76,9 @@ int
 ReadBozoFile(const char *aname)
 {
     FILE *tfile;
-    char tbuffer[BOZO_BSSIZE];
-    char *tp;
+    char *tbuffer = NULL;
+    size_t bufsize = 0;
+    ssize_t len;
     char *instp = NULL, *typep = NULL, *notifier = NULL, *notp = NULL;
     afs_int32 code;
     afs_int32 ktmask, ktday, kthour, ktmin, ktsec;
@@ -109,8 +110,8 @@ ReadBozoFile(const char *aname)
     }
     while (1) {
 	/* ok, read lines giving parms and such from the file */
-	tp = fgets(tbuffer, sizeof(tbuffer), tfile);
-	if (tp == (char *)0)
+	len = getline(&tbuffer, &bufsize, tfile);
+	if (len == -1)
 	    break;		/* all done */
 
 	if (strncmp(tbuffer, "restarttime", 11) == 0) {
@@ -181,8 +182,8 @@ ReadBozoFile(const char *aname)
 
 	for (i = 0; i < MAXPARMS; i++) {
 	    /* now read the parms, until we see an "end" line */
-	    tp = fgets(tbuffer, sizeof(tbuffer), tfile);
-	    if (!tp) {
+	    len = getline(&tbuffer, &bufsize, tfile);
+	    if (len == -1) {
 		code = -1;
 		goto fail;
 	    }
@@ -225,6 +226,7 @@ ReadBozoFile(const char *aname)
     code = 0;
 
   fail:
+    free(tbuffer);
     if (instp)
 	free(instp);
     if (typep)
