@@ -24,6 +24,10 @@
 #define CMD_HELPPARM	(CMD_MAXPARMS-1)	/* last one is used by -help switch */
 #define	CMD_MAXPARMS	64	/* max number of parm types to a cmd line */
 
+#ifndef AFS_NT40_ENV
+#define CMD_BACKSLASH_ESCAPE
+#endif
+
 /* parse items are here */
 struct cmd_item {
     struct cmd_item *next;
@@ -82,6 +86,9 @@ extern int cmd_Dispatch(int argc, char **argv);
 extern int cmd_FreeArgv(char **argv);
 extern int cmd_ParseLine(char *aline, char **argv, afs_int32 * an,
 			 afs_int32 amaxn);
+extern int cmd_Split(const char *text, int *pc, char ***pv);
+extern void cmd_FreeSplit(char ***pargv);
+extern int cmd_Join(int argc, char **argv, char **text);
 extern void cmd_DisablePositionalCommands(void);
 extern void cmd_DisableAbbreviations(void);
 extern void PrintSyntax(struct cmd_syndesc *as);
