@@ -24,7 +24,7 @@
  */
 
 /*
- * Tests for cmd_Split() and cmd_Join().
+ * Tests for cmd_Split(), cmd_Join(), and cmd_ParseLine().
  */
 
 #include <afsconfig.h>
@@ -154,12 +154,50 @@ test_join(void)
     }
 }
 
+void
+test_parseline(void)
+{
+    int code;
+    int tc;
+    char *tv[100];
+
+    /*
+     * Note: argv[0] should be an empty placeholder string, so we shift the
+     *       argv checks by one.
+     */
+    for (struct good_case *t = good_cases; t->text; t++) {
+	tc = -1;
+	memset(tv, 0, sizeof(tv));
+	code = cmd_ParseLine(t->text, tv, &tc, sizeof(tv)/sizeof(*tv));
+	is_int(code, 0, "cmd_ParseLine: %s", t->text);
+	is_int(tc, t->argc + 1, ".. size is %d", t->argc);
+	is_string(tv[0], "", ".. argv[0] is '' (placeholder)");
+	for (int i = 0; i < sizeof(tv)/sizeof(*tv) && i <= t->argc; i++) {
+	    is_string(tv[i+1], t->argv[i], ".. argv[%d] is %s", i, t->argv[i]);
+	}
+	cmd_FreeArgv(tv);
+    }
+
+    for (struct bad_case *t = bad_cases; t->text; t++) {
+	tc = -1;
+	memset(tv, 0, sizeof(tv));
+	code = cmd_ParseLine(t->text, tv, &tc, sizeof(tv)/sizeof(*tv));
+	is_int(code, t->code, "cmd_ParseLine: %s", t->text);
+	cmd_FreeArgv(tv);
+    }
+
+    /* CMD_TOOMANY test */
+    code = cmd_ParseLine("a b", tv, &tc, 2);
+    is_int(code, CMD_TOOMANY, "cmd_ParseLine: too many");
+}
+
 int
 main(int argc, char **argv)
 {
-    plan(160);
+    plan(321);
     initialize_CMD_error_table();
     test_split();
     test_join();
+    test_parseline();
     return 0;
 }

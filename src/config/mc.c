@@ -16,7 +16,7 @@
 #include <sys/file.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <errno.h>
 #include <string.h>
 
 #define TOK_DONTUSE 1		/* Don't copy if match and this flag is set. */
@@ -26,82 +26,78 @@ struct token {
     int flags;
 };
 
-/* free token list returned by parseLine */
+/**
+ * Parse the directive line into a set of words.
+ *
+ * Extract the sysname, arch, and OS words from a directive line.  The words are
+ * enclosed by '<' and '>' characters. Words staring with a '-' symbol are
+ * placed in the negative set.
+ *
+ * This function splits the 'aline' input string in place.
+ *
+ * @param aline directive line
+ * @param alist list of tokens
+ */
+static int
+ParseDirective(char *aline, struct token **alist)
+{
+    struct token *head = NULL;
+    struct token *tail = NULL;
+    const char *sep = " \t\r\n";
+    char *end;
+    char *word;
+
+    /*
+     * Extract the string enclosed by the '<' and '>' markers.  The leading '<'
+     * must be the first character of the line and the enclosing '>' should be
+     * the last character of the line. Any characters following the '>' end
+     * marker are ignored.
+     */
+    if (aline[0] != '<')
+	return -1;
+    aline++;
+    end = strchr(aline, '>');
+    if (end == NULL)
+	return -1;
+    *end = '\0';
+
+    /*
+     * Split the words delimited by whitespace. Words starting with the '-'
+     * symbol are put into the negative set.
+     */
+    for (word = strtok(aline, sep); word != NULL; word = strtok(NULL, sep)) {
+	struct token *token = calloc(1, sizeof(*token));
+	if (token == NULL)
+	    return ENOMEM;
+	if (word[0] == '-') {
+	    token->key = word + 1;
+	    token->flags = TOK_DONTUSE;
+	} else {
+	    token->key = word;
+	    token->flags = 0;
+	}
+	if (head == NULL)
+	    head = token;
+	else
+	    tail->next = token;
+	tail = token;
+    }
+    *alist = head;
+    return 0;
+}
+
+/**
+ * Free token list returned by ParseDirective().
+ */
 static int
 FreeTokens(struct token *alist)
 {
     struct token *nlist;
     for (; alist; alist = nlist) {
 	nlist = alist->next;
-	free(alist->key);
 	free(alist);
     }
     return 0;
-}
-
-#define	space(x)    ((x) == ' ' || (x) == '\t' || (x) == '<' || (x) == '>')
-static int
-ParseLine(char *aline, struct token **alist)
-{
-    char tbuffer[MAXTOKLEN + 1];
-    char *tptr = NULL;
-    int inToken;
-    struct token *first, *last;
-    struct token *ttok;
-    int tc;
-    int dontUse = 0;
-
-    inToken = 0;		/* not copying token chars at start */
-    first = NULL;
-    last = NULL;
-    while (1) {
-	tc = *aline++;
-	if (tc == 0 || space(tc)) {	/* terminating null gets us in here, too */
-	    if (inToken) {
-		inToken = 0;	/* end of this token */
-		if (!tptr)
-		    return -1;	/* should never get here */
-		else
-		    *tptr++ = 0;
-		ttok = malloc(sizeof(struct token));
-		ttok->next = NULL;
-		if (dontUse) {
-		    ttok->key = strdup(tbuffer + 1); /* Skip first char */
-		    ttok->flags = TOK_DONTUSE;
-		    dontUse = 0;
-		} else {
-		    ttok->key = strdup(tbuffer);
-		    ttok->flags = 0;
-		}
-		if (last) {
-		    last->next = ttok;
-		    last = ttok;
-		} else
-		    last = ttok;
-		if (!first)
-		    first = ttok;
-	    }
-	} else {
-	    /* an alpha character */
-	    if (!inToken) {
-		if (tc == '-') {
-		    dontUse = 1;
-		}
-		tptr = tbuffer;
-		inToken = 1;
-	    }
-	    if (tptr - tbuffer >= MAXTOKLEN)
-		return -1;	/* token too long */
-	    *tptr++ = tc;
-	}
-	if (tc == 0) {
-	    /* last token flushed 'cause space(0) --> true */
-	    if (last)
-		last->next = NULL;
-	    *alist = first;
-	    return 0;
-	}
-    }
 }
 
 /* read a line into a buffer, putting in null termination and stopping on appropriate
@@ -141,6 +137,7 @@ mc_copy(FILE * ain, FILE * aout, char *alist[])
     int code;
     int copying;
     int done;
+    int line_number = 1;
 
     copying = 1;		/* start off copying data */
     while (1) {
@@ -152,9 +149,11 @@ mc_copy(FILE * ain, FILE * aout, char *alist[])
 	if (tbuffer[0] == '<') {
 	    /* interpret the line as a set of options, any one of which will cause us
 	     * to start copying the data again. */
-	    code = ParseLine(tbuffer, &tokens);
-	    if (code != 0)
+	    code = ParseDirective(tbuffer, &tokens);
+	    if (code != 0) {
+		fprintf(stderr, "Failed to parse directive on line %d.\n", line_number);
 		return -1;
+	    }
 	    copying = 0;
 	    done = 0;
 	    for (tp = alist; (!done) && (*tp != NULL); tp++) {
@@ -182,6 +181,7 @@ mc_copy(FILE * ain, FILE * aout, char *alist[])
 		putc('\n', aout);
 	    }
 	}
+	line_number++;
     }
     return 0;
 }

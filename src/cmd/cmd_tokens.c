@@ -47,6 +47,13 @@ struct token_buffer {
     char *token_end;     /**< Address of the token nul terminator. */
 };
 
+/* cmd_ParseLine() context. */
+struct token_vector {
+    int max;
+    int count;
+    char **tokens;
+};
+
 /* cmd_Split() context. */
 struct token_list {
     struct opr_queue q;
@@ -443,4 +450,91 @@ cmd_Join(int argc, char **argv, char **text)
   fail:
     free_token_buffer(&tb);
     return code;
+}
+
+/**
+ * Add a token to a fixed length argv vector.
+ *
+ * @param token token string
+ * @param rock callback context
+ * @return 0 on success
+ *   @retval CMD_TOOMANY  number of tokens exceeds string vector size
+ */
+static int
+add_arg(char *token, void *rock)
+{
+    struct token_vector *tv = rock;
+    int i = tv->count++;
+
+    if (i >= tv->max)
+	return CMD_TOOMANY;
+
+    tv->tokens[i] = strdup(token);
+    if (tv->tokens[i] == NULL)
+	return ENOMEM;
+
+    return 0;
+}
+
+/**
+ * Split a string using a shell-like syntax into a fixed length argv vector.
+ *
+ * The caller must call cmd_FreeArgv() to free the strings held by the
+ * argv string vector.
+ *
+ * @param[in] aline  text to be split
+ * @param[out] argv  pointer to the string vector to be filled
+ * @param[out] an  number of arguments, not including the teminating NULL
+ * @param[in] amaxn  maximum size of the argv vector, including the
+ *                   terminating NULL
+ *
+ * @return 0 on success
+ *   @retval ENOMEM  out of memory
+ *   @retval CMD_TOOMANY  number of tokens exceeds string vector size
+ *   @retval CMD_MISSINGQUOTE  missing closing quote in text
+ *   @retval CMD_BADESCAPE  bad escape sequence in text
+ */
+int
+cmd_ParseLine(char *aline, char **argv, afs_int32 *an, afs_int32 amaxn)
+{
+    int code;
+    struct token_vector tokens = {amaxn, 0, argv};
+
+    /* Ensure the vector is clear so it will be properly terminated and
+     * will be safe for cmd_FreeArgv() on errors. */
+    memset(argv, 0, amaxn * sizeof(*argv));
+
+    /* Place a placeholder for the program name in argv[0]. */
+    code = add_arg("", &tokens);
+    if (code != 0)
+	goto fail;
+
+    code = tokenize(aline, add_arg, &tokens);
+    if (code != 0)
+	goto fail;
+
+    *an = tokens.count;
+    return 0;
+
+  fail:
+    *an = 0;
+    cmd_FreeArgv(argv);
+    return code;
+}
+
+
+/**
+ * Free the strings returned from cmd_ParseLine().
+ *
+ * @param argv  a string vector filled by cmd_ParseLine()
+ * @return 0 on success
+ */
+int
+cmd_FreeArgv(char **argv)
+{
+    for (;*argv != NULL; argv++) {
+	free(*argv);
+	*argv = NULL;
+    }
+    return 0;
 }
