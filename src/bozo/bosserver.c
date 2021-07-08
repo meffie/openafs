@@ -62,7 +62,6 @@ extern struct bnode_ops fsbnode_ops, dafsbnode_ops, ezbnode_ops, cronbnode_ops;
 
 struct afsconf_dir *bozo_confdir = 0;	/* bozo configuration dir */
 static PROCESS bozo_pid;
-const char *bozo_fileName;
 FILE *bozo_logFile;
 #ifndef AFS_NT40_ENV
 static int bozo_argc = 0;
@@ -95,10 +94,6 @@ bozo_insecureme(int sig)
     bozo_isrestricted = 0;
     bozo_restdisable = 1;
 }
-
-struct bztemp {
-    FILE *file;
-};
 
 /* check whether caller is authorized to manage RX statistics */
 int
@@ -300,304 +295,6 @@ CreateDirs(const char *coredir)
 	    return errno;
     }
     return 0;
-}
-
-/* strip the \\n from the end of the line, if it is present */
-static int
-StripLine(char *abuffer)
-{
-    char *tp;
-
-    tp = abuffer + strlen(abuffer);	/* starts off pointing at the null  */
-    if (tp == abuffer)
-	return 0;		/* null string, no last character to check */
-    tp--;			/* aim at last character */
-    if (*tp == '\n')
-	*tp = 0;
-    return 0;
-}
-
-/* write one bnode's worth of entry into the file */
-static int
-bzwrite(struct bnode *abnode, void *arock)
-{
-    struct bztemp *at = (struct bztemp *)arock;
-    int i;
-    afs_int32 code;
-
-    if (abnode->notifier)
-	fprintf(at->file, "bnode %s %s %d %s\n", abnode->type->name,
-		abnode->name, abnode->fileGoal, abnode->notifier);
-    else
-	fprintf(at->file, "bnode %s %s %d\n", abnode->type->name,
-		abnode->name, abnode->fileGoal);
-    for (i = 0;; i++) {
-	char *parm = NULL;
-	code = bnode_GetParm(abnode, i, &parm);
-	if (code) {
-	    free(parm);
-	    if (code != BZDOM)
-		return code;
-	    break;
-	}
-	fprintf(at->file, "parm %s\n", parm);
-	free(parm);
-    }
-    fprintf(at->file, "end\n");
-    return 0;
-}
-
-#define	MAXPARMS    20
-int
-ReadBozoFile(char *aname)
-{
-    FILE *tfile;
-    char tbuffer[BOZO_BSSIZE];
-    char *tp;
-    char *instp = NULL, *typep = NULL, *notifier = NULL, *notp = NULL;
-    afs_int32 code;
-    afs_int32 ktmask, ktday, kthour, ktmin, ktsec;
-    afs_int32 i, goal;
-    struct bnode *tb;
-    char *parms[MAXPARMS];
-    char *thisparms[MAXPARMS];
-    int rmode;
-
-    /* rename BozoInit to BosServer for the user */
-    if (!aname) {
-	/* if BozoInit exists and BosConfig doesn't, try a rename */
-	if (access(AFSDIR_SERVER_BOZINIT_FILEPATH, 0) == 0
-	    && access(AFSDIR_SERVER_BOZCONF_FILEPATH, 0) != 0) {
-	    code = rk_rename(AFSDIR_SERVER_BOZINIT_FILEPATH,
-			     AFSDIR_SERVER_BOZCONF_FILEPATH);
-	    if (code < 0)
-		perror("bosconfig rename");
-	}
-	if (access(AFSDIR_SERVER_BOZCONFNEW_FILEPATH, 0) == 0) {
-	    code = rk_rename(AFSDIR_SERVER_BOZCONFNEW_FILEPATH,
-			     AFSDIR_SERVER_BOZCONF_FILEPATH);
-	    if (code < 0)
-		perror("bosconfig rename");
-	}
-    }
-
-    /* don't do server restarts by default */
-    bozo_nextRestartKT.mask = KTIME_NEVER;
-    bozo_nextRestartKT.hour = 0;
-    bozo_nextRestartKT.min = 0;
-    bozo_nextRestartKT.day = 0;
-
-    /* restart processes at 5am if their binaries have changed */
-    bozo_nextDayKT.mask = KTIME_HOUR | KTIME_MIN;
-    bozo_nextDayKT.hour = 5;
-    bozo_nextDayKT.min = 0;
-
-    for (code = 0; code < MAXPARMS; code++)
-	parms[code] = NULL;
-    if (!aname)
-	aname = (char *)bozo_fileName;
-    tfile = fopen(aname, "r");
-    if (!tfile)
-	return 0;		/* -1 */
-    instp = malloc(BOZO_BSSIZE);
-    if (!instp) {
-	code = ENOMEM;
-	goto fail;
-    }
-    typep = malloc(BOZO_BSSIZE);
-    if (!typep) {
-	code = ENOMEM;
-	goto fail;
-    }
-    notp = malloc(BOZO_BSSIZE);
-    if (!notp) {
-	code = ENOMEM;
-	goto fail;
-    }
-    while (1) {
-	/* ok, read lines giving parms and such from the file */
-	tp = fgets(tbuffer, sizeof(tbuffer), tfile);
-	if (tp == (char *)0)
-	    break;		/* all done */
-
-	if (strncmp(tbuffer, "restarttime", 11) == 0) {
-	    code =
-		sscanf(tbuffer, "restarttime %d %d %d %d %d", &ktmask, &ktday,
-		       &kthour, &ktmin, &ktsec);
-	    if (code != 5) {
-		code = -1;
-		goto fail;
-	    }
-	    /* otherwise we've read in the proper ktime structure; now assign
-	     * it and continue processing */
-	    bozo_nextRestartKT.mask = ktmask;
-	    bozo_nextRestartKT.day = ktday;
-	    bozo_nextRestartKT.hour = kthour;
-	    bozo_nextRestartKT.min = ktmin;
-	    bozo_nextRestartKT.sec = ktsec;
-	    continue;
-	}
-
-	if (strncmp(tbuffer, "checkbintime", 12) == 0) {
-	    code =
-		sscanf(tbuffer, "checkbintime %d %d %d %d %d", &ktmask,
-		       &ktday, &kthour, &ktmin, &ktsec);
-	    if (code != 5) {
-		code = -1;
-		goto fail;
-	    }
-	    /* otherwise we've read in the proper ktime structure; now assign
-	     * it and continue processing */
-	    bozo_nextDayKT.mask = ktmask;	/* time to restart the system */
-	    bozo_nextDayKT.day = ktday;
-	    bozo_nextDayKT.hour = kthour;
-	    bozo_nextDayKT.min = ktmin;
-	    bozo_nextDayKT.sec = ktsec;
-	    continue;
-	}
-
-	if (strncmp(tbuffer, "restrictmode", 12) == 0) {
-	    code = sscanf(tbuffer, "restrictmode %d", &rmode);
-	    if (code != 1) {
-		code = -1;
-		goto fail;
-	    }
-	    if (rmode != 0 && rmode != 1) {
-		code = -1;
-		goto fail;
-	    }
-	    bozo_isrestricted = rmode;
-	    continue;
-	}
-
-	if (strncmp("bnode", tbuffer, 5) != 0) {
-	    code = -1;
-	    goto fail;
-	}
-	notifier = notp;
-	code =
-	    sscanf(tbuffer, "bnode %s %s %d %s", typep, instp, &goal,
-		   notifier);
-	if (code < 3) {
-	    code = -1;
-	    goto fail;
-	} else if (code == 3)
-	    notifier = NULL;
-
-	memset(thisparms, 0, sizeof(thisparms));
-
-	for (i = 0; i < MAXPARMS; i++) {
-	    /* now read the parms, until we see an "end" line */
-	    tp = fgets(tbuffer, sizeof(tbuffer), tfile);
-	    if (!tp) {
-		code = -1;
-		goto fail;
-	    }
-	    StripLine(tbuffer);
-	    if (!strncmp(tbuffer, "end", 3))
-		break;
-	    if (strncmp(tbuffer, "parm ", 5)) {
-		code = -1;
-		goto fail;	/* no "parm " either */
-	    }
-	    if (!parms[i]) {	/* make sure there's space */
-		parms[i] = malloc(BOZO_BSSIZE);
-		if (parms[i] == NULL) {
-		    code = ENOMEM;
-		    goto fail;
-		}
-	    }
-	    strcpy(parms[i], tbuffer + 5);	/* remember the parameter for later */
-	    thisparms[i] = parms[i];
-	}
-
-	/* ok, we have the type and parms, now create the object */
-	code =
-	    bnode_Create(typep, instp, &tb, thisparms[0], thisparms[1],
-			 thisparms[2], thisparms[3], thisparms[4], notifier,
-			 goal ? BSTAT_NORMAL : BSTAT_SHUTDOWN, 0);
-	if (code)
-	    goto fail;
-
-	/* bnode created in 'temporarily shutdown' state;
-	 * check to see if we are supposed to run this guy,
-	 * and if so, start the process up */
-	if (goal) {
-	    bnode_SetStat(tb, BSTAT_NORMAL);	/* set goal, taking effect immediately */
-	} else {
-	    bnode_SetStat(tb, BSTAT_SHUTDOWN);
-	}
-    }
-    /* all done */
-    code = 0;
-
-  fail:
-    if (instp)
-	free(instp);
-    if (typep)
-	free(typep);
-    if (notp)
-	free(notp);
-    for (i = 0; i < MAXPARMS; i++)
-	if (parms[i])
-	    free(parms[i]);
-    if (tfile)
-	fclose(tfile);
-    return code;
-}
-
-/* write a new bozo file */
-int
-WriteBozoFile(char *aname)
-{
-    FILE *tfile;
-    char *tbuffer = NULL;
-    afs_int32 code;
-    struct bztemp btemp;
-    int ret = 0;
-
-    if (!aname)
-	aname = (char *)bozo_fileName;
-    if (asprintf(&tbuffer, "%s.NBZ", aname) < 0)
-	return -1;
-
-    tfile = fopen(tbuffer, "w");
-    if (!tfile) {
-	ret = -1;
-	goto out;
-    }
-    btemp.file = tfile;
-
-    fprintf(tfile, "restrictmode %d\n", bozo_isrestricted);
-    fprintf(tfile, "restarttime %d %d %d %d %d\n", bozo_nextRestartKT.mask,
-	    bozo_nextRestartKT.day, bozo_nextRestartKT.hour,
-	    bozo_nextRestartKT.min, bozo_nextRestartKT.sec);
-    fprintf(tfile, "checkbintime %d %d %d %d %d\n", bozo_nextDayKT.mask,
-	    bozo_nextDayKT.day, bozo_nextDayKT.hour, bozo_nextDayKT.min,
-	    bozo_nextDayKT.sec);
-    code = bnode_ApplyInstance(bzwrite, &btemp);
-    if (code || (code = ferror(tfile))) {	/* something went wrong */
-	fclose(tfile);
-	unlink(tbuffer);
-	ret = code;
-	goto out;
-    }
-    /* close the file, check for errors and snap new file into place */
-    if (fclose(tfile) == EOF) {
-	unlink(tbuffer);
-	ret = -1;
-	goto out;
-    }
-    code = rk_rename(tbuffer, aname);
-    if (code) {
-	unlink(tbuffer);
-	ret = -1;
-	goto out;
-    }
-    ret = 0;
-out:
-    free(tbuffer);
-    return ret;
 }
 
 static int
@@ -955,7 +652,6 @@ main(int argc, char **argv, char **envp)
     }
 
     /* some path inits */
-    bozo_fileName = AFSDIR_SERVER_BOZCONF_FILEPATH;
     DoCore = strdup(AFSDIR_SERVER_LOGS_DIRPATH);
     if (!DoCore) {
 	fprintf(stderr, "bosserver: Failed to allocate memory.\n");
@@ -1195,8 +891,46 @@ main(int argc, char **argv, char **envp)
     }
 #endif
 
-    /* Read init file, starting up programs. Also starts watcher threads. */
-    if ((code = ReadBozoFile(0))) {
+    /*
+     * Rename BozoInit to BosConfig on startup, only when the BosConfig is not
+     * present.  The BozoInit file is obsolete, but this renaming feature is
+     * present for compatibility with old bosservers. See the BosConfig.new
+     * file below to update the BosConfig on startup.
+     */
+    if (access(AFSDIR_SERVER_BOZINIT_FILEPATH, 0) == 0
+	&& access(AFSDIR_SERVER_BOZCONF_FILEPATH, 0) != 0) {
+	code = rk_rename(AFSDIR_SERVER_BOZINIT_FILEPATH,
+			 AFSDIR_SERVER_BOZCONF_FILEPATH);
+	if (code < 0)
+	    bozo_Log("Failed to rename BozoInit: errno %d\n", errno);
+    }
+
+    /*
+     * When a BosConfig.new file is found on startup, rename BosConfig.new
+     * to BosConfig, even if BosConfig is already present. This allows
+     * admins to prepare a new BosConfig to be loaded when the bosserver
+     * restarts. This is otherwise not possible because the bosserver
+     * overwrites the BosConfig while the bosserver is running.
+     */
+    if (access(AFSDIR_SERVER_BOZCONFNEW_FILEPATH, 0) == 0) {
+	code = rk_rename(AFSDIR_SERVER_BOZCONFNEW_FILEPATH,
+			 AFSDIR_SERVER_BOZCONF_FILEPATH);
+	if (code < 0)
+	    bozo_Log("Failed to rename BosConfig.new: errno %d\n", errno);
+    }
+
+    /* Do not do server restarts by default. */
+    memset(&bozo_nextRestartKT, 0, sizeof(bozo_nextRestartKT));
+    bozo_nextRestartKT.mask = KTIME_NEVER;
+
+    /* Restart processes at 5am if their binaries have changed by default. */
+    memset(&bozo_nextDayKT, 0, sizeof(bozo_nextDayKT));
+    bozo_nextDayKT.mask = KTIME_HOUR | KTIME_MIN;
+    bozo_nextDayKT.hour = 5;
+
+    /* Read the BosConfig file and create bnodes listed in the file. */
+    code = ReadBozoFile(AFSDIR_SERVER_BOZCONF_FILEPATH);
+    if (code != 0) {
 	bozo_Log
 	    ("bosserver: Something is wrong (%d) with the bos configuration file %s; aborting\n",
 	     code, AFSDIR_SERVER_BOZCONF_FILEPATH);
