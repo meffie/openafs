@@ -54,7 +54,8 @@ LIBOBJS = \
 	$(OUT)\dirpath.obj \
 	$(OUT)\fileutil.obj \
 	$(OUT)\secutil_nt.obj \
-	$(OUT)\tabular_output.obj
+	$(OUT)\tabular_output.obj \
+	$(OUT)\getline.obj
 
 MT_LIBOBJS = \
 	$(OUT)\base32.obj \
