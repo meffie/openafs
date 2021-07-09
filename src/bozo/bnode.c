@@ -67,24 +67,50 @@ RememberProcName(struct bnode_proc *ap)
 	tbnodep->lastErrorName = strdup(ap->coreName);
 }
 
-/* utility for use by BOP_HASCORE functions to determine where a core file might
+/**
+ * Utility to format the core file path.
+ * The caller must free the output string.
+ */
+int
+bnode_CoreName(struct bnode *abnode, char *acoreName, char **path)
+{
+    int code;
+    char *tpath;
+
+    if (DoCore && acoreName)
+	code = asprintf(&tpath, "%s/%s%s.%s",
+	                DoCore, AFSDIR_CORE_FILE, acoreName, abnode->name);
+    else if (DoCore && !acoreName)
+	code = asprintf(&tpath, "%s/%s%s",
+	                DoCore, AFSDIR_CORE_FILE, abnode->name);
+    else if (!DoCore && acoreName)
+	code = asprintf(&tpath, "%s%s.%s",
+	                AFSDIR_SERVER_CORELOG_FILEPATH, acoreName, abnode->name);
+    else
+	code = asprintf(&tpath, "%s%s",
+	                AFSDIR_SERVER_CORELOG_FILEPATH, abnode->name);
+    if (code < 0)
+	return ENOMEM;
+    *path = tpath;
+    return 0;
+}
+
+/**
+ * Utility for use by BOP_HASCORE functions to determine where a core file might
  * be stored.
  */
 int
-bnode_CoreName(struct bnode *abnode, char *acoreName, char *abuffer)
+bnode_HasCoreName(struct bnode *abnode, char *acoreName)
 {
-    if (DoCore) {
-	strcpy(abuffer, DoCore);
-	strcat(abuffer, "/");
-	strcat(abuffer, AFSDIR_CORE_FILE);
-    } else
-	strcpy(abuffer, AFSDIR_SERVER_CORELOG_FILEPATH);
-    if (acoreName) {
-	strcat(abuffer, acoreName);
-	strcat(abuffer, ".");
-    }
-    strcat(abuffer, abnode->name);
-    return 0;
+    int code;
+    char *path;
+
+    code = bnode_CoreName(abnode, acoreName, &path);
+    if (code)
+	return 0;
+    code = access(path, 0);
+    free(path);
+    return (code == 0) ? 1 : 0;
 }
 
 /* save core file, if any */
@@ -92,22 +118,24 @@ static void
 SaveCore(struct bnode *abnode, struct bnode_proc
 	 *aproc)
 {
-    char tbuffer[256];
+    char *path;
     struct stat tstat;
     afs_int32 code = 0;
     char *corefile = NULL;
 #ifdef BOZO_SAVE_CORES
     struct timeval Start;
     struct tm *TimeFields;
-    char FileName[256];
+    char *FileName;
 #endif
 
     /* Linux always appends the PID to core dumps from threaded processes, so
      * we have to scan the directory to find core files under another name. */
     if (DoCore) {
-	strcpy(tbuffer, DoCore);
-	strcat(tbuffer, "/");
-	strcat(tbuffer, AFSDIR_CORE_FILE);
+	code = asprintf(&corefile, "%s/%s", DoCore, AFSDIR_CORE_FILE);
+	if (code < 0) {
+	    bozo_Log("Out of memory.");
+	    return;
+	}
     } else
 	code = stat(AFSDIR_SERVER_CORELOG_FILEPATH, &tstat);
     if (code) {
@@ -139,22 +167,32 @@ SaveCore(struct bnode *abnode, struct bnode_proc
             }
         }
         closedir(logdir);
-    } else {
-	corefile = strdup(tbuffer);
     }
-    if (code)
+    if (code) {
+	free(corefile);
 	return;
+    }
 
-    bnode_CoreName(abnode, aproc->coreName, tbuffer);
+    code = bnode_CoreName(abnode, aproc->coreName, &path);
+    if (code) {
+	bozo_Log("Out of memory.\n");
+	return;
+    }
 #ifdef BOZO_SAVE_CORES
     FT_GetTimeOfDay(&Start, 0);
     TimeFields = localtime(&Start.tv_sec);
-    sprintf(FileName, "%s.%d%02d%02d%02d%02d%02d", tbuffer,
+    code = asprintf(FileName, "%s.%d%02d%02d%02d%02d%02d", path,
 	    TimeFields->tm_year + 1900, TimeFields->tm_mon + 1, TimeFields->tm_mday,
 	    TimeFields->tm_hour, TimeFields->tm_min, TimeFields->tm_sec);
-    strcpy(tbuffer, FileName);
+    if (code < 0) {
+	bozo_Log("Out of memory.\n");
+	return;
+    }
+    free(path);
+    path = FileName;
 #endif
-    rk_rename(corefile, tbuffer);
+    rk_rename(corefile, path);
+    free(path);
     free(corefile);
 }
 
@@ -686,70 +724,68 @@ bproc(void *unused)
 static afs_int32
 SendNotifierData(int fd, struct bnode_proc *tp)
 {
+    int code;
     struct bnode *tb = tp->bnode;
-    char buffer[1000], *bufp = buffer, *buf1;
-    int len;
+    char *buffer = NULL;
 
     /*
-     * First sent out the bnode_proc struct
+     * First sent out the bnode_proc struct.
      */
-    (void)sprintf(bufp, "BEGIN bnode_proc\n");
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "comLine: %s\n", tp->comLine);
-    bufp += strlen(bufp);
-    if (!(buf1 = tp->coreName))
-	buf1 = "(null)";
-    (void)sprintf(bufp, "coreName: %s\n", buf1);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "pid: %ld\n", afs_printable_int32_ld(tp->pid));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastExit: %ld\n", afs_printable_int32_ld(tp->lastExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "flags: %ld\n", afs_printable_int32_ld(tp->flags));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "END bnode_proc\n");
-    bufp += strlen(bufp);
-    len = (int)(bufp - buffer);
-    if (write(fd, buffer, len) < 0) {
+    code = asprintf(&buffer,
+	    "BEGIN bnode_proc\n"
+	    "comLine: %s\n"
+	    "coreName: %s\n"
+	    "pid: %ld\n"
+	    "lastExit: %ld\n"
+	    "flags: %ld\n"
+	    "END bnode_proc\n",
+	    tp->comLine,
+	    (tp->coreName == NULL ? "(null)" : tp->coreName),
+	    afs_printable_int32_ld(tp->pid),
+	    afs_printable_int32_ld(tp->lastExit),
+	    afs_printable_int32_ld(tp->flags));
+    if (code < 0)
+	return ENOMEM;
+    if (write(fd, buffer, strlen(buffer)) < 0) {
+	free(buffer);
 	return -1;
     }
+    free(buffer);
+    buffer = NULL;
 
     /*
-     * Now sent out the bnode struct
+     * Now sent out the bnode struct.
      */
-    bufp = buffer;
-    (void)sprintf(bufp, "BEGIN bnode\n");
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "name: %s\n", tb->name);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "rsTime: %ld\n", afs_printable_int32_ld(tb->rsTime));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "rsCount: %ld\n", afs_printable_int32_ld(tb->rsCount));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "procStartTime: %ld\n", afs_printable_int32_ld(tb->procStartTime));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "procStarts: %ld\n", afs_printable_int32_ld(tb->procStarts));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastAnyExit: %ld\n", afs_printable_int32_ld(tb->lastAnyExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "lastErrorExit: %ld\n", afs_printable_int32_ld(tb->lastErrorExit));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "errorCode: %ld\n", afs_printable_int32_ld(tb->errorCode));
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "errorSignal: %ld\n", afs_printable_int32_ld(tb->errorSignal));
-    bufp += strlen(bufp);
-/*
-    (void) sprintf(bufp, "lastErrorName: %s\n", tb->lastErrorName);
-    bufp += strlen(bufp);
-*/
-    (void)sprintf(bufp, "goal: %d\n", tb->goal);
-    bufp += strlen(bufp);
-    (void)sprintf(bufp, "END bnode\n");
-    bufp += strlen(bufp);
-    len = (int)(bufp - buffer);
-    if (write(fd, buffer, len) < 0) {
+    code = asprintf(&buffer,
+	    "BEGIN bnode\n"
+	    "name: %s\n"
+	    "rsTime: %ld\n"
+	    "rsCount: %ld\n"
+	    "procStartTime: %ld\n"
+	    "procStarts: %ld\n"
+	    "lastAnyExit: %ld\n"
+	    "lastErrorExit: %ld\n"
+	    "errorCode: %ld\n"
+	    "errorSignal: %ld\n"
+	    "goal: %d\n"
+	    "END bnode\n",
+	    tb->name,
+	    afs_printable_int32_ld(tb->rsTime),
+	    afs_printable_int32_ld(tb->rsCount),
+	    afs_printable_int32_ld(tb->procStartTime),
+	    afs_printable_int32_ld(tb->procStarts),
+	    afs_printable_int32_ld(tb->lastAnyExit),
+	    afs_printable_int32_ld(tb->lastErrorExit),
+	    afs_printable_int32_ld(tb->errorCode),
+	    afs_printable_int32_ld(tb->errorSignal),
+	    tb->goal);
+    if (code < 0)
+	return ENOMEM;
+    if (write(fd, buffer, strlen(buffer)) < 0) {
+	free(buffer);
 	return -1;
     }
+    free(buffer);
     return 0;
 }
 
