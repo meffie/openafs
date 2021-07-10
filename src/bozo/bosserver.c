@@ -323,7 +323,6 @@ bzwrite(struct bnode *abnode, void *arock)
 {
     struct bztemp *at = (struct bztemp *)arock;
     int i;
-    char tbuffer[BOZO_BSSIZE];
     afs_int32 code;
 
     if (abnode->notifier)
@@ -333,13 +332,16 @@ bzwrite(struct bnode *abnode, void *arock)
 	fprintf(at->file, "bnode %s %s %d\n", abnode->type->name,
 		abnode->name, abnode->fileGoal);
     for (i = 0;; i++) {
-	code = bnode_GetParm(abnode, i, tbuffer, BOZO_BSSIZE);
+	char *parm = NULL;
+	code = bnode_GetParm(abnode, i, &parm);
 	if (code) {
+	    free(parm);
 	    if (code != BZDOM)
 		return code;
 	    break;
 	}
-	fprintf(at->file, "parm %s\n", tbuffer);
+	fprintf(at->file, "parm %s\n", parm);
+	free(parm);
     }
     fprintf(at->file, "end\n");
     return 0;
