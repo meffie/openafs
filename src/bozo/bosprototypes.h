@@ -13,7 +13,8 @@
 #include <rx/rxkad.h>
 
 /* bnode.c */
-int bnode_CoreName(struct bnode *abnode, char *acoreName, char *abuffer);
+int bnode_CoreName(struct bnode *abnode, char *acoreName, char **abuffer);
+int bnode_HasCoreName(struct bnode *abnode, char *acoreName);
 int bnode_GetString(struct bnode *abnode, char **adesc);
 int bnode_GetParm(struct bnode *abnode, afs_int32 aindex, char **parm);
 int bnode_GetStat(struct bnode *abnode, afs_int32 * astatus);

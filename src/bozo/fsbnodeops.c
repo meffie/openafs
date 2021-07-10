@@ -158,31 +158,24 @@ fsbnode2bnode(struct fsbnode *abnode) {
 static int
 fs_hascore(struct bnode *abnode)
 {
-    char tbuffer[256];
-
     /* see if file server has a core file */
-    bnode_CoreName(abnode, "file", tbuffer);
-    if (access(tbuffer, 0) == 0)
+    if (bnode_HasCoreName(abnode, "file"))
 	return 1;
 
     /* see if volserver has a core file */
-    bnode_CoreName(abnode, "vol", tbuffer);
-    if (access(tbuffer, 0) == 0)
+    if (bnode_HasCoreName(abnode, "vol"))
 	return 1;
 
     /* see if salvageserver left a core file */
-    bnode_CoreName(abnode, "salsrv", tbuffer);
-    if (access(tbuffer, 0) == 0)
+    if (bnode_HasCoreName(abnode, "salsrv"))
 	return 1;
 
     /* see if salvager left a core file */
-    bnode_CoreName(abnode, "salv", tbuffer);
-    if (access(tbuffer, 0) == 0)
+    if (bnode_HasCoreName(abnode, "salv"))
 	return 1;
 
     /* see if scanner left a core file (MR-AFS) */
-    bnode_CoreName(abnode, "scan", tbuffer);
-    if (access(tbuffer, 0) == 0)
+    if (bnode_HasCoreName(abnode, "scan"))
 	return 1;
 
     /* no one left a core file */
