@@ -51,6 +51,11 @@
 
 #define TEST_PORT 1234
 
+static int verbose = 0;
+static int serverPid = 0;
+static char *dirname = NULL;
+
+
 static void
 testOriginalIterator(struct afsconf_dir *dir, int num, char *user) {
     char buffer[256];
@@ -90,8 +95,7 @@ startClient(char *configPath)
     afs_uint32 addr;
     afs_int32 result;
     char *string = NULL;
-
-    plan(63);
+    char *long_name = NULL;
 
     dir = afsconf_Open(configPath);
     ok(dir!=NULL,
@@ -106,6 +110,22 @@ startClient(char *configPath)
     /* Check that they are a super user */
     ok(afsconf_IsSuperIdentity(dir, testId),
        "User added with old i/face is identitifed as super user");
+
+    ok(afsconf_AddUser(dir, "") == EINVAL,
+       "Adding an empty user fails");
+
+    ok(afsconf_AddUser(dir, "foo\nbar") == EINVAL,
+       "Adding a user containing a newline fails");
+
+    ok(afsconf_AddUser(dir, " bogus") == EINVAL,
+       "Adding a user that starts with a space fails");
+
+    long_name = malloc(2048);
+    memset(long_name, 'x', 2047);
+    long_name[2047] = '\0';
+    ok(afsconf_AddUser(dir, long_name) == EINVAL,
+       "Adding a user that exceeds the line length fails");
+    free(long_name);
 
     /* Check that nobody else is */
     ok(!afsconf_IsSuperIdentity(dir,
@@ -394,28 +414,47 @@ waitforsig(int signo, int nsecs)
     return -1;
 }
 
+void
+cleanup_server(int passed, int planned)
+{
+    int stat = 0;
+    if (serverPid > 1) {
+	if (verbose)
+	    diag("Sending SIGTERM to pid %d", serverPid);
+	kill(serverPid, SIGTERM);
+	waitpid(serverPid, &stat, 0);
+    }
+}
+
+void
+cleanup_config(int passed, int planned)
+{
+    if (dirname != NULL) {
+	if (verbose)
+	    diag("Removing test config '%s'", dirname);
+	afstest_UnlinkTestConfig(dirname);
+    }
+}
+
 int main(int argc, char **argv)
 {
     struct afsconf_dir *dir;
-    char *dirname;
-    int serverPid, clientPid, waited, stat;
     int code;
     int ret = 0;
     sigset_t set;
     char *argv0 = afstest_GetProgname(argv);
 
+    if (getenv("C_TAP_VERBOSE") != NULL)
+        verbose = 1;
+
     afstest_SkipTestsIfBadHostname();
 
-    /* Start the client and the server if requested */
-
-    if (argc == 3 ) {
+    /* Start the server if requested */
+    if (argc == 3) {
         if (strcmp(argv[1], "-server") == 0) {
 	    globalDir = afsconf_Open(argv[2]);
 	    afstest_StartTestRPCService(argv[2], getppid(), TEST_PORT,
 					TEST_SERVICE_ID, TEST_ExecuteRequest);
-            exit(0);
-        } else if (strcmp(argv[1], "-client") == 0) {
-            startClient(argv[2]);
             exit(0);
         } else {
             printf("Bad option %s\n", argv[1]);
@@ -423,8 +462,19 @@ int main(int argc, char **argv)
         }
     }
 
-    /* Otherwise, do the basic configuration, then start the client and
-     * server */
+    /*
+     * Otherwise, do the basic configuration, then start the server and run
+     * the tests.
+     */
+
+    plan(67);
+
+    /*
+     * Register a handlers to cleanup on process exit.
+     * Cleanup handlers are run in the order registered.
+     */
+    test_cleanup_register(cleanup_server);
+    test_cleanup_register(cleanup_config);
 
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
@@ -446,50 +496,32 @@ int main(int argc, char **argv)
 	goto out;
     }
 
-    printf("Config directory is %s\n", dirname);
+    if (verbose)
+	diag("Config directory is %s", dirname);
     serverPid = fork();
     if (serverPid == -1) {
         /* Bang */
+	fprintf(stderr, "%s: Fork failed; errno=%d\n", argv0, errno);
+	goto out;
     } else if (serverPid == 0) {
         execl(argv[0], argv[0], "-server", dirname, NULL);
 	ret = 1;
 	goto out;
     }
+    if (verbose)
+	diag("Server pid is %d", serverPid);
 
     /* Our server child pid will send us a SIGUSR1 when it's started listening
      * on its port. Wait for up to 5 seconds to get the USR1. */
     if (waitforsig(SIGUSR1, 5) != 0) {
 	fprintf(stderr, "%s: Timed out waiting for SIGUSR1 from server child\n",
 		argv0);
-	kill(serverPid, SIGTERM);
 	ret = 1;
 	goto out;
     }
 
-    clientPid = fork();
-    if (clientPid == -1) {
-        kill(serverPid, SIGTERM);
-        waitpid(serverPid, &stat, 0);
-	ret = 1;
-	goto out;
-    } else if (clientPid == 0) {
-        execl(argv[0], argv[0], "-client", dirname, NULL);
-    }
-
-    do {
-        waited = waitpid(0, &stat, 0);
-    } while(waited == -1 && errno == EINTR);
-
-    if (waited == serverPid) {
-        kill(clientPid, SIGTERM);
-    } else if (waited == clientPid) {
-        kill(serverPid, SIGTERM);
-    }
-    waitpid(0, &stat, 0);
+    startClient(dirname);
 
 out:
-    /* Client and server are both done, so cleanup after everything */
-    afstest_UnlinkTestConfig(dirname);
-
     return ret;
 }

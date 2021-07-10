@@ -56,3 +56,4 @@ token_replaceToken
 token_setPag
 token_setRxkadViceId
 xdr_ktc_setTokenData
+afsconf_GetIdentity
