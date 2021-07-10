@@ -20,6 +20,7 @@
 #include <afs/audit.h>
 #include <afs/afsutil.h>
 #include <afs/fileutil.h>
+#include <afs/cmd.h>
 #include <opr/queue.h>
 
 #include "bnode.h"
@@ -858,91 +859,17 @@ bnode_Init(void)
     return code;
 }
 
-/* free token list returned by parseLine */
-int
-bnode_FreeTokens(struct bnode_token *alist)
-{
-    struct bnode_token *nlist;
-    for (; alist; alist = nlist) {
-	nlist = alist->next;
-	free(alist->key);
-	free(alist);
-    }
-    return 0;
-}
-
-static int
-space(int x)
-{
-    if (x == 0 || x == ' ' || x == '\t' || x == '\n')
-	return 1;
-    else
-	return 0;
-}
-
-int
-bnode_ParseLine(char *aline, struct bnode_token **alist)
-{
-    char tbuffer[256];
-    char *tptr = NULL;
-    int inToken;
-    struct bnode_token *first, *last;
-    struct bnode_token *ttok;
-    int tc;
-
-    inToken = 0;		/* not copying token chars at start */
-    first = (struct bnode_token *)0;
-    last = (struct bnode_token *)0;
-    while (1) {
-	tc = *aline++;
-	if (tc == 0 || space(tc)) {	/* terminating null gets us in here, too */
-	    if (inToken) {
-		inToken = 0;	/* end of this token */
-		*tptr++ = 0;
-		ttok = malloc(sizeof(struct bnode_token));
-		ttok->next = (struct bnode_token *)0;
-		ttok->key = strdup(tbuffer);
-		if (last) {
-		    last->next = ttok;
-		    last = ttok;
-		} else
-		    last = ttok;
-		if (!first)
-		    first = ttok;
-	    }
-	} else {
-	    /* an alpha character */
-	    if (!inToken) {
-		tptr = tbuffer;
-		inToken = 1;
-	    }
-	    if (tptr - tbuffer >= sizeof(tbuffer))
-		return -1;	/* token too long */
-	    *tptr++ = tc;
-	}
-	if (tc == 0) {
-	    /* last token flushed 'cause space(0) --> true */
-	    if (last)
-		last->next = (struct bnode_token *)0;
-	    *alist = first;
-	    return 0;
-	}
-    }
-}
-
-#define	MAXVARGS	    128
 int
 bnode_NewProc(struct bnode *abnode, char *aexecString, char *coreName,
 	      struct bnode_proc **aproc)
 {
-    struct bnode_token *tlist, *tt;
     afs_int32 code;
     struct bnode_proc *tp;
     pid_t cpid;
-    char *argv[MAXVARGS];
-    int i;
+    int argc = 0;
+    char **argv = NULL;
 
-    code = bnode_ParseLine(aexecString, &tlist);	/* try parsing first */
+    code = cmd_Split(aexecString, &argc, &argv);  /* Try parsing first. */
     if (code)
 	return code;
     tp = calloc(1, sizeof(struct bnode_proc));
@@ -953,24 +880,18 @@ bnode_NewProc(struct bnode *abnode, char *aexecString, char *coreName,
     abnode->procStartTime = FT_ApproxTime();
     abnode->procStarts++;
 
-    /* convert linked list of tokens into argv structure */
-    for (tt = tlist, i = 0; i < (MAXVARGS - 1) && tt; tt = tt->next, i++) {
-	argv[i] = tt->key;
-    }
-    argv[i] = NULL;		/* null-terminated */
-
     cpid = spawnprocve(argv[0], argv, environ, -1);
     osi_audit(BOSSpawnProcEvent, 0, AUD_STR, aexecString, AUD_END);
 
     if (cpid == (pid_t) - 1) {
 	bozo_Log("Failed to spawn process for bnode '%s'\n", abnode->name);
-	bnode_FreeTokens(tlist);
+	cmd_FreeSplit(&argv);
 	free(tp);
 	return errno;
     }
     bozo_Log("%s started pid %ld: %s\n", abnode->name, cpid, aexecString);
 
-    bnode_FreeTokens(tlist);
+    cmd_FreeSplit(&argv);
     opr_queue_Prepend(&allProcs, &tp->q);
     *aproc = tp;
     tp->pid = cpid;
@@ -994,4 +915,39 @@ bnode_StopProc(struct bnode_proc *aproc, int asignal)
     code = kill(aproc->pid, asignal);
     bnode_Check(aproc->bnode);
     return code;
+}
+
+/**
+ * Returns true if the process for this command-line should be restarted.
+ *
+ * Stat the program file for the given command line and determine if the
+ * ctime (status) has been changed since the last time the process has been
+ * started (or restarted).
+ *
+ * @param[in] command_line  command-line of bosserver managed program
+ * @param[in] last_start    last time this process was started (or restarted)
+ * @returns
+ *   @retval 1 the process should be restarted
+ *   @retval 0 the process should not be restarted
+ */
+int
+bnode_IsRestartRequired(char *command_line, time_t last_start)
+{
+    afs_int32 code;
+    struct stat tstat;
+    int argc = 0;
+    char **argv = NULL;
+    int restart = 0;
+
+    code = cmd_Split(command_line, &argc, &argv);
+    if (code != 0 || argc == 0)
+	goto done;
+    code = stat(argv[0], &tstat);
+    if (code != 0)
+	goto done;
+    if (tstat.st_ctime > last_start)
+	restart = 1;
+  done:
+    cmd_FreeSplit(&argv);
+    return restart;
 }

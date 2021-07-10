@@ -9,6 +9,7 @@ auth/realms
 auth/writeoldkey
 bozo/bosconfig
 cmd/command
+cmd/tokens
 opr/cache
 opr/dict
 opr/fmt
