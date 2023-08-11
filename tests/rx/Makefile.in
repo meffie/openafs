@@ -13,7 +13,7 @@ LIBS = $(abs_top_builddir)/tests/common/libafstest_common.la \
 SIMPLE_LIBS = $(TOP_LIBDIR)/libafsrpc.a \
 	      $(TOP_LIBDIR)/libafsutil.a
 
-BINS = atomic-t event-t simple-client simple-server
+BINS = atomic-t event-t simple-client simple-server timeout-t
 
 all: $(BINS)
 
@@ -28,6 +28,9 @@ simple-client: simple-client.o $(SIMPLE_LIBS)
 
 simple-server: simple-server.o $(SIMPLE_LIBS)
 	$(LT_LDRULE_static) simple-server.o $(SIMPLE_LIBS) ${LIB_hcrypto} $(LIB_roken) $(XLIBS)
+
+timeout-t: timeout-t.o $(LIBS)
+	$(LT_LDRULE_static) timeout-t.o $(LIBS) $(LIB_roken) $(XLIBS)
 
 install:
 

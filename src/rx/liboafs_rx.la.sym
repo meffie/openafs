@@ -43,6 +43,7 @@ rx_GetIFInfo
 rx_GetNetworkError
 rx_GetSecurityData
 rx_GetSecurityHeaderSize
+rx_GetServerStats
 rx_GetServiceSpecific
 rx_GetSpecific
 rx_GetStatistics
@@ -64,6 +65,7 @@ rx_PeerOf
 rx_PortOf
 rx_PrintPeerStats
 rx_PrintStats
+rx_PrintTheseStats
 rx_ReadProc
 rx_ReadProc32
 rx_ReadvProc
@@ -80,6 +82,7 @@ rx_ServiceOf
 rx_SetCallAbortCode
 rx_SetConnDeadTime
 rx_SetConnHardDeadTime
+rx_SetConnIdleDeadTime
 rx_SetConnSecondsUntilNatPing
 rx_SetLocalStatus
 rx_SetMaxMTU
@@ -130,6 +133,7 @@ rx_opaque_free
 rx_opaque_freeContents
 rx_opaque_new
 rx_opaque_populate
+rx_port
 rx_queryPeerRPCStats
 rx_queryProcessRPCStats
 rx_socket

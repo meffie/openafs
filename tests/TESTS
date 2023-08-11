@@ -22,6 +22,7 @@ rx/atomic
 rx/event
 rx/perf
 rx/simple
+rx/timeout
 volser/vos-man
 volser/vos
 bucoord/backup-man
