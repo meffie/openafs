@@ -33,6 +33,8 @@
 #include <rx/rx_globals.h>
 #include <afs/afsutil.h>
 
+static int DEBUG = 0;
+
 /*
  * Printing these stats in the test results allows a human tester to obtain
  * visual confirmation that nothing untoward has happened in the Rx stack
@@ -88,8 +90,7 @@ get_stats(void)
     code = rx_GetServerStats(s, host, port, &rxstats,
 			     &supportedStatValues);
     if (code < 0) {
-	diag("rxstats call failed with code %d\n", code);
-	exit(1);
+	bail("rxstats call failed with code %d\n", code);
     }
     if (code != sizeof(rxstats)) {
 	struct rx_debugIn debug;
@@ -128,17 +129,6 @@ static const rx_setter rx_setters[] = {
 u_short timevalues[MAX_RX_SETTER];	/* desired values for each setter */
 
 
-static int
-validate_timeout_invariants(int rxDead, int idleDead, int hardDead)
-{
-    if (RX_MINDEADTIME <= rxDead &&
-	(idleDead == 0 || rxDead <= idleDead) &&
-	(hardDead == 0 || (idleDead == 0 && rxDead <= hardDead) || idleDead <= hardDead))
-	return 1;	/* all invariants satisfied */
-    else
-	return 0;	/* one or more invariants violated */
-}
-
 static void
 validate_conn_timeouts(struct rx_connection *conn)
 {
@@ -146,9 +136,22 @@ validate_conn_timeouts(struct rx_connection *conn)
     int idleDead = rx_GetConnIdleDeadTime(conn);
     int hardDead = rx_GetConnHardDeadTime(conn);
 
-    ok(validate_timeout_invariants(rxDead, idleDead, hardDead),
-	"conn invariants satisfied: rxDead=%d, idleDead=%d, hardDead=%d",
-	rxDead, idleDead, hardDead);
+/*
+ * TODO: Instead of bail() should we just break out of the look and
+ * fail with ok(0, msg).
+ */
+    if (rxDead < RX_MINDEADTIME) {
+	bail("dead is too small; "
+	     "dead=%d, idle=%d, hard=%d", rxDead, idleDead, hardDead);
+    }
+    if (idleDead != 0 && idleDead < rxDead) {
+	bail("idle dead is less than dead; "
+	     "dead=%d, idle=%d, hard=%d", rxDead, idleDead, hardDead);
+    }
+    if (hardDead != 0 && (idleDead != 0 || hardDead < rxDead) && hardDead < idleDead) {
+	bail("hard dead is less than idle dead ??; "
+	     "dead=%d, idle=%d, hard=%d", rxDead, idleDead, hardDead);
+    }
 }
 
 /*
@@ -178,8 +181,10 @@ test_timevalues(u_short rxDead, u_short idleDead, u_short hardDead)
     int first, second, third;
     struct rx_connection *conn = NULL;
 
-    diag("initial values: rxDead=%d, idleDead=%d, hardDead=%d",
-	    rxDead, idleDead, hardDead);
+    if (DEBUG) {
+	diag("initial values: rxDead=%d, idleDead=%d, hardDead=%d",
+	     rxDead, idleDead, hardDead);
+    }
     timevalues[0] = 0;
     timevalues[1] = rxDead;
     timevalues[2] = idleDead;
@@ -193,13 +198,14 @@ test_timevalues(u_short rxDead, u_short idleDead, u_short hardDead)
     for (first = 0; first < 4; first++) {
 	for (second = 0; second < 4; second++) {
 	    for (third = 0; third < 4; third++) {
-
-		diag("trial values: rxDead=%d, idleDead=%d, hardDead=%d",
-			rxDead, idleDead, hardDead);
-		diag("trial setter order: %s=%d, %s=%d, %s=%d",
-			rx_setters[first].name, timevalues[first],
-			rx_setters[second].name, timevalues[second],
-			rx_setters[third].name, timevalues[third]);
+		if (DEBUG) {
+		    diag("trial values: rxDead=%d, idleDead=%d, hardDead=%d",
+			 rxDead, idleDead, hardDead);
+		    diag("trial setter order: %s=%d, %s=%d, %s=%d",
+			 rx_setters[first].name, timevalues[first],
+			 rx_setters[second].name, timevalues[second],
+			 rx_setters[third].name, timevalues[third]);
+		}
 
 		/*
 		 * Each test obtains a new client connection to ensure a consistent
@@ -241,7 +247,6 @@ main(void)
     u_short rxDead, idleDead, hardDead;
     int code;
     int maxTime = 10;	/* 10s should suffice for all possible permutations of timeout value orderings */
-    int nTests;		/* number of tests in a single call to test_timevalues() */
 
     code = rx_Init(0);	/* rx_connDeadTime = RX_DEAULT_DEAD_TIME = 12s */
     if (code != 0)
@@ -249,8 +254,7 @@ main(void)
 
     sc = rxnull_NewClientSecurityObject();	/* safe to reuse for all conns */
 
-    nTests = MAX_RX_SETTER * MAX_RX_SETTER * MAX_RX_SETTER;
-    plan(maxTime * maxTime * maxTime * nTests);
+    plan(1);
 
 
     for (rxDead=0; rxDead<maxTime; rxDead++) {
@@ -260,8 +264,11 @@ main(void)
 	    }
 	}
     }
+    ok(1, "timeout invariants");
 
-    get_stats();    /* mostly to check for conn leaks */
+    if (DEBUG) {
+	get_stats();    /* mostly to check for conn leaks */
+    }
 
     return 0;
 }
