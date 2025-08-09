@@ -378,15 +378,6 @@ else
         AC_MSG_RESULT($AFS_SYSNAME)
 fi
 
-case $AFS_SYSNAME in
-        *_darwin*)
-                AC_CHECK_HEADERS(crt_externs.h)
-                DARWIN_PLIST=src/libafs/afs.${AFS_SYSNAME}.plist
-                DARWIN_INFOFILE=afs.${AFS_SYSNAME}.plist
-		AC_SUBST([XCODEBUILD_FLAGS])
-                ;;
-esac
-
 dnl Some hosts have a separate common param file they should include.  Figure
 dnl out if we're on one of them now that we know the sysname.
 case $AFS_SYSNAME in

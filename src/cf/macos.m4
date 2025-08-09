@@ -82,3 +82,27 @@ AC_DEFUN([OPENAFS_MACOS_ARCH], [
 
   AC_SUBST([ARCHFLAGS])
 ])
+
+# OPENAFS_MACOS_CHECKS()
+#
+# macOS platform specific checks and config files. Should be invoked after
+# the $AFS_SYSNAME is determined.
+# ---------------------------------------------------------------------------
+AC_DEFUN([OPENAFS_MACOS_CHECKS], [
+  AS_CASE([$AFS_SYSNAME],
+    [*_darwin_*],
+      [AC_CHECK_HEADERS([crt_externs.h])
+       AC_CONFIG_FILES([
+        src/libafs/Info.plist:src/libafs/afs.${AFS_SYSNAME}.plist.in
+        src/packaging/MacOS/OpenAFS-debug.Description.plist
+        src/packaging/MacOS/OpenAFS-debug.Info.plist
+        src/packaging/MacOS/OpenAFS.Info.plist
+        src/packaging/MacOS/OpenAFS.info
+        src/packaging/MacOS/buildpkg.sh
+        src/packaging/MacOS/pkgbuild.sh
+        src/platform/DARWIN/AFSPreference/Info.plist
+        src/platform/DARWIN/PrivilegedHelper/Makefile
+        src/platform/DARWIN/PrivilegedHelper/privhelper-info.plist
+        src/platform/DARWIN/PrivilegedHelper/privhelper.c
+        src/platform/DARWIN/growlagent/Makefile])
+       AC_SUBST([XCODEBUILD_FLAGS])])])
