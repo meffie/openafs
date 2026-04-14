@@ -82,7 +82,7 @@
 %endif
 %endif
 
-%define kverrel %(%{kmodtool} verrel %{?kernel_version} 2>/dev/null)
+%global kverrel %(kv="%{kernel_version}"; echo "${kv%.*}")
 
 %define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
 
