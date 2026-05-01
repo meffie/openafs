@@ -24,6 +24,11 @@ my $help = 0;
 my $man = 0;
 my $dir = ".";
 my $cellservdb_url;
+my $srcball;
+my $docball;
+my $relnotes;
+my $changelog;
+my $cellservdb;
 
 #
 # Create an empty file.
@@ -96,18 +101,51 @@ GetOptions(
     "man" => \$man,
     "dir=s" => \$dir,
     "cellservdb-url=s" => \$cellservdb_url,
+    "source=s" => \$srcball,
+    "doc=s" => \$docball,
+    "relnotes=s" => \$relnotes,
+    "changelog=s" => \$changelog,
+    "cellservdb=s" => \$cellservdb,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
 
+#
 # Process positional arguments.
-my $srcball = shift;
-my $relnotes = shift;
-my $changelog = shift;
-my $cellservdb = shift;
+#
+# This script previously only supported positional arguments for the input
+# files.  For compatibility, fallback to positional arguments when no conflicts
+# are seen.
+#
+if (defined($srcball) && defined($ARGV[0])) {
+    pod2usage(-exitval => 1, -verbose => 0,
+              -message => "--source and positional argument 1 are exclusive");
+}
+if (defined($docball) && defined($ARGV[1])) {
+    pod2usage(-exitval => 1, -verbose => 0,
+              -message => "--doc and positional argument 2 are exclusive");
+}
+if (defined($relnotes) && defined($ARGV[2])) {
+    pod2usage(-exitval => 1, -verbose => 0,
+              -message => "--relnotes and positional argument 3 are exclusive");
+}
+if (defined($changelog)  && defined($ARGV[3])) {
+    pod2usage(-exitval => 1, -verbose => 0,
+              -message => "--changelog and positional argument 4 are exclusive");
+}
+if (defined($cellservdb) && defined($ARGV[4])) {
+    pod2usage(-exitval => 1, -verbose => 0,
+              -message => "--cellservdb and positional argument 5 are exclusive");
+}
+
+$srcball    = $ARGV[0] if !defined($srcball)    && defined($ARGV[0]);
+$docball    = $ARGV[1] if !defined($docball)    && defined($ARGV[1]);
+$relnotes   = $ARGV[2] if !defined($relnotes)   && defined($ARGV[2]);
+$changelog  = $ARGV[3] if !defined($changelog)  && defined($ARGV[3]);
+$cellservdb = $ARGV[4] if !defined($cellservdb) && defined($ARGV[4]);
 
 if (!defined($srcball)) {
-    pod2usage(-exitval => 1, -verbose => 1);
+    pod2usage(-exitval => 1, -verbose => 0, -message => "--source is required");
 }
 
 if (! -f $srcball) {
@@ -220,6 +258,12 @@ File::Copy::copy($srcball,
                  $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
     or die "$progname: Unable to copy $srcball into position: $!\n";
 
+# Copy the doc archive if specified.
+if (defined($docball)) {
+    File::Copy::copy($docball,
+                     "$tmpdir/rpmdir/SOURCES/openafs-${openafs_version}-doc.tar.bz2")
+        or die "$progname: Unable to copy $docball into position: $!\n";
+}
 
 for my $packaging_file (glob("$packaging/*")) {
     my $file = File::Basename::fileparse($packaging_file);
@@ -337,21 +381,69 @@ __END__
 
 =head1 NAME
 
-makesrpm.pl - Build the SRPM for OpenAFS from source distibution files
+makesrpm - Build an OpenAFS SRPM for RHEL-family distributions
 
 =head1 SYNOPSIS
 
-makesrpm.pl [options] <src.tar.bz2> <doc.tar.bz2> [<relnotes> [<changelog> [<cellservdb>]]]
+B<makesrpm.pl> S<<< B<--source> I<FILE> >>>
+               S<<< [B<--doc> I<FILE>] >>>
+               S<<< [B<--relnotes> I<FILE>] >>>
+               S<<< [B<--changelog> I<FILE>] >>>
+               S<<< [B<--cellservdb> I<FILE>] >>>
+               S<<< [B<--cellservdb-url> I<URL>] >>>
+               S<<< [B<--dir> I<DIR>] >>>
+               S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
 
-Build the SRPM for OpenAFS from source distibution files. Generate empty RELNOTES
-and ChangeLog files if not provided. Download the CellServDB file from
-grand.central.org if one is not provided.
+B<makesrpm> is a tool to build an OpenAFS SRPM file for RHEL and RHEL-derived
+distributions.
+
+B<makesrpm> will extract the spec file and packaging files from the source
+archive.
 
 =head1 OPTIONS
 
 =over 4
+
+=item B<--source> I<FILE>
+
+Use the specified OpenAFS source archive I<FILE>.  The archive is copied into
+the C<SOURCES> directory and renamed based on the OpenAFS version.
+
+=item B<--doc> I<FILE>
+
+Use the specified OpenAFS documentation archive I<FILE>. The archive is copied
+into the C<SOURCES> directory and renamed based on the OpenAFS version.
+
+=item B<--relnotes> I<FILE>
+
+Use the specified release notes file I<FILE>. The file is copied into the
+C<SOURCES> directory and renamed appropriately.  An empty release notes file is
+created if this option is not provided.
+
+=item B<--changelog> I<FILE>
+
+Use the specified F<ChangeLog> file I<FILE>. The file is copied into the
+C<SOURCES> directory and renamed to C<ChangeLog>.  An empty F<ChangeLog> file
+is created if this option is not provided.
+
+=item B<--cellservdb> I<FILE>
+
+Use the specified F<CellServDB> file I<FILE>. The file is copied into the
+C<SOURCES> directory and renamed to match the filename in the C<Source>
+directive in the spec file. If this option is not provided, the F<CellServDB>
+file is downloaded from the URL specified in the spec file.
+
+=item B<--dir> I<DIR>
+
+Place the generated SRPM file in I<DIR> instead of the current directory.
+
+=item B<--cellservdb-url> I<URL>
+
+Overrides the download URL for the F<CellServDB> file. The provided I<URL> is
+written into the spec file and is used to download the file if a local copy is
+not provided with B<--cellservdb>.
 
 =item B<--help>
 
@@ -361,17 +453,32 @@ Print help message and exit.
 
 Print full man page and exit.
 
-=item B<--dir> I<path>
-
-Place the generated SRPM file in I<path> instead of the current directory.
-
-=item B<--cellservdb-url> I<URL>
-
-The URL of the CellServDB file to be downloaded when B<cellservdb> is not
-specified, and the URL to be set in the C<Source20> source directive in the
-generated F<openafs.spec> RPM spec file.  When not specified, I<URL> is is read
-from the F<openafs.spec.in> file extracted from the source archive.
-
 =back
+
+=head1 EXAMPLES
+
+Build the SRPM from a source distribution archive:
+
+    $ makesrpm.pl --source openafs-1.9.0-src.tar.bz2
+
+Build the SRPM from a source distribution archive with the given release notes
+and change log:
+
+    $ makesrpm.pl --source openafs-1.9.0-src.tar.bz2 \
+                  --relnotes RELNOTES-1.9.0 \
+                  --changelog ChangeLog
+
+=head1 EXIT STATUS
+
+B<makesrpm.pl> will exit with a status of 0 on success and a non-zero status on
+failure.
+
+=head1 SEE ALSO
+
+L<rpmbuild(8)>, F<make-release>
+
+=head1 AUTHOR
+
+The original B<makesrpm.pl> was written by Simon Wilkinson <sxw@inf.ed.ac.uk>
 
 =cut
