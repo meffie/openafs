@@ -114,7 +114,7 @@ File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
 
 File::Copy::copy($srcball,
                  $tmpdir."/rpmdir/SOURCES/openafs-$afsversion-src.tar.bz2")
-    or die "$progname: Unable to copy $srcball into position\n";
+    or die "$progname: Unable to copy $srcball into position: $!\n";
 
 # Populate it with all the stuff in the packaging directory, except the
 # specfile
@@ -127,7 +127,8 @@ while (defined($file = $pkgdirh->read)) {
 
         print "$progname: Copying $file into place\n";
         File::Copy::copy($srcdir."/src/packaging/RedHat/".$file,
-                         $tmpdir."/rpmdir/SOURCES/".$file);
+                         $tmpdir."/rpmdir/SOURCES/".$file)
+          or die "$progname: Unable to copy $file into position: $!\n";
     }
 }
 undef $dirh;
@@ -167,7 +168,7 @@ if ($cellservdb) {
 if ($relnotes) {
     File::Copy::copy($relnotes,
                      $tmpdir."/rpmdir/SOURCES/RELNOTES-$afsversion")
-        or die "$progname: Unable to copy $relnotes into position\n";
+        or die "$progname: Unable to copy $relnotes into position: $!\n";
 } else {
     print "$progname: WARNING: No release notes provided. Using empty file\n";
     system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$afsversion");
@@ -176,7 +177,7 @@ if ($relnotes) {
 if ($changelog) {
     File::Copy::copy($changelog,
                      $tmpdir."/rpmdir/SOURCES/ChangeLog")
-        or die "$progname: Unable to copy $changelog into position\n";
+        or die "$progname: Unable to copy $changelog into position: $!\n";
 } else {
     print "$progname: WARNING: No changelog provided. Using empty file\n";
     system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
