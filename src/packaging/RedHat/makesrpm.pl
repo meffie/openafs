@@ -161,9 +161,26 @@ GetOptions(
     "prepare-only" => \$prepare_only,
     "omit-source" => \$omit_source,
     "ignore-dirty" => \$ignore_dirty,
-) or pod2usage(-exitval => 1, -verbose => 1);
-pod2usage(-exitval => 0, -verbose => 1) if $help;
-pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
+) or pod2usage(-exitval => 1, -verbose => 0);
+
+# Display a brief usage and exit.
+if ($help) {
+    pod2usage(-exitval => 0, -verbose => 0);
+}
+
+# Display the man page and exit. Pipe the output through a pager when running
+# in a terminal and the PAGER environment variable is set.  The pipe to the
+# pager is automatically closed by pod2usage().
+if ($man) {
+    my $fh = \*STDOUT;
+
+    if (-t STDOUT && $ENV{PAGER}) {
+        if (open(my $pipe, "|-", $ENV{PAGER})) {
+            $fh = $pipe;
+        }
+    }
+    pod2usage(-output => $fh, -exitval => 0, -verbose => 2, -noperldoc => 1);
+}
 
 #
 # Process positional arguments.
@@ -660,7 +677,9 @@ Print help message and exit.
 
 =item B<--man>
 
-Print full man page and exit.
+Print full man page and exit.  When B<makesrpm> is run in a terminal, the
+output is piped through the command specified by the C<PAGER> environment
+variable.
 
 =back
 
