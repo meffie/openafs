@@ -26,6 +26,20 @@ my $man = 0;
 my $dir = ".";
 my $cellservdb_url;
 
+#
+# Create an empty file.
+#
+# Arguments:
+#   path - The path to the file to create.
+#
+# Dies on failure.
+#
+sub create_file {
+    my ($path) = @_;
+    open(my $fh, '>', $path) or die "$progname: Unable to open file '$path': $!\n";
+    close $fh;
+}
+
 GetOptions(
     "help|?" => \$help,
     "man" => \$man,
@@ -168,8 +182,10 @@ if ($relnotes) {
                      $tmpdir."/rpmdir/SOURCES/RELNOTES-${openafs_version}")
         or die "$progname: Unable to copy $relnotes into position: $!\n";
 } else {
-    print "$progname: WARNING: No release notes provided. Using empty file\n";
-    system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$openafs_version");
+    if (! -f "$tmpdir/rpmdir/SOURCES/RELNOTES-${openafs_version}") {
+        print "$progname: WARNING: No release notes provided. Using empty file\n";
+        create_file("$tmpdir/rpmdir/SOURCES/RELNOTES-${openafs_version}");
+    }
 }
 
 if ($changelog) {
@@ -177,8 +193,10 @@ if ($changelog) {
                      $tmpdir."/rpmdir/SOURCES/ChangeLog")
         or die "$progname: Unable to copy $changelog into position: $!\n";
 } else {
-    print "$progname: WARNING: No changelog provided. Using empty file\n";
-    system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
+    if (! -f "$tmpdir/rpmdir/SOURCES/ChangeLog") {
+        print "$progname: WARNING: No changelog provided. Using empty file\n";
+        create_file("$tmpdir/rpmdir/SOURCES/ChangeLog");
+    }
 }
 
 #
