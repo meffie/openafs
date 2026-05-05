@@ -40,7 +40,7 @@ if (!defined($srcball)) {
 }
 
 if (! -f $srcball) {
-  die "Unable to open $srcball\n";
+    die "Unable to open $srcball\n";
 }
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -48,8 +48,8 @@ my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 system("tar -C $tmpdir -xvjf $srcball '\*/configure.ac' ".
        "'\*/src/packaging/RedHat' ".
        "'\*/.version' ".
-       "'\*/build-tools' > /dev/null")==0
-  or die "Unable to unpack src tar ball\n";
+       "'\*/build-tools' > /dev/null") == 0
+    or die "Unable to unpack src tar ball\n";
 
 my $dirh = IO::Dir->new($tmpdir);
 my $vdir;
@@ -66,7 +66,7 @@ my $linuxver;
 my $linuxrel;
 
 if (not defined($afsversion)) {
-  $afsversion = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
+    $afsversion = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
 }
 
 # Build the Linux version and release information from the package version
@@ -74,23 +74,23 @@ if (not defined($afsversion)) {
 # Normal: 1.7.0
 # Prereleases: 1.7.0pre1
 # Development trees: 1.7.0dev
-# and RPMS which are built from trees midway between heads, such as 
+# and RPMS which are built from trees midway between heads, such as
 # 1.7.0-45-gabcdef or 1.7.0pre1-37-g12345 or 1.7.0dev-56-g98765
 
-if ($afsversion=~m/(.*)(pre[0-9]+)/) {
-    $linuxver=$1;
-    $linuxrel="0.$2";
-} elsif ($afsversion=~m/(.*)dev/) {
-    $linuxver=$1;
-    $linuxrel="0.dev";
+if ($afsversion =~ m/(.*)(pre[0-9]+)/) {
+    $linuxver = $1;
+    $linuxrel = "0.$2";
+} elsif ($afsversion =~ m/(.*)dev/) {
+    $linuxver = $1;
+    $linuxrel = "0.dev";
 } else {
-    $linuxver=$afsversion;
-    $linuxrel=1;
+    $linuxver = $afsversion;
+    $linuxrel = 1;
 }
 
-if ($afsversion=~m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
+if ($afsversion =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
     $linuxver = $1 if ($linuxver eq $afsversion);
-    $linuxrel.=".$2.$3";
+    $linuxrel .= ".$2.$3";
 }
 
 # Avoid illegal characters in RPM package version and release strings.
@@ -104,26 +104,26 @@ print "Package release is $linuxrel\n";
 
 print "Building version $afsversion\n";
 File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
-		     $tmpdir."/rpmdir/SRPMS",
-		     $tmpdir."/rpmdir/SOURCES"], 0, 0755);
+                     $tmpdir."/rpmdir/SRPMS",
+                     $tmpdir."/rpmdir/SOURCES"], 0, 0755);
 
-File::Copy::copy($srcball, 
-		 $tmpdir."/rpmdir/SOURCES/openafs-$afsversion-src.tar.bz2")
-  or die "Unable to copy $srcball into position\n";
+File::Copy::copy($srcball,
+                 $tmpdir."/rpmdir/SOURCES/openafs-$afsversion-src.tar.bz2")
+    or die "Unable to copy $srcball into position\n";
 
-# Populate it with all the stuff in the packaging directory, except the 
+# Populate it with all the stuff in the packaging directory, except the
 # specfile
 my $pkgdirh = IO::Dir->new($srcdir."/src/packaging/RedHat")
-  or die "Unable to find RedHat packaging directory\n";
+    or die "Unable to find RedHat packaging directory\n";
 my $file;
 while (defined($file = $pkgdirh->read)) {
-  if (-f $srcdir."/src/packaging/RedHat/".$file) {
-     next if $file eq "openafs.spec.in";
+    if (-f $srcdir."/src/packaging/RedHat/".$file) {
+        next if $file eq "openafs.spec.in";
 
-     print "Copying $file into place\n";
-     File::Copy::copy($srcdir."/src/packaging/RedHat/".$file, 
-		      $tmpdir."/rpmdir/SOURCES/".$file);
-  }
+        print "Copying $file into place\n";
+        File::Copy::copy($srcdir."/src/packaging/RedHat/".$file,
+                         $tmpdir."/rpmdir/SOURCES/".$file);
+    }
 }
 undef $dirh;
 
@@ -160,21 +160,21 @@ if ($cellservdb) {
 }
 
 if ($relnotes) {
-  File::Copy::copy($relnotes,
-		   $tmpdir."/rpmdir/SOURCES/RELNOTES-$afsversion")
-  or die "Unable to copy $relnotes into position\n";
+    File::Copy::copy($relnotes,
+                     $tmpdir."/rpmdir/SOURCES/RELNOTES-$afsversion")
+        or die "Unable to copy $relnotes into position\n";
 } else {
-  print "WARNING: No release notes provided. Using empty file\n";
-  system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$afsversion");
+    print "WARNING: No release notes provided. Using empty file\n";
+    system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$afsversion");
 }
 
 if ($changelog) {
-  File::Copy::copy($changelog,
-		   $tmpdir."/rpmdir/SOURCES/ChangeLog")
-  or die "Unable to copy $changelog into position\n";
+    File::Copy::copy($changelog,
+                     $tmpdir."/rpmdir/SOURCES/ChangeLog")
+        or die "Unable to copy $changelog into position\n";
 } else {
-  print "WARNING: No changelog provided. Using empty file\n";
-  system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
+    print "WARNING: No changelog provided. Using empty file\n";
+    system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
 }
 
 # Create the specfile. Use sed for this, cos its easier
@@ -186,14 +186,14 @@ system("cat $spec_template | ".
        "    -e 's/\%define pkgvers.*/%define pkgvers $linuxver/g' ".
        "    $cellservdb_substitute  >".
        "$tmpdir/rpmdir/SPECS/openafs.spec") == 0
-  or die "sed failed : $!\n";
+    or die "sed failed : $!\n";
 
 # Build an RPM
 system("rpmbuild -bs --nodeps --define \"dist %undefined\" ".
        "--define \"build_modules 0\" ".
        "--define \"_topdir $tmpdir/rpmdir\" ".
        "$tmpdir/rpmdir/SPECS/openafs.spec > /dev/null") == 0
-  or die "rpmbuild failed : $!\n";
+    or die "rpmbuild failed : $!\n";
 
 # Copy it out to somewhere useful
 my @srpms = glob("$tmpdir/rpmdir/SRPMS/*.src.rpm");
