@@ -66,54 +66,52 @@ my $srcdir = $tmpdir."/".$vdir;
 
 # Work out which version we're dealing with from git-version script
 # (which may use a .version file)
-my $afsversion;
-my $linuxver;
-my $linuxrel;
+my $openafs_version;
+my $package_version;
+my $package_release;
 
-if (not defined($afsversion)) {
-    $afsversion = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
-}
+$openafs_version = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
+print "$progname: Building version $openafs_version\n";
 
-# Build the Linux version and release information from the package version
-# We need to handle a number of varieties of package version -
+# Determine the package Version and Release tags from the OpenAFS version.
+# We need to handle a number of varieties of OpenAFS version formats:
 # Normal: 1.7.0
 # Prereleases: 1.7.0pre1
 # Development trees: 1.7.0dev
 # and RPMS which are built from trees midway between heads, such as
 # 1.7.0-45-gabcdef or 1.7.0pre1-37-g12345 or 1.7.0dev-56-g98765
 
-if ($afsversion =~ m/(.*)(pre[0-9]+)/) {
-    $linuxver = $1;
-    $linuxrel = "0.$2";
-} elsif ($afsversion =~ m/(.*)dev/) {
-    $linuxver = $1;
-    $linuxrel = "0.dev";
+if ($openafs_version =~ m/(.*)(pre[0-9]+)/) {
+    $package_version = $1;
+    $package_release = "0.$2";
+} elsif ($openafs_version =~ m/(.*)dev/) {
+    $package_version = $1;
+    $package_release = "0.dev";
 } else {
-    $linuxver = $afsversion;
-    $linuxrel = 1;
+    $package_version = $openafs_version;
+    $package_release = 1;
 }
 
-if ($afsversion =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
-    $linuxver = $1 if ($linuxver eq $afsversion);
-    $linuxrel .= ".$2.$3";
+if ($openafs_version =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
+    $package_version = $1 if ($package_version eq $openafs_version);
+    $package_release .= ".$2.$3";
 }
 
 # Avoid illegal characters in RPM package version and release strings.
-$linuxver =~ s/-/_/g;
-$linuxrel =~ s/-/_/g;
+$package_version =~ s/-/_/g;
+$package_release =~ s/-/_/g;
 
-print "$progname: Package version is $linuxver\n";
-print "$progname: Package release is $linuxrel\n";
+print "$progname: Package version is $package_version\n";
+print "$progname: Package release is $package_release\n";
 
 # Build the RPM root
 
-print "$progname: Building version $afsversion\n";
 File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
                      $tmpdir."/rpmdir/SRPMS",
                      $tmpdir."/rpmdir/SOURCES"], 0, 0755);
 
 File::Copy::copy($srcball,
-                 $tmpdir."/rpmdir/SOURCES/openafs-$afsversion-src.tar.bz2")
+                 $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
     or die "$progname: Unable to copy $srcball into position: $!\n";
 
 # Populate it with all the stuff in the packaging directory, except the
@@ -133,14 +131,13 @@ while (defined($file = $pkgdirh->read)) {
 }
 undef $dirh;
 
-my $spec_template = "$srcdir/src/packaging/RedHat/openafs.spec.in";
-my $cellservdb_substitute = "";
+my $spec_input = "$srcdir/src/packaging/RedHat/openafs.spec.in";
+my $cellservdb_change_source;
 if ($cellservdb_url) {
-    # Set the CellServDB source URL in the generated the spec file.
-    $cellservdb_substitute = "-e 's%^Source20:.*%Source20: $cellservdb_url%'";
+    $cellservdb_change_source = 1;  # Change the CellServDB source value in the spec.
 } else {
-    # Extract the CellServDB source URL from the spec file template.
-    open(my $fh, $spec_template) or die "$progname: Unable to open $spec_template: $!\n";
+    # Extract the CellServDB source URL from the input spec file.
+    open(my $fh, $spec_input) or die "$progname: Unable to open $spec_input: $!\n";
     while (<$fh>) {
         if (/^Source20:\s*(.*)\s*$/) {
             $cellservdb_url = $1;
@@ -149,8 +146,9 @@ if ($cellservdb_url) {
     }
     close($fh);
     if (not $cellservdb_url) {
-        die "$progname: Unable to find CellServDB source directive in $spec_template\n";
+        die "$progname: Unable to find CellServDB source directive in $spec_input\n";
     }
+    $cellservdb_change_source = 0;
 }
 
 if ($cellservdb) {
@@ -167,11 +165,11 @@ if ($cellservdb) {
 
 if ($relnotes) {
     File::Copy::copy($relnotes,
-                     $tmpdir."/rpmdir/SOURCES/RELNOTES-$afsversion")
+                     $tmpdir."/rpmdir/SOURCES/RELNOTES-${openafs_version}")
         or die "$progname: Unable to copy $relnotes into position: $!\n";
 } else {
     print "$progname: WARNING: No release notes provided. Using empty file\n";
-    system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$afsversion");
+    system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$openafs_version");
 }
 
 if ($changelog) {
@@ -183,22 +181,42 @@ if ($changelog) {
     system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
 }
 
-# Create the specfile. Use sed for this, cos its easier
-system("cat $spec_template | ".
-       "sed -e 's/\@PACKAGE_VERSION\@/$afsversion/g' ".
-       "    -e 's/\@LINUX_PKGVER\@/$linuxver/g' ".
-       "    -e 's/\@LINUX_PKGREL\@/$linuxrel/g' ".
-       "    -e 's/\%define afsvers.*/%define afsvers $afsversion/g' ".
-       "    -e 's/\%define pkgvers.*/%define pkgvers $linuxver/g' ".
-       "    $cellservdb_substitute  >".
-       "$tmpdir/rpmdir/SPECS/openafs.spec") == 0
-    or die "$progname: sed failed : $!\n";
+#
+# Bake-in the OpenAFS version, the RPM Version, and RPM Release in the SRPM.
+# This creates a SRPM that can build binary RPM files with the correct version
+# information when running `rpmbuild --rebuild`.
+#
+# Also change the CellServDB source when a custom value is specified with the
+# --cellservdb_url option.
+#
+my $spec_output = "$tmpdir/rpmdir/SPECS/openafs.spec";
+open(my $in_fh, '<', $spec_input)
+  or die "$progname: Cannot open input spec file '$spec_input': $!";
+open(my $out_fh, '>', $spec_output)
+  or die "$progname: Cannot open output spec file '$spec_output': $!";
+
+while (<$in_fh>) {
+    s/^\%define afsvers.*/%define afsvers $openafs_version/g;
+    s/^\%define pkgvers.*/%define pkgvers $package_version/g;
+    s/^\%define pkgrel.*/%define pkgrel $package_release/g;
+
+    s/\@PACKAGE_VERSION\@/$openafs_version/g;
+    s/\@LINUX_PKGVER\@/$package_version/g;
+    s/\@LINUX_PKGREL\@/$package_release/g;
+
+    if ($cellservdb_change_source) {
+        s%^Source20:.*%Source20: $cellservdb_url%;
+    }
+    print $out_fh $_;
+}
+close $out_fh;
+close $in_fh;
 
 # Build an RPM
 system("rpmbuild -bs --nodeps --define \"dist %undefined\" ".
        "--define \"build_modules 0\" ".
        "--define \"_topdir $tmpdir/rpmdir\" ".
-       "$tmpdir/rpmdir/SPECS/openafs.spec > /dev/null") == 0
+       "$spec_output > /dev/null") == 0
     or die "$progname: rpmbuild failed : $!\n";
 
 # Copy it out to somewhere useful
