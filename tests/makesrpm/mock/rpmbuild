@@ -1,0 +1,57 @@
+#!/usr/bin/bash
+#
+# Mock rpmbuild for makesrpm.pl testing.
+#
+
+set -x
+
+echo mock/rpmbuild: "$@"
+
+topdir=
+specfile=
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+    case "${args[i]}" in
+    --define|-D)
+        i=$((i + 1))
+        if [[ "${args[i]}" == _topdir\ * ]]; then
+            topdir="${args[i]#_topdir }"
+        fi
+        ;;
+    -*)
+        # skip
+        ;;
+    *)
+        specfile="${args[i]}"
+        ;;
+    esac
+done
+
+if [[ -n "$RPMBUILD_COPY_SPEC" ]]; then
+    if [ -z $specfile ]; then
+       echo "mock/rpmbuild: spec argument not found" >&2
+       exit 1
+    fi
+    echo "Copying file: $specfile -> $RPMBUILD_COPY_SPEC"
+    cp "$specfile" "$RPMBUILD_COPY_SPEC"
+fi
+
+if [[ -n "$RPMBUILD_SIMULATE" ]]; then
+    if [ -z $topdir ]; then
+       echo "mock/rpmbuild: --define _topdir argument not found" >&2
+       exit 1
+    fi
+    echo "mock/rpmbuild: simulating" >&2
+    mkdir -p "$topdir/SRPMS"
+    srpm="$topdir/SRPMS/openafs-dummy.src.rpm"
+    echo "Dummy" > "$srpm"
+    echo "Wrote: $srpm"
+    exit 0
+fi
+
+if [[ -n "$RPMBUILD_FAIL" ]]; then
+    echo "mock/rpmbuild: simulated failure" >&2
+    exit 1
+fi
+
+exec /usr/bin/rpmbuild "$@"
