@@ -1,0 +1,29 @@
+#!/usr/bin/bash
+#
+# Mock rpmbuild for makesrpm.pl testing.
+#
+
+set -x
+
+echo mock/rpmbuild: "$@"
+
+if [[ -n "$RPMBUILD_COPY_SPEC" ]]; then
+    echo "Copying file: ${11} -> $RPMBUILD_COPY_SPEC"
+    cp "${11}" "$RPMBUILD_COPY_SPEC"
+fi
+
+if [[ -n "$RPMBUILD_SIMULATE" ]]; then
+    echo "mock/rpmbuild: simulating" >&2
+    topdir=$(echo "${10}" | cut -f2 -d' ')
+    echo "$topdir"
+    mkdir -p "$topdir/SRPMS"
+    echo "Dummy" > "$topdir/SRPMS/openafs-dummy.src.rpm"
+    exit 0
+fi
+
+if [[ -n "$RPMBUILD_FAIL" ]]; then
+    echo "mock/rpmbuild: simulated failure" >&2
+    exit 1
+fi
+
+exec /usr/bin/rpmbuild "$@"
