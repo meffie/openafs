@@ -1,0 +1,5 @@
+.*
+!.gitignore
+*.pyc
+*.tar.gz
+*.tar.bz2
