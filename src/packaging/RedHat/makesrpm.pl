@@ -230,24 +230,43 @@ while (<$in_fh>) {
 close $out_fh;
 close $in_fh;
 
-# Build an RPM
-system("rpmbuild -bs --nodeps --define \"dist %undefined\" ".
-       "--define \"build_modules 0\" ".
-       "--define \"_topdir $tmpdir/rpmdir\" ".
-       "$spec_output > /dev/null") == 0
-    or die "$progname: rpmbuild failed : $!\n";
-
-# Copy it out to somewhere useful
-my @srpms = glob("$tmpdir/rpmdir/SRPMS/*.src.rpm");
-if (scalar(@srpms) != 1) {
-    die "$progname: Generated SRPM file not found.\n";
+#
+# Build the SRPM.
+#
+my $srpm;
+open(my $rpmbuild, "-|",
+     "rpmbuild", "-bs", "--nodeps",
+     "--define", "dist %undefined",
+     "--define", "build_modules 0",
+     "--define", "_topdir $tmpdir/rpmdir",
+     $spec_output)
+    or die "$progname: Failed to start rpmbuild: $!\n";
+while (<$rpmbuild>) {
+    print $_;
+    if (/^Wrote: (.*)/) {
+        $srpm = $1;
+    }
 }
-my $filename = File::Basename::fileparse($srpms[0]);
-my $srpm = File::Spec->rel2abs("$dir/$filename");
-File::Path::make_path($dir);
-File::Copy::copy($srpms[0], $srpm)
-    or die "$progname: Failed to copy '$srpms[0]' to '$srpm': $!\n";
-print "$progname: SRPM is $srpm\n";
+if (!close($rpmbuild)) {
+    if ($!) {
+        die "$progname: Failed to close rpmbuild pipe: $!\n";
+    }
+    my $exit_code = $? >> 8;
+    die "$progname: rpmbuild failed with exit code ${exit_code} (status $?)\n";
+}
+
+# Copy it out to somewhere useful.
+if (defined($dir)) {
+    if (!defined($srpm)) {
+        die "$progname: Generated SRPM file not found.\n";
+    }
+    my $srpm_filename = File::Basename::fileparse($srpm);
+    my $srpm_output = File::Spec->rel2abs("$dir/$srpm_filename");
+    File::Path::make_path($dir);
+    File::Copy::copy($srpm, $srpm_output)
+        or die "$progname: Failed to copy '$srpm' to '$srpm_output': $!\n";
+    print "$progname: SRPM is $srpm_output\n";
+}
 
 __END__
 
