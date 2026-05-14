@@ -40,6 +40,33 @@ sub create_file {
     close $fh;
 }
 
+#
+# Run a command and exit on error.
+#
+# Arguments:
+#   args - command line arguments
+#
+# Dies with an error message if the command returns a non-zero exit code.
+#
+sub run_command {
+    my @args = @_;
+
+    if (system(@args) != 0) {
+        my $exit_code = $? >> 8;
+        my $signal = $? & 127;
+        my $command = join(' ', @args);
+
+        if ($? == -1) {
+            die "$progname: Failed to execute '$command': $!\n";
+        }
+        if ($signal) {
+            my $coredump = ($? & 128) ? " (core dumped)" : "";
+            die "$progname: '$command' died with signal $signal$coredump\n";
+        }
+        die "$progname: '$command' exited with code $exit_code (status $?)\n";
+    }
+}
+
 GetOptions(
     "help|?" => \$help,
     "man" => \$man,
@@ -64,11 +91,10 @@ if (! -f $srcball) {
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
-system("tar -C $tmpdir -xvjf $srcball --wildcards ".
-       "'\*/src/packaging/RedHat' ".
-       "'\*/.version' ".
-       "'\*/build-tools' > /dev/null") == 0
-    or die "$progname: Unable to unpack src tar ball\n";
+run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards",
+            "*/src/packaging/RedHat",
+            "*/.version",
+            "*/build-tools");
 
 my $dirh = IO::Dir->new($tmpdir);
 my $vdir;
@@ -173,8 +199,7 @@ if ($cellservdb) {
         or die "$progname: Unable to copy $cellservdb to $dest: $!\n";
 } else {
     print "$progname: Downloading $cellservdb_url\n";
-    system("cd $tmpdir/rpmdir/SOURCES && wget $cellservdb_url") == 0
-        or die "$progname: Unable to download $cellservdb_url: $!\n";
+    run_command("wget", "-P", "$tmpdir/rpmdir/SOURCES", $cellservdb_url);
 }
 
 if ($relnotes) {
