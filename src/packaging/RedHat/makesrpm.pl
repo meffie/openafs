@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+#
+# Build an SRPM for OpenAFS, given a src tarball, release notes,
+# and ChangeLog.  See the documentation at the end of this file.
+#
 
 use strict;
 use warnings;
@@ -13,9 +17,10 @@ use File::Temp;
 use File::Basename;
 use File::Spec;
 
-# Build an SRPM for OpenAFS, given a src tarball, release notes,
-# and ChangeLog.
+# Globals
+my $progname = "makesrpm";
 
+# Options
 my $help = 0;
 my $man = 0;
 my $dir = ".";
@@ -40,7 +45,7 @@ if (!defined($srcball)) {
 }
 
 if (! -f $srcball) {
-    die "Unable to open $srcball\n";
+    die "$progname: Source archive not found: $srcball\n";
 }
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -49,13 +54,13 @@ system("tar -C $tmpdir -xvjf $srcball --wildcards ".
        "'\*/src/packaging/RedHat' ".
        "'\*/.version' ".
        "'\*/build-tools' > /dev/null") == 0
-    or die "Unable to unpack src tar ball\n";
+    or die "$progname: Unable to unpack src tar ball\n";
 
 my $dirh = IO::Dir->new($tmpdir);
 my $vdir;
 while (defined($vdir = $dirh->read) && $vdir=~/^\./) {};
 
-die "Unable to find unpacked source code\n" if !$vdir;
+die "$progname: Unable to find unpacked source code\n" if !$vdir;
 
 my $srcdir = $tmpdir."/".$vdir;
 
@@ -97,30 +102,30 @@ if ($afsversion =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
 $linuxver =~ s/-/_/g;
 $linuxrel =~ s/-/_/g;
 
-print "Package version is $linuxver\n";
-print "Package release is $linuxrel\n";
+print "$progname: Package version is $linuxver\n";
+print "$progname: Package release is $linuxrel\n";
 
 # Build the RPM root
 
-print "Building version $afsversion\n";
+print "$progname: Building version $afsversion\n";
 File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
                      $tmpdir."/rpmdir/SRPMS",
                      $tmpdir."/rpmdir/SOURCES"], 0, 0755);
 
 File::Copy::copy($srcball,
                  $tmpdir."/rpmdir/SOURCES/openafs-$afsversion-src.tar.bz2")
-    or die "Unable to copy $srcball into position\n";
+    or die "$progname: Unable to copy $srcball into position\n";
 
 # Populate it with all the stuff in the packaging directory, except the
 # specfile
 my $pkgdirh = IO::Dir->new($srcdir."/src/packaging/RedHat")
-    or die "Unable to find RedHat packaging directory\n";
+    or die "$progname: Unable to find RedHat packaging directory\n";
 my $file;
 while (defined($file = $pkgdirh->read)) {
     if (-f $srcdir."/src/packaging/RedHat/".$file) {
         next if $file eq "openafs.spec.in";
 
-        print "Copying $file into place\n";
+        print "$progname: Copying $file into place\n";
         File::Copy::copy($srcdir."/src/packaging/RedHat/".$file,
                          $tmpdir."/rpmdir/SOURCES/".$file);
     }
@@ -134,7 +139,7 @@ if ($cellservdb_url) {
     $cellservdb_substitute = "-e 's%^Source20:.*%Source20: $cellservdb_url%'";
 } else {
     # Extract the CellServDB source URL from the spec file template.
-    open(my $fh, $spec_template) or die "Unable to open $spec_template: $!\n";
+    open(my $fh, $spec_template) or die "$progname: Unable to open $spec_template: $!\n";
     while (<$fh>) {
         if (/^Source20:\s*(.*)\s*$/) {
             $cellservdb_url = $1;
@@ -143,37 +148,37 @@ if ($cellservdb_url) {
     }
     close($fh);
     if (not $cellservdb_url) {
-        die "Unable to find CellServDB source directive in $spec_template\n";
+        die "$progname: Unable to find CellServDB source directive in $spec_template\n";
     }
 }
 
 if ($cellservdb) {
     my $filename = File::Basename::fileparse($cellservdb_url);
     my $dest = "$tmpdir/rpmdir/SOURCES/$filename";
-    print "Copying $cellservdb to $dest\n";
+    print "$progname: Copying $cellservdb to $dest\n";
     File::Copy::copy($cellservdb, "$dest")
-        or die "Unable to copy $cellservdb to $dest: $!\n";
+        or die "$progname: Unable to copy $cellservdb to $dest: $!\n";
 } else {
-    print "Downloading $cellservdb_url\n";
+    print "$progname: Downloading $cellservdb_url\n";
     system("cd $tmpdir/rpmdir/SOURCES && wget $cellservdb_url") == 0
-        or die "Unable to download $cellservdb_url: $!\n";
+        or die "$progname: Unable to download $cellservdb_url: $!\n";
 }
 
 if ($relnotes) {
     File::Copy::copy($relnotes,
                      $tmpdir."/rpmdir/SOURCES/RELNOTES-$afsversion")
-        or die "Unable to copy $relnotes into position\n";
+        or die "$progname: Unable to copy $relnotes into position\n";
 } else {
-    print "WARNING: No release notes provided. Using empty file\n";
+    print "$progname: WARNING: No release notes provided. Using empty file\n";
     system("touch $tmpdir/rpmdir/SOURCES/RELNOTES-$afsversion");
 }
 
 if ($changelog) {
     File::Copy::copy($changelog,
                      $tmpdir."/rpmdir/SOURCES/ChangeLog")
-        or die "Unable to copy $changelog into position\n";
+        or die "$progname: Unable to copy $changelog into position\n";
 } else {
-    print "WARNING: No changelog provided. Using empty file\n";
+    print "$progname: WARNING: No changelog provided. Using empty file\n";
     system("touch $tmpdir/rpmdir/SOURCES/ChangeLog");
 }
 
@@ -186,26 +191,26 @@ system("cat $spec_template | ".
        "    -e 's/\%define pkgvers.*/%define pkgvers $linuxver/g' ".
        "    $cellservdb_substitute  >".
        "$tmpdir/rpmdir/SPECS/openafs.spec") == 0
-    or die "sed failed : $!\n";
+    or die "$progname: sed failed : $!\n";
 
 # Build an RPM
 system("rpmbuild -bs --nodeps --define \"dist %undefined\" ".
        "--define \"build_modules 0\" ".
        "--define \"_topdir $tmpdir/rpmdir\" ".
        "$tmpdir/rpmdir/SPECS/openafs.spec > /dev/null") == 0
-    or die "rpmbuild failed : $!\n";
+    or die "$progname: rpmbuild failed : $!\n";
 
 # Copy it out to somewhere useful
 my @srpms = glob("$tmpdir/rpmdir/SRPMS/*.src.rpm");
 if (scalar(@srpms) != 1) {
-    die "Generated SRPM file not found.\n";
+    die "$progname: Generated SRPM file not found.\n";
 }
 my $filename = File::Basename::fileparse($srpms[0]);
 my $srpm = File::Spec->rel2abs("$dir/$filename");
 File::Path::make_path($dir);
 File::Copy::copy($srpms[0], $srpm)
-    or die "Failed to copy '$srpms[0]' to '$srpm': $!\n";
-print "SRPM is $srpm\n";
+    or die "$progname: Failed to copy '$srpms[0]' to '$srpm': $!\n";
+print "$progname: SRPM is $srpm\n";
 
 __END__
 
