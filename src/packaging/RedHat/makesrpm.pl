@@ -20,6 +20,7 @@ use Cwd qw(cwd);
 my $progname = "makesrpm";
 my $tmpdir;
 my $toplevel;
+my $openafs_version;
 
 # Options
 my $help = 0;
@@ -31,6 +32,8 @@ my $docball;
 my $relnotes;
 my $changelog;
 my $cellservdb;
+my $package_version;
+my $package_release;
 
 #
 # Create an empty file.
@@ -144,6 +147,8 @@ GetOptions(
     "relnotes=s" => \$relnotes,
     "changelog=s" => \$changelog,
     "cellservdb=s" => \$cellservdb,
+    "package-version=s" => \$package_version,
+    "package-release=s" => \$package_release,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
@@ -207,10 +212,6 @@ File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
 #
 # Determine the OpenAFS version.
 #
-my $openafs_version;
-my $package_version;
-my $package_release;
-
 if (!defined($srcball)) {
     $openafs_version = capture_output("$toplevel/build-tools/git-version", $toplevel);
     if ($openafs_version =~ /-dirty$/) {
@@ -241,26 +242,36 @@ print "$progname: Building version $openafs_version\n";
 # and RPMS which are built from trees midway between heads, such as
 # 1.7.0-45-gabcdef or 1.7.0pre1-37-g12345 or 1.7.0dev-56-g98765
 #
-if ($openafs_version =~ m/(.*)(pre[0-9]+)/) {
-    $package_version = $1;
-    $package_release = "0.$2";
-} elsif ($openafs_version =~ m/(.*)dev/) {
-    $package_version = $1;
-    $package_release = "0.dev";
-} else {
-    $package_version = $openafs_version;
-    $package_release = 1;
+if (!defined($package_version) || !defined($package_release)) {
+    my ($pv, $pr);
+
+    if ($openafs_version =~ m/(.*)(pre[0-9]+)/) {
+        $pv = $1;
+        $pr = "0.$2";
+    } elsif ($openafs_version =~ m/(.*)dev/) {
+        $pv = $1;
+        $pr = "0.dev";
+    } else {
+        $pv = $openafs_version;
+        $pr = 1;
+    }
+
+    if ($openafs_version =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
+        $pv = $1 if ($pv eq $openafs_version);
+        $pr .= ".$2.$3";
+    }
+
+    # Avoid illegal characters in RPM package version and release strings.
+    $pv =~ s/-/_/g;
+    $pr =~ s/-/_/g;
+
+    if (!defined($package_version)) {
+        $package_version = $pv;
+    }
+    if (!defined($package_release)) {
+        $package_release = $pr;
+    }
 }
-
-if ($openafs_version =~ m/(.*)-([0-9]+)-(g[a-f0-9]+)$/) {
-    $package_version = $1 if ($package_version eq $openafs_version);
-    $package_release .= ".$2.$3";
-}
-
-# Avoid illegal characters in RPM package version and release strings.
-$package_version =~ s/-/_/g;
-$package_release =~ s/-/_/g;
-
 print "$progname: Package version is $package_version\n";
 print "$progname: Package release is $package_release\n";
 
@@ -456,6 +467,8 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--cellservdb> I<FILE>] >>>
                S<<< [B<--cellservdb-url> I<URL>] >>>
                S<<< [B<--output-dir> I<DIR>] >>>
+               S<<< [B<--package-version> I<VERSION>] >>>
+               S<<< [B<--package-release> I<RELEASE>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -516,6 +529,18 @@ file is downloaded from the URL specified in the spec file.
 =item B<--output-dir> I<DIR>, B<--dir> I<DIR>
 
 Place the generated SRPM file in I<DIR> instead of the current directory.
+
+=item B<--package-version> I<VERSION>
+
+The package version string to be used for the package. This version is used for
+the C<Version> tag in the spec file used to build the SRPM. When not specified,
+the package version is derived from the OpenAFS version string.
+
+=item B<--package-release> I<RELEASE>
+
+The package release string to be used for the package. This release is used for
+the C<Release> tag in the spec file used to build the SRPM. When not specified,
+the package release is derived from the OpenAFS version string.
 
 =item B<--cellservdb-url> I<URL>
 
