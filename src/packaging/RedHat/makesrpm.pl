@@ -9,8 +9,6 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use IO::Dir;
-use IO::File;
 use File::Path;
 use File::Copy;
 use File::Temp;
@@ -96,13 +94,10 @@ run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards",
             "*/.version",
             "*/build-tools");
 
-my $dirh = IO::Dir->new($tmpdir);
-my $vdir;
-while (defined($vdir = $dirh->read) && $vdir=~/^\./) {};
-
-die "$progname: Unable to find unpacked source code\n" if !$vdir;
-
-my $srcdir = $tmpdir."/".$vdir;
+my ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
+if (!defined($packaging)) {
+    die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
+}
 
 # Work out which version we're dealing with from git-version script
 # (which may use a .version file)
@@ -110,6 +105,10 @@ my $openafs_version;
 my $package_version;
 my $package_release;
 
+my ($srcdir) = glob("$tmpdir/openafs-*");
+if (!defined($srcdir)) {
+    die "$progname: Unable to find source directory in '${srcball}'.\n";
+}
 $openafs_version = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
 print "$progname: Building version $openafs_version\n";
 
@@ -156,22 +155,15 @@ File::Copy::copy($srcball,
 
 # Populate it with all the stuff in the packaging directory, except the
 # specfile
-my $pkgdirh = IO::Dir->new($srcdir."/src/packaging/RedHat")
-    or die "$progname: Unable to find RedHat packaging directory\n";
-my $file;
-while (defined($file = $pkgdirh->read)) {
-    if (-f $srcdir."/src/packaging/RedHat/".$file) {
-        next if $file eq "openafs.spec.in";
-
-        print "$progname: Copying $file into place\n";
-        File::Copy::copy($srcdir."/src/packaging/RedHat/".$file,
-                         $tmpdir."/rpmdir/SOURCES/".$file)
-          or die "$progname: Unable to copy $file into position: $!\n";
-    }
+for my $packaging_file (glob("$packaging/*")) {
+    my $file = File::Basename::fileparse($packaging_file);
+    next if $file eq "openafs.spec.in";
+    print "$progname: Copying $file into place\n";
+    File::Copy::copy($packaging_file, "$tmpdir/rpmdir/SOURCES/$file")
+        or die "$progname: Unable to copy $file into position: $!\n";
 }
-undef $dirh;
 
-my $spec_input = "$srcdir/src/packaging/RedHat/openafs.spec.in";
+my $spec_input = "$packaging/openafs.spec.in";
 my $cellservdb_change_source;
 if ($cellservdb_url) {
     $cellservdb_change_source = 1;  # Change the CellServDB source value in the spec.
