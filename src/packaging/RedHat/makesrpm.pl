@@ -46,7 +46,6 @@ if (! -f $srcball) {
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
 system("tar -C $tmpdir -xvf $srcball --wildcards ".
-       "'\*/configure.ac' ".
        "'\*/src/packaging/RedHat' ".
        "'\*/.version' ".
        "'\*/build-tools' > /dev/null") == 0
