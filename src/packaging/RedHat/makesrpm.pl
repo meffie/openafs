@@ -100,6 +100,7 @@ GetOptions(
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
 
+# Process positional arguments.
 my $srcball = shift;
 my $relnotes = shift;
 my $changelog = shift;
@@ -113,14 +114,16 @@ if (! -f $srcball) {
     die "$progname: Source archive not found: $srcball\n";
 }
 
+#
+# Create the RPM build directories.
+#
 if (!defined($tmpdir)) {
     $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 }
-run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/src/packaging/RedHat");
-my ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
-if (!defined($packaging)) {
-    die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
-}
+
+File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
+                     $tmpdir."/rpmdir/SRPMS",
+                     $tmpdir."/rpmdir/SOURCES"], 0, 0755);
 
 #
 # Determine the OpenAFS version.
@@ -142,14 +145,16 @@ $openafs_version =~ s/openafs-[^-]*-//;
 $openafs_version =~ s/_/./g;
 print "$progname: Building version $openafs_version\n";
 
-# Determine the package Version and Release tags from the OpenAFS version.
+#
+# Determine the package Version and Release tags.
+#
 # We need to handle a number of varieties of OpenAFS version formats:
 # Normal: 1.7.0
 # Prereleases: 1.7.0pre1
 # Development trees: 1.7.0dev
 # and RPMS which are built from trees midway between heads, such as
 # 1.7.0-45-gabcdef or 1.7.0pre1-37-g12345 or 1.7.0dev-56-g98765
-
+#
 if ($openafs_version =~ m/(.*)(pre[0-9]+)/) {
     $package_version = $1;
     $package_release = "0.$2";
@@ -173,26 +178,21 @@ $package_release =~ s/-/_/g;
 print "$progname: Package version is $package_version\n";
 print "$progname: Package release is $package_release\n";
 
-# Build the RPM root
-
-File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
-                     $tmpdir."/rpmdir/SRPMS",
-                     $tmpdir."/rpmdir/SOURCES"], 0, 0755);
-
-File::Copy::copy($srcball,
-                 $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
-    or die "$progname: Unable to copy $srcball into position: $!\n";
-
-# Populate it with all the stuff in the packaging directory, except the
-# specfile
-for my $packaging_file (glob("$packaging/*")) {
-    my $file = File::Basename::fileparse($packaging_file);
-    next if $file eq "openafs.spec.in";
-    print "$progname: Copying $file into place\n";
-    File::Copy::copy($packaging_file, "$tmpdir/rpmdir/SOURCES/$file")
-        or die "$progname: Unable to copy $file into position: $!\n";
+#
+# Extract the packaging files.
+#
+if (!defined($tmpdir)) {
+    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+}
+run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/src/packaging/RedHat");
+my ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
+if (!defined($packaging)) {
+    die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
 }
 
+#
+# Inspect the spec file to determine the CellServDB URL.
+#
 my $spec_input = "$packaging/openafs.spec.in";
 my $cellservdb_change_source;
 if ($cellservdb_url) {
@@ -211,6 +211,22 @@ if ($cellservdb_url) {
         die "$progname: Unable to find CellServDB source directive in $spec_input\n";
     }
     $cellservdb_change_source = 0;
+}
+
+#
+# Populate the SOURCES directory.
+#
+File::Copy::copy($srcball,
+                 $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
+    or die "$progname: Unable to copy $srcball into position: $!\n";
+
+
+for my $packaging_file (glob("$packaging/*")) {
+    my $file = File::Basename::fileparse($packaging_file);
+    next if $file eq "openafs.spec.in";
+    print "$progname: Copying $file into place\n";
+    File::Copy::copy($packaging_file, "$tmpdir/rpmdir/SOURCES/$file")
+        or die "$progname: Unable to copy $file into position: $!\n";
 }
 
 if ($cellservdb) {
@@ -246,6 +262,8 @@ if ($changelog) {
     }
 }
 
+#
+# Populate the SPECS directory.
 #
 # Bake-in the OpenAFS version, the RPM Version, and RPM Release in the SRPM.
 # This creates a SRPM that can build binary RPM files with the correct version
