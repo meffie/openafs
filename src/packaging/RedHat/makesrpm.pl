@@ -24,7 +24,7 @@ my $toplevel;
 # Options
 my $help = 0;
 my $man = 0;
-my $dir = ".";
+my $output_dir = ".";
 my $cellservdb_url;
 my $srcball;
 my $docball;
@@ -137,7 +137,7 @@ sub capture_output {
 GetOptions(
     "help|?" => \$help,
     "man" => \$man,
-    "dir=s" => \$dir,
+    "output-dir|dir=s" => \$output_dir,
     "cellservdb-url=s" => \$cellservdb_url,
     "source=s" => \$srcball,
     "doc=s" => \$docball,
@@ -429,13 +429,13 @@ if (!close($rpmbuild)) {
 }
 
 # Copy it out to somewhere useful.
-if (defined($dir)) {
+if (defined($output_dir)) {
     if (!defined($srpm)) {
         die "$progname: Generated SRPM file not found.\n";
     }
     my $srpm_filename = File::Basename::fileparse($srpm);
-    my $srpm_output = File::Spec->rel2abs("$dir/$srpm_filename");
-    File::Path::make_path($dir);
+    my $srpm_output = File::Spec->rel2abs("$output_dir/$srpm_filename");
+    File::Path::make_path($output_dir);
     File::Copy::copy($srpm, $srpm_output)
         or die "$progname: Failed to copy '$srpm' to '$srpm_output': $!\n";
     print "$progname: SRPM is $srpm_output\n";
@@ -455,7 +455,7 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--changelog> I<FILE>] >>>
                S<<< [B<--cellservdb> I<FILE>] >>>
                S<<< [B<--cellservdb-url> I<URL>] >>>
-               S<<< [B<--dir> I<DIR>] >>>
+               S<<< [B<--output-dir> I<DIR>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -513,7 +513,7 @@ C<SOURCES> directory and renamed to match the filename in the C<Source>
 directive in the spec file. If this option is not provided, the F<CellServDB>
 file is downloaded from the URL specified in the spec file.
 
-=item B<--dir> I<DIR>
+=item B<--output-dir> I<DIR>, B<--dir> I<DIR>
 
 Place the generated SRPM file in I<DIR> instead of the current directory.
 
