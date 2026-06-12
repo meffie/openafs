@@ -17,6 +17,7 @@ use File::Spec;
 
 # Globals
 my $progname = "makesrpm";
+my $tmpdir;
 
 # Options
 my $help = 0;
@@ -36,6 +37,31 @@ sub create_file {
     my ($path) = @_;
     open(my $fh, '>', $path) or die "$progname: Unable to open file '$path': $!\n";
     close $fh;
+}
+
+#
+# Read the contents of a file.
+#
+# Arguments:
+#   path - The path to the file to be read.
+#
+# Returns:
+#   The file contents as a string without the trailing newline.
+#
+# Dies on failure.
+#
+sub read_file {
+    my ($path) = @_;
+    my $contents;
+
+    open(my $fh, "<", $path) or die "$progname: Unable to open '$path': $!\n";
+    {
+        local $/;  # Slurp the whole output.
+        $contents = <$fh>;
+    }
+    chomp $contents;
+    close($fh);
+    return $contents;
 }
 
 #
@@ -87,29 +113,33 @@ if (! -f $srcball) {
     die "$progname: Source archive not found: $srcball\n";
 }
 
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-
-run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards",
-            "*/src/packaging/RedHat",
-            "*/.version",
-            "*/build-tools");
-
+if (!defined($tmpdir)) {
+    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+}
+run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/src/packaging/RedHat");
 my ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
 if (!defined($packaging)) {
     die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
 }
 
-# Work out which version we're dealing with from git-version script
-# (which may use a .version file)
+#
+# Determine the OpenAFS version.
+#
 my $openafs_version;
 my $package_version;
 my $package_release;
 
-my ($srcdir) = glob("$tmpdir/openafs-*");
-if (!defined($srcdir)) {
-    die "$progname: Unable to find source directory in '${srcball}'.\n";
+if (!defined($tmpdir)) {
+    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 }
-$openafs_version = `"/bin/sh" "$srcdir/build-tools/git-version" "$srcdir"`;
+run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/.version");
+my ($dot_version) = glob("$tmpdir/openafs-*/.version");
+if (!defined($dot_version)) {
+    die "$progname: Unable to find '.version' in '${srcball}'.\n";
+}
+$openafs_version = read_file($dot_version);
+$openafs_version =~ s/openafs-[^-]*-//;
+$openafs_version =~ s/_/./g;
 print "$progname: Building version $openafs_version\n";
 
 # Determine the package Version and Release tags from the OpenAFS version.
