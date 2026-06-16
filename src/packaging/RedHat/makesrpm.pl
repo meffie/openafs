@@ -34,6 +34,8 @@ my $changelog;
 my $cellservdb;
 my $package_version;
 my $package_release;
+my $spec_input;
+my $packaging;
 
 #
 # Create an empty file.
@@ -149,6 +151,8 @@ GetOptions(
     "cellservdb=s" => \$cellservdb,
     "package-version=s" => \$package_version,
     "package-release=s" => \$package_release,
+    "spec=s" => \$spec_input,
+    "packaging=s" => \$packaging,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
@@ -275,25 +279,37 @@ print "$progname: Package release is $package_release\n";
 #
 # Determine the path to the packaging files.
 #
-my $packaging;
-if (!defined($srcball)) {
-    $packaging = "$toplevel/src/packaging/RedHat";
-} else {
-    if (!defined($tmpdir)) {
-        $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-    }
-    run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards", "*/src/packaging/RedHat");
-    ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
-    if (!defined($packaging)) {
-        die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
+if (!defined($packaging)) {
+    if (!defined($srcball)) {
+        $packaging = "$toplevel/src/packaging/RedHat";
+    } else {
+        if (!defined($tmpdir)) {
+            $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+        }
+        run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards",
+                    "*/src/packaging/RedHat");
+        ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
+        if (!defined($packaging)) {
+            die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
+        }
     }
 }
+print "$progname: Using packaging files in $packaging\n";
 
 #
 # Inspect the spec file to determine the CellServDB URL and whether a doc
 # archive is required.
 #
-my $spec_input = "$packaging/openafs.spec.in";
+if (!defined($spec_input)) {
+    $spec_input = "$packaging/SPECS/openafs.spec";
+    if (! -f $spec_input) {
+        $spec_input = "$packaging/openafs.spec.in";
+    }
+    if (! -f $spec_input) {
+        die "$progname: Unable to find spec input file in '$packaging'\n";
+    }
+}
+
 my $cellservdb_change_source = $cellservdb_url ? 1 : 0;
 
 # Older versions of the spec file required a separate archive for the
@@ -342,23 +358,27 @@ if (defined($docball)) {
         or die "$progname: Unable to copy $docball into position: $!\n";
 }
 
-for my $packaging_file (glob("$packaging/*")) {
+for my $packaging_file (glob("$packaging/* $packaging/SOURCES/*")) {
+    next if -d $packaging_file;   # Skip directories
     my $file = File::Basename::fileparse($packaging_file);
-    next if $file eq "openafs.spec.in";
+    next if $file eq "openafs.spec.in";   # Skip spec template
+    next if $file eq "openafs.spec";      # Skip spec file
     print "$progname: Copying $file into place\n";
     File::Copy::copy($packaging_file, "$tmpdir/rpmdir/SOURCES/$file")
         or die "$progname: Unable to copy $file into position: $!\n";
 }
 
+my $cellservdb_filename = File::Basename::fileparse($cellservdb_url);
 if ($cellservdb) {
-    my $filename = File::Basename::fileparse($cellservdb_url);
-    my $dest = "$tmpdir/rpmdir/SOURCES/$filename";
+    my $dest = "$tmpdir/rpmdir/SOURCES/$cellservdb_filename";
     print "$progname: Copying $cellservdb to $dest\n";
     File::Copy::copy($cellservdb, "$dest")
         or die "$progname: Unable to copy $cellservdb to $dest: $!\n";
 } else {
-    print "$progname: Downloading $cellservdb_url\n";
-    run_command("wget", "-P", "$tmpdir/rpmdir/SOURCES", $cellservdb_url);
+    if (! -f "$tmpdir/rpmdir/SOURCES/$cellservdb_filename") {
+        print "$progname: Downloading $cellservdb_url\n";
+        run_command("wget", "-P", "$tmpdir/rpmdir/SOURCES", $cellservdb_url);
+    }
 }
 
 if ($relnotes) {
@@ -471,6 +491,8 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--output-dir> I<DIR>] >>>
                S<<< [B<--package-version> I<VERSION>] >>>
                S<<< [B<--package-release> I<RELEASE>] >>>
+               S<<< [B<--packaging> I<DIR>] >>>
+               S<<< [B<--spec> I<FILE>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -527,6 +549,12 @@ C<SOURCES> directory and renamed to match the filename in the C<Source>
 directive in the spec file. If this option is not provided, the F<CellServDB>
 file is downloaded from the URL specified in the spec file.
 
+=item B<--cellservdb-url> I<URL>
+
+Overrides the download URL for the F<CellServDB> file. The provided I<URL> is
+written into the spec file and is used to download the file if a local copy is
+not provided with B<--cellservdb>.
+
 =item B<--output-dir> I<DIR>, B<--dir> I<DIR>
 
 Place the generated SRPM file in I<DIR> instead of the current directory.
@@ -543,11 +571,21 @@ The package release string to be used for the package. This release is used for
 the C<Release> tag in the spec file used to build the SRPM. When not specified,
 the package release is derived from the OpenAFS version string.
 
-=item B<--cellservdb-url> I<URL>
+=item B<--packaging> I<DIR>
 
-Overrides the download URL for the F<CellServDB> file. The provided I<URL> is
-written into the spec file and is used to download the file if a local copy is
-not provided with B<--cellservdb>.
+Specifies the directory containing the packaging files to be included in the
+C<SOURCES> directory.  If this option is not specified, the packaging files
+located in the F<src/packaging/RedHat> directory in the local git repository
+are used.
+
+If this option is not specified and the B<--source> option is specified, the
+packaging files are extracted from the F<src/packaging/RedHat> directory from
+the source archive.
+
+=item B<--spec> I<FILE>
+
+Specifies the path to the RPM spec file. If this option is not provided, the
+spec file is located within the directory specified by B<--packaging>.
 
 =item B<--help>
 
