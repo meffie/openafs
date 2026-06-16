@@ -36,6 +36,7 @@ my $package_version;
 my $package_release;
 my $spec_input;
 my $packaging;
+my $topdir;
 
 #
 # Create an empty file.
@@ -153,6 +154,7 @@ GetOptions(
     "package-release=s" => \$package_release,
     "spec=s" => \$spec_input,
     "packaging=s" => \$packaging,
+    "rpm-build-dir|topdir=s" => \$topdir,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
@@ -205,13 +207,16 @@ if (!defined($srcball)) {
 #
 # Create the RPM build directories.
 #
-if (!defined($tmpdir)) {
-    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+if (!defined($topdir)) {
+    if (!defined($tmpdir)) {
+        $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    }
+    $topdir = "$tmpdir/rpmdir";
 }
 
-File::Path::mkpath([ $tmpdir."/rpmdir/SPECS",
-                     $tmpdir."/rpmdir/SRPMS",
-                     $tmpdir."/rpmdir/SOURCES"], 0, 0755);
+File::Path::mkpath(["$topdir/SPECS",
+                    "$topdir/SRPMS",
+                    "$topdir/SOURCES"], 0, 0755);
 
 #
 # Determine the OpenAFS version.
@@ -340,19 +345,19 @@ if (!defined($srcball)) {
     print "$progname: Creating source archive.\n";
     run_command("./build-tools/make-release",
                 "--no-doc-tarball",
-                "--dir", "$tmpdir/rpmdir/SOURCES",
+                "--dir", "$topdir/SOURCES",
                 "HEAD");
     chdir($cwd) or die "$progname: Failed to cd to '$cwd': $!";
 } else {
     File::Copy::copy($srcball,
-                     $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
+                     "$topdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
         or die "$progname: Unable to copy $srcball into position: $!\n";
 }
 
 # Copy the doc archive if specified.
 if (defined($docball)) {
     File::Copy::copy($docball,
-                     "$tmpdir/rpmdir/SOURCES/openafs-${openafs_version}-doc.tar.bz2")
+                     "$topdir/SOURCES/openafs-${openafs_version}-doc.tar.bz2")
         or die "$progname: Unable to copy $docball into position: $!\n";
 }
 
@@ -362,42 +367,42 @@ for my $packaging_file (glob("$packaging/* $packaging/SOURCES/*")) {
     next if $file eq "openafs.spec.in";   # Skip spec template
     next if $file eq "openafs.spec";      # Skip spec file
     print "$progname: Copying $file into place\n";
-    File::Copy::copy($packaging_file, "$tmpdir/rpmdir/SOURCES/$file")
+    File::Copy::copy($packaging_file, "$topdir/SOURCES/$file")
         or die "$progname: Unable to copy $file into position: $!\n";
 }
 
 my $cellservdb_filename = File::Basename::fileparse($cellservdb_url);
 if ($cellservdb) {
-    my $dest = "$tmpdir/rpmdir/SOURCES/$cellservdb_filename";
+    my $dest = "$topdir/SOURCES/$cellservdb_filename";
     print "$progname: Copying $cellservdb to $dest\n";
     File::Copy::copy($cellservdb, "$dest")
         or die "$progname: Unable to copy $cellservdb to $dest: $!\n";
 } else {
-    if (! -f "$tmpdir/rpmdir/SOURCES/$cellservdb_filename") {
+    if (! -f "$topdir/SOURCES/$cellservdb_filename") {
         print "$progname: Downloading $cellservdb_url\n";
-        run_command("wget", "-P", "$tmpdir/rpmdir/SOURCES", $cellservdb_url);
+        run_command("wget", "-P", "$topdir/SOURCES", $cellservdb_url);
     }
 }
 
 if ($relnotes) {
     File::Copy::copy($relnotes,
-                     $tmpdir."/rpmdir/SOURCES/RELNOTES-${openafs_version}")
+                     "$topdir/SOURCES/RELNOTES-${openafs_version}")
         or die "$progname: Unable to copy $relnotes into position: $!\n";
 } else {
-    if (! -f "$tmpdir/rpmdir/SOURCES/RELNOTES-${openafs_version}") {
+    if (! -f "$topdir/SOURCES/RELNOTES-${openafs_version}") {
         print "$progname: WARNING: No release notes provided. Using empty file\n";
-        create_file("$tmpdir/rpmdir/SOURCES/RELNOTES-${openafs_version}");
+        create_file("$topdir/SOURCES/RELNOTES-${openafs_version}");
     }
 }
 
 if ($changelog) {
     File::Copy::copy($changelog,
-                     $tmpdir."/rpmdir/SOURCES/ChangeLog")
+                     "$topdir/SOURCES/ChangeLog")
         or die "$progname: Unable to copy $changelog into position: $!\n";
 } else {
-    if (! -f "$tmpdir/rpmdir/SOURCES/ChangeLog") {
+    if (! -f "$topdir/SOURCES/ChangeLog") {
         print "$progname: WARNING: No changelog provided. Using empty file\n";
-        create_file("$tmpdir/rpmdir/SOURCES/ChangeLog");
+        create_file("$topdir/SOURCES/ChangeLog");
     }
 }
 
@@ -411,7 +416,7 @@ if ($changelog) {
 # Also change the CellServDB source when a custom value is specified with the
 # --cellservdb_url option.
 #
-my $spec_output = "$tmpdir/rpmdir/SPECS/openafs.spec";
+my $spec_output = "$topdir/SPECS/openafs.spec";
 open(my $in_fh, '<', $spec_input)
   or die "$progname: Cannot open input spec file '$spec_input': $!";
 open(my $out_fh, '>', $spec_output)
@@ -438,11 +443,13 @@ close $in_fh;
 # Build the SRPM.
 #
 my $srpm;
+my $abs_topdir = File::Spec->rel2abs($topdir);
+
 open(my $rpmbuild, "-|",
      "rpmbuild", "-bs", "--nodeps",
      "--define", "dist %undefined",
      "--define", "build_modules 0",
-     "--define", "_topdir $tmpdir/rpmdir",
+     "--define", "_topdir $abs_topdir",
      $spec_output)
     or die "$progname: Failed to start rpmbuild: $!\n";
 while (<$rpmbuild>) {
@@ -491,6 +498,7 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--package-release> I<RELEASE>] >>>
                S<<< [B<--packaging> I<DIR>] >>>
                S<<< [B<--spec> I<FILE>] >>>
+               S<<< [B<--rpm-build-dir> I<DIR>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -584,6 +592,13 @@ spec file is located within the directory specified by B<--packaging>.
 Overrides the download URL for the F<CellServDB> file. The provided I<URL> is
 written into the spec file and is used to download the file if a local copy is
 not provided with B<--cellservdb>.
+
+=item B<--rpm-build-dir> I<DIR>, B<--topdir> I<DIR>
+
+Specifies the directory to use for the RPM build. The C<SPECS>, C<SOURCES>, and
+C<SRPMS> subdirectories will be created in this directory.  If this option is
+not provided, a temporary directory is used, which is automatically removed
+when the script exits.
 
 =item B<--help>
 
