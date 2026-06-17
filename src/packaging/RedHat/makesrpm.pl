@@ -38,6 +38,8 @@ my $spec_input;
 my $packaging;
 my $topdir;
 my $prepare_only = 0;
+my $omit_source = 0;
+my $ignore_dirty = 0;
 
 #
 # Create an empty file.
@@ -157,6 +159,8 @@ GetOptions(
     "packaging=s" => \$packaging,
     "rpm-build-dir|topdir=s" => \$topdir,
     "prepare-only" => \$prepare_only,
+    "omit-source" => \$omit_source,
+    "ignore-dirty" => \$ignore_dirty,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
@@ -229,6 +233,9 @@ File::Path::mkpath(["$topdir/SPECS",
 #
 if (!defined($srcball)) {
     $openafs_version = capture_output("$toplevel/build-tools/git-version", $toplevel);
+    if ($ignore_dirty) {
+        $openafs_version =~ s/-dirty$//;
+    }
     if ($openafs_version =~ /-dirty$/) {
         die "$progname: You have uncommitted changes. Please commit or stash them.\n";
     }
@@ -346,14 +353,18 @@ if ($cellservdb_url) {
 # Populate the SOURCES directory.
 #
 if (!defined($srcball)) {
-    my $cwd = cwd();
-    chdir($toplevel) or die "$progname: Failed to cd to '$toplevel': $!";
-    print "$progname: Creating source archive.\n";
-    run_command("./build-tools/make-release",
-                "--no-doc-tarball",
-                "--dir", "$topdir/SOURCES",
-                "HEAD");
-    chdir($cwd) or die "$progname: Failed to cd to '$cwd': $!";
+    if ($omit_source) {
+        print "$progname: Skipping source archive creation (--omit-source specified)\n";
+    } else {
+        my $cwd = cwd();
+        chdir($toplevel) or die "$progname: Failed to cd to '$toplevel': $!";
+        print "$progname: Creating source archive.\n";
+        run_command("./build-tools/make-release",
+                    "--no-doc-tarball",
+                    "--dir", "$topdir/SOURCES",
+                    "HEAD");
+        chdir($cwd) or die "$progname: Failed to cd to '$cwd': $!";
+    }
 } else {
     File::Copy::copy($srcball,
                      "$topdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
@@ -514,6 +525,8 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--spec> I<FILE>] >>>
                S<<< [B<--rpm-build-dir> I<DIR>] >>>
                S<<< [B<--prepare-only>] >>>
+               S<<< [B<--omit-source>] >>>
+               S<<< [B<--ignore-dirty>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -628,6 +641,18 @@ do not run C<rpmbuild> to build the SRPM.  The RPM build directories will be
 created in the path specified by the B<--rpm-build-dir> option. If the
 B<--rpm-build-dir> option is not specified, the default RPM build path will be
 used (e.g., C<$HOME/rpmbuild>) instead of a temporary directory.
+
+=item B<--omit-source>
+
+Skip building the source archive when preparing the RPM build directories. This
+can be combined with B<--prepare-only> update the packaging files in the RPM
+build directory.  This option is ignored when the B<--source> option is
+specified.
+
+=item B<--ignore-dirty>
+
+Build the source archive even when uncommitted changes are detected in the
+source tree.  This option is ignored when the B<--source> option is specified.
 
 =item B<--help>
 
