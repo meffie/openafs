@@ -37,6 +37,9 @@ my $package_release;
 my $spec_input;
 my $packaging;
 my $topdir;
+my $prepare_only = 0;
+my $omit_source = 0;
+my $ignore_dirty = 0;
 
 #
 # Create an empty file.
@@ -155,6 +158,9 @@ GetOptions(
     "spec=s" => \$spec_input,
     "packaging=s" => \$packaging,
     "rpm-build-dir|topdir=s" => \$topdir,
+    "prepare-only" => \$prepare_only,
+    "omit-source" => \$omit_source,
+    "ignore-dirty" => \$ignore_dirty,
 ) or pod2usage(-exitval => 1, -verbose => 1);
 pod2usage(-exitval => 0, -verbose => 1) if $help;
 pod2usage(-exitval => 0, -verbose => 2, -noperldoc => 1) if $man;
@@ -205,10 +211,14 @@ if (!defined($srcball)) {
 # Create the RPM build directories.
 #
 if (!defined($topdir)) {
-    if (!defined($tmpdir)) {
-        $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    if ($prepare_only) {
+        $topdir = capture_output("rpm", "--eval", "%{_topdir}");
+    } else {
+        if (!defined($tmpdir)) {
+            $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+        }
+        $topdir = "$tmpdir/rpmdir";
     }
-    $topdir = "$tmpdir/rpmdir";
 }
 # Resolve to an absolute path now: the script chdir()s to the git toplevel
 # directory below to build the source archive, and a relative $topdir must
@@ -224,6 +234,9 @@ File::Path::mkpath(["$topdir/SPECS",
 #
 if (!defined($srcball)) {
     $openafs_version = capture_output("$toplevel/build-tools/git-version", $toplevel);
+    if ($ignore_dirty) {
+        $openafs_version =~ s/-dirty$//;
+    }
     if ($openafs_version =~ /-dirty$/) {
         die "$progname: You have uncommitted changes. Please commit or stash them.\n";
     }
@@ -347,6 +360,8 @@ if (defined($srcball)) {
     File::Copy::copy($srcball,
                      "$topdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
         or die "$progname: Unable to copy $srcball into position: $!\n";
+} elsif ($omit_source) {
+    print "$progname: Skipping source archive creation (--omit-source specified)\n";
 } else {
     # Create the source archive if not specified.
     print "$progname: Creating source archive.\n";
@@ -451,6 +466,14 @@ close $in_fh;
 my $srpm;
 my $abs_topdir = File::Spec->rel2abs($topdir);
 
+if ($prepare_only) {
+    print "$progname: RPM build directories prepared in '$abs_topdir'\n";
+    print "$progname: SRPM build skipped (--prepare-only specified)\n";
+    print "$progname: To build packages, run:\n";
+    print "$progname:   rpmbuild -ba --define '_topdir $abs_topdir' $spec_output\n";
+    exit 0;
+}
+
 open(my $rpmbuild, "-|",
      "rpmbuild", "-bs", "--nodeps",
      "--define", "dist %undefined",
@@ -505,6 +528,9 @@ B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--packaging> I<DIR>] >>>
                S<<< [B<--spec> I<FILE>] >>>
                S<<< [B<--rpm-build-dir> I<DIR>] >>>
+               S<<< [B<--prepare-only>] >>>
+               S<<< [B<--omit-source>] >>>
+               S<<< [B<--ignore-dirty>] >>>
                S<<< [B<--help> | B<--man>] >>>
 
 =head1 DESCRIPTION
@@ -522,6 +548,12 @@ in the local git repository.
 
 When run with the B<--source> option, B<makesrpm> will extract the spec file
 and packaging files from the source archive instead of the git working tree.
+
+This tool can also prepare an RPM build directory for building OpenAFS RPM
+packages instead of building an SRPM.  When run with the B<--prepare-only>
+option, B<makesrpm> will create and populate RPM build directories instead of
+building the SRPM. This allows you to inspect or modify the packaging files
+before running B<rpmbuild> manually.
 
 =head1 OPTIONS
 
@@ -605,6 +637,27 @@ Specifies the directory to use for the RPM build. The C<SPECS>, C<SOURCES>, and
 C<SRPMS> subdirectories will be created in this directory.  If this option is
 not provided, a temporary directory is used, which is automatically removed
 when the script exits.
+
+=item B<--prepare-only>
+
+Prepare the rpmbuild C<SOURCES> and C<SPECS> directories with the packaging
+files, but do not run C<rpmbuild> to build the SRPM.  The RPM build
+directories will be created in the path specified by the B<--rpm-build-dir>
+option. If the B<--rpm-build-dir> option is not specified, the default RPM
+build path will be used (e.g., C<$HOME/rpmbuild>) instead of a temporary
+directory.
+
+=item B<--omit-source>
+
+Skip building the source archive when preparing the RPM build directories. This
+can be combined with B<--prepare-only> to update the packaging files in the
+RPM build directory.  This option is ignored when the B<--source> option is
+specified.
+
+=item B<--ignore-dirty>
+
+Build the source archive even when uncommitted changes are detected in the
+source tree.  This option is ignored when the B<--source> option is specified.
 
 =item B<--help>
 
