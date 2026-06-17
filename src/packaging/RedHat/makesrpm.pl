@@ -18,6 +18,8 @@ use File::Spec;
 # Globals
 my $progname = "makesrpm";
 my $tmpdir;
+my $toplevel;
+my $docball_required = 0;
 
 # Options
 my $help = 0;
@@ -96,6 +98,42 @@ sub run_command {
     }
 }
 
+#
+# Run a command and return the stdout as a string.
+#
+# Arguments:
+#   args - command line arguments
+#
+# Dies with an error message if the command returns a non-zero exit code.
+#
+sub capture_output {
+    my @args = @_;
+    my $command = join(' ', @args);
+    my $output;
+
+    open(my $pipe, "-|", @args) or
+      die "$progname: Unable to run '$command': $!\n";
+    {
+        local $/;  # Slurp the whole output.
+        $output = <$pipe>;
+    }
+    chomp $output;
+    if (!close($pipe)) {
+        if ($!) {
+            die "$progname: Failed to close pipe: $!\n";
+        }
+        my $exit_code = $? >> 8;
+        my $signal = $? & 127;
+
+        if ($signal) {
+            my $coredump = ($? & 128) ? " (core dumped)" : "";
+            die "$progname: '$command' died with signal $signal$coredump\n";
+        }
+        die "$progname: Command '$command' failed with exit code ${exit_code} (status $?)\n";
+    }
+    return $output;
+}
+
 GetOptions(
     "help|?" => \$help,
     "man" => \$man,
@@ -145,11 +183,11 @@ $changelog  = $ARGV[3] if !defined($changelog)  && defined($ARGV[3]);
 $cellservdb = $ARGV[4] if !defined($cellservdb) && defined($ARGV[4]);
 
 if (!defined($srcball)) {
-    pod2usage(-exitval => 1, -verbose => 0, -message => "--source is required");
-}
-
-if (! -f $srcball) {
-    die "$progname: Source archive not found: $srcball\n";
+    $toplevel = capture_output("git", "rev-parse", "--show-toplevel");
+} else {
+    if (! -f $srcball) {
+        die "$progname: Source archive not found: $srcball\n";
+    }
 }
 
 #
@@ -170,17 +208,24 @@ my $openafs_version;
 my $package_version;
 my $package_release;
 
-if (!defined($tmpdir)) {
-    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+if (!defined($srcball)) {
+    $openafs_version = capture_output("$toplevel/build-tools/git-version", $toplevel);
+    if ($openafs_version =~ /-dirty$/) {
+        die "$progname: You have uncommitted changes. Please commit or stash them.\n";
+    }
+} else {
+    if (!defined($tmpdir)) {
+        $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    }
+    run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/.version");
+    my ($dot_version) = glob("$tmpdir/openafs-*/.version");
+    if (!defined($dot_version)) {
+        die "$progname: Unable to find '.version' in '${srcball}'.\n";
+    }
+    $openafs_version = read_file($dot_version);
+    $openafs_version =~ s/openafs-[^-]*-//;
+    $openafs_version =~ s/_/./g;
 }
-run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards", "*/.version");
-my ($dot_version) = glob("$tmpdir/openafs-*/.version");
-if (!defined($dot_version)) {
-    die "$progname: Unable to find '.version' in '${srcball}'.\n";
-}
-$openafs_version = read_file($dot_version);
-$openafs_version =~ s/openafs-[^-]*-//;
-$openafs_version =~ s/_/./g;
 print "$progname: Building version $openafs_version\n";
 
 #
@@ -217,49 +262,70 @@ print "$progname: Package version is $package_version\n";
 print "$progname: Package release is $package_release\n";
 
 #
-# Extract the packaging files.
+# Determine the path to the packaging files.
 #
-if (!defined($tmpdir)) {
-    $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-}
-run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards", "*/src/packaging/RedHat");
-my ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
-if (!defined($packaging)) {
-    die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
+my $packaging;
+if (!defined($srcball)) {
+    $packaging = "$toplevel/src/packaging/RedHat";
+} else {
+    if (!defined($tmpdir)) {
+        $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    }
+    run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards", "*/src/packaging/RedHat");
+    ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
+    if (!defined($packaging)) {
+        die "$progname: Unable to find RedHat packaging directory in '${srcball}'.\n";
+    }
 }
 
 #
-# Inspect the spec file to determine the CellServDB URL.
+# Inspect the spec file to determine the CellServDB URL and whether a doc
+# archive is required.
 #
 my $spec_input = "$packaging/openafs.spec.in";
-my $cellservdb_change_source;
-if ($cellservdb_url) {
-    $cellservdb_change_source = 1;  # Change the CellServDB source value in the spec.
-} else {
-    # Extract the CellServDB source URL from the input spec file.
-    open(my $fh, $spec_input) or die "$progname: Unable to open $spec_input: $!\n";
-    while (<$fh>) {
-        if (/^Source20:\s*(.*)\s*$/) {
-            $cellservdb_url = $1;
-            last;
-        }
+my $cellservdb_change_source = $cellservdb_url ? 1 : 0;
+
+# Older versions of the spec file required a separate archive for the
+# documentation.  Check the spec file if a doc archive is needed, and get the
+# CellServDB source URL when --cellservdb-url was not given.
+open(my $fh, $spec_input) or die "$progname: Unable to open $spec_input: $!\n";
+while (<$fh>) {
+    if (/^Source1:.*-doc\.tar\..*$/) {
+        $docball_required = 1;
     }
-    close($fh);
-    if (not $cellservdb_url) {
-        die "$progname: Unable to find CellServDB source directive in $spec_input\n";
+    if (!$cellservdb_change_source && /^Source20:\s*(.*)\s*$/) {
+        $cellservdb_url = $1;
     }
-    $cellservdb_change_source = 0;
+}
+close($fh);
+if (not $cellservdb_url) {
+    die "$progname: Unable to find CellServDB source directive in $spec_input\n";
 }
 
 #
 # Populate the SOURCES directory.
 #
-File::Copy::copy($srcball,
-                 $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
-    or die "$progname: Unable to copy $srcball into position: $!\n";
 
-# Copy the doc archive if specified.
+if (defined($srcball)) {
+    # Copy the source archive if specified.
+    File::Copy::copy($srcball,
+                     $tmpdir."/rpmdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
+        or die "$progname: Unable to copy $srcball into position: $!\n";
+} else {
+    # Create the source archive if not specified.
+    print "$progname: Creating source archive.\n";
+    my @make_release = ("$toplevel/build-tools/make-release");
+    if (!$docball_required) {
+        push(@make_release, "--no-doc-tarball");
+    }
+    push(@make_release, "--dir");
+    push(@make_release, "$tmpdir/rpmdir/SOURCES");
+    push(@make_release, "HEAD");
+    run_command(@make_release);
+}
+
 if (defined($docball)) {
+    # Copy the doc archive if specified.
     File::Copy::copy($docball,
                      "$tmpdir/rpmdir/SOURCES/openafs-${openafs_version}-doc.tar.bz2")
         or die "$progname: Unable to copy $docball into position: $!\n";
@@ -385,7 +451,7 @@ makesrpm - Build an OpenAFS SRPM for RHEL-family distributions
 
 =head1 SYNOPSIS
 
-B<makesrpm.pl> S<<< B<--source> I<FILE> >>>
+B<makesrpm.pl> S<<< [B<--source> I<FILE>] >>>
                S<<< [B<--doc> I<FILE>] >>>
                S<<< [B<--relnotes> I<FILE>] >>>
                S<<< [B<--changelog> I<FILE>] >>>
@@ -397,10 +463,18 @@ B<makesrpm.pl> S<<< B<--source> I<FILE> >>>
 =head1 DESCRIPTION
 
 B<makesrpm> is a tool to build an OpenAFS SRPM file for RHEL and RHEL-derived
-distributions.
+distributions. It can build the SRPM from either a local git repository or a
+source distribution archive.
 
-B<makesrpm> will extract the spec file and packaging files from the source
-archive.
+When run without any options from within an OpenAFS local git repository,
+B<makesrpm> will build a source archive from the current C<HEAD> commit and
+then build the SRPM using the spec file and packaging files located in the
+F<src/packaging/RedHat> directory in the source tree.  By default, B<makesrpm>
+will refuse to build the source archive when uncommitted changes are detected
+in the local git repository.
+
+When run with the B<--source> option, B<makesrpm> will extract the spec file
+and packaging files from the source archive instead of the git working tree.
 
 =head1 OPTIONS
 
@@ -409,7 +483,9 @@ archive.
 =item B<--source> I<FILE>
 
 Use the specified OpenAFS source archive I<FILE>.  The archive is copied into
-the C<SOURCES> directory and renamed based on the OpenAFS version.
+the C<SOURCES> directory and renamed based on the OpenAFS version. The
+source archive is built from the current git commit when B<--source>
+is not specified.
 
 =item B<--doc> I<FILE>
 
@@ -419,14 +495,17 @@ into the C<SOURCES> directory and renamed based on the OpenAFS version.
 =item B<--relnotes> I<FILE>
 
 Use the specified release notes file I<FILE>. The file is copied into the
-C<SOURCES> directory and renamed appropriately.  An empty release notes file is
-created if this option is not provided.
+C<SOURCES> directory and renamed appropriately.  Unlike the change log,
+release notes are never generated automatically; an empty release notes file
+is created if this option is not provided.
 
 =item B<--changelog> I<FILE>
 
 Use the specified F<ChangeLog> file I<FILE>. The file is copied into the
-C<SOURCES> directory and renamed to C<ChangeLog>.  An empty F<ChangeLog> file
-is created if this option is not provided.
+C<SOURCES> directory and renamed to C<ChangeLog>.  The change log is generated
+from the current git commit when B<--source> is not specified. An empty
+F<ChangeLog> file is created if this option is not provided and B<--source> is
+specified.
 
 =item B<--cellservdb> I<FILE>
 
@@ -456,6 +535,11 @@ Print full man page and exit.
 =back
 
 =head1 EXAMPLES
+
+Build the SRPM from a git tag:
+
+    $ git checkout openafs-stable-1_8_16
+    $ ./src/packaging/RedHat/makesrpm.pl
 
 Build the SRPM from a source distribution archive:
 
