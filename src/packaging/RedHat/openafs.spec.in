@@ -76,7 +76,17 @@
 %define kmodtool bash %{_sourcedir}/openafs-kmodtool
 
 %define kmod_name openafs
-%define kverrel %(%{kmodtool} verrel %{?kernvers} 2>/dev/null)
+
+%if %{?kernel_version:0}%{!?kernel_version:1}
+%if %{?kernvers:1}%{!?kernvers:0}
+%{warn: kernvers is deprecated; Use --define "kernel_version <version>"}
+%global kernel_version %{kernvers}
+%else
+%global kernel_version %(uname -r)
+%endif
+%endif
+
+%define kverrel %(%{kmodtool} verrel %{?kernel_version} 2>/dev/null)
 
 %define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
 
@@ -149,14 +159,10 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "source_date_epoch 1712832000"  Specify the build timestamp. The default
                                           is the current system time.
 
- --define "kernvers 3.19.3-100.fc20.i686" Specify the specific kernel version
+ --define "kernel_version 3.19.3-100.fc20.i686" Specify the specific kernel version
                                   to build modules against. The default is
                                   to build against the currently-running
                                   kernel.
- --define "kbase /lib/modules/"   The base location to look for kernel headers
- --define "kend /build"           The 'end' location to look for kernels
-                                  The build will define ksrvdir as
-                                  %%{kbase}<kernvers>%%{kend}
 
  --without authlibs               Disable authlibs package (default: with authlibs)
  --without krb5                   Disable krb5 support (default: with krb5)
@@ -171,10 +177,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "build_userspace 1"     Request building of userspace tools
  --define "build_modules 1"       Request building of kernel modules
                                   You probably never need to specify these.
-
- --define "kmoddir /lib/modules"  This is the base location where modules
-                                  will be installed.  You probably don't
-                                  need to change this ever.
 
 To a kernel module for your running kernel, just run:
   rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
