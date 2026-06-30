@@ -68,10 +68,23 @@
 %define depmod /sbin/depmod
 %endif
 
-%define kmodtool bash %{_sourcedir}/openafs-kmodtool
-
 %define kmod_name openafs
-%define kverrel %(%{kmodtool} verrel %{?kernvers} 2>/dev/null)
+
+%if %{?kernvers:0}%{!?kernvers:1}
+%global kernvers %(uname -r)
+%endif
+
+%global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
+
+%if 0%{?amzn} >= 2023
+%global kernel_epoch 1:
+%else
+%global kernel_epoch %nil
+%endif
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%global _find_debuginfo_opts %{?_find_debuginfo_opts} -p '.*openafs\.ko.*' -o kmod-debuginfo.list
+%endif
 
 %define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
 
@@ -124,7 +137,6 @@ Source36: openafs-server.init
 Source37: openafs-server.service
 Source38: openafs.sysconfig
 Source39: openafs-ThisCell
-Source999: openafs-kmodtool
 
 %description
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -387,7 +399,39 @@ krb4 lookalike services.
 
 %if %{build_modules}
 
-%{expand:%(%{kmodtool} rpmtemplate %{kmod_name} %{kverrel} %{depmod} '' 2>/dev/null)}
+%package -n kmod-%{kmod_name}
+Summary:          %{kmod_name} kernel module
+Group:            System Environment/Kernel
+%if ! (0%{?fedora} >= 27 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023)
+Provides:         kernel-modules = %{kernel_epoch}%{kernvers}
+%endif
+Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides:         openafs-kernel = %{version}
+Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
+Requires(post):   %{depmod}
+Requires(postun): %{depmod}
+Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+%if 0%{?rhel} >= 8 || 0%{?amzn} >= 2023
+BuildRequires: elfutils-devel
+%endif
+
+%description -n kmod-%{kmod_name}
+This package provides the %{kmod_name} kernel modules built for the Linux
+kernel %{kernvers} for the %{_target_cpu} family of processors.
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%package -n kmod-%{kmod_name}-debuginfo
+Summary:          Debug information for %{kmod_name} kernel modules
+Group:            Development/Debug
+Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+AutoReqProv:      no
+
+%description   -n kmod-%{kmod_name}-debuginfo
+This package provides debug information for the %{kmod_name} kernel modules
+built for the Linux kernel %{kernvers} for the %{_target_cpu} family of processors.
+%endif
 
 %endif
 
@@ -870,6 +914,14 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 /sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
 %endif
 
+%if %{build_modules}
+%post -n kmod-%{kmod_name}
+%{depmod} -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
+
+%postun -n kmod-%{kmod_name}
+%{depmod} -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
+%endif
+
 #-----------------------------------------------------------------------------
 # File lists
 #-----------------------------------------------------------------------------
@@ -1229,6 +1281,20 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/akeyconvert.8.gz
 %{_mandir}/man8/asetkey.8.gz
 %endif
+%endif
+
+%if %{build_modules}
+
+%files -n kmod-%{kmod_name}
+%defattr(644,root,root,755)
+/lib/modules/%{kernvers}/extra/%{kmod_name}/
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%files -n kmod-%{kmod_name}-debuginfo
+%defattr(-,root,root)
+kmod-debuginfo.list
+%endif
+
 %endif
 
 #-----------------------------------------------------------------------------
