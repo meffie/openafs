@@ -33,7 +33,7 @@ _comptest_completion()
 	local cur="${COMP_WORDS[COMP_CWORD]}"
 	local prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-	local cmd_list=$(_comptest_completion_commands "$prev" "$cur")
+	local cmd_list=$(./comptest -completion-helper -- "$prev" "$cur" 2>/tmp/comptest.err)
 	COMPREPLY=( $(compgen -W "$cmd_list" -- "$cur") )
 }
 
