@@ -819,6 +819,27 @@ initSyntax(void)
     }
 }
 
+static void
+CompletionHelper(int argc, char **argv)
+{
+    const char *prev = NULL;
+    const char *cur = NULL;
+
+    if (argc >= 4) {
+	prev = argv[3];
+    }
+    if (argc >= 5) {
+	cur = argv[4];
+    }
+    fprintf(stderr, "DEBUG: prev = '%s', cur = '%s'\n", prev, cur);
+
+    /* TODO: Process "prev" and "cur" to print list of words. */
+    /*       The linked list of syntaxes is allSyntax */
+    /*       Each syntax has an array of parameters in parms */
+
+    printf("one two three four five\n");
+}
+
 /* Call the appropriate function, or return syntax error code.  Note: if
  * no opcode is specified, an initialization routine exists, and it has
  * NOT been called before, we invoke the special initialization opcode
@@ -848,6 +869,11 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
 
     /*Remember the program name */
     pname = argv[0];
+
+    if (argc > 1 && strcmp(argv[1], "-completion-helper") == 0) {
+	CompletionHelper(argc, argv);
+	return CMD_HELP;
+    }
 
     if (noOpcodes) {
 	if (argc == 1) {

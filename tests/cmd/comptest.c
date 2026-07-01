@@ -32,16 +32,8 @@
 #include <afs/cmd.h>
 
 static int
-command_foo(struct cmd_syndesc *as, void *arock)
+command_proc(struct cmd_syndesc *as, void *arock)
 {
-    printf("Running foo\n");
-    return 0;
-}
-
-static int
-command_bar(struct cmd_syndesc *as, void *arock)
-{
-    printf("Running bar\n");
     return 0;
 }
 
@@ -51,11 +43,42 @@ main(int argc, char *argv[])
     int code;
     struct cmd_syndesc *syntax;
 
-    syntax = cmd_CreateSyntax("foo", command_foo, NULL, 0, "command foo");
-    cmd_AddParm(syntax, "-example", CMD_FLAG, CMD_OPTIONAL, "example flag");
+    syntax = cmd_CreateSyntax("one", command_proc, NULL, 0, "test command one");
+    cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
+    cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-pear", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-plum", CMD_SINGLE, CMD_OPTIONAL, "example");
 
-    syntax = cmd_CreateSyntax("bar", command_bar, NULL, 0, "command bar");
-    cmd_AddParm(syntax, "-option", CMD_SINGLE, CMD_REQUIRED, "example option");
+    syntax = cmd_CreateSyntax("two", command_proc, NULL, 0, "test command two");
+    cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
+    cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-orange", CMD_SINGLE, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-lime", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_CreateAlias(syntax, "duo");
+
+    syntax = cmd_CreateSyntax("three", command_proc, NULL, 0, "test command three");
+    cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
+    cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-lime", CMD_FLAG, CMD_OPTIONAL, "example");
+
+    syntax = cmd_CreateSyntax("four", command_proc, NULL, 0, "test command four");
+    cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
+    cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-lime", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-kiwi", CMD_FLAG, CMD_OPTIONAL, "example");
+
+    syntax = cmd_CreateSyntax("five", command_proc, NULL, 0, "test command five");
+    cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
+    cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-pear", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-kiwi", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-mango", CMD_FLAG, CMD_OPTIONAL, "example");
+
 
     code = cmd_Dispatch(argc, argv);
     return code;
