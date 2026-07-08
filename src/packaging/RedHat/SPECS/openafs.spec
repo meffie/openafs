@@ -486,78 +486,78 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %if %{build_userspace}
 
 # Install userspace files
-make %{_smp_mflags} install_nolibafs DESTDIR="$RPM_BUILD_ROOT"
+make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 
 # Exclude duplicated files.
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/bos
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/fs
+rm -f %{buildroot}%{_prefix}/afs/bin/bos
+rm -f %{buildroot}%{_prefix}/afs/bin/fs
 %if %{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kas
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/klog
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/klog.krb
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kpwvalid
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_sbindir}/kpwvalid
+rm -f %{buildroot}%{_prefix}/afs/bin/kas
+rm -f %{buildroot}%{_prefix}/afs/bin/klog
+rm -f %{buildroot}%{_prefix}/afs/bin/klog.krb
+rm -f %{buildroot}%{_prefix}/afs/bin/kpwvalid
+rm -f %{buildroot}%{_sbindir}/kpwvalid
 %endif
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/pts
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/udebug
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/vos
+rm -f %{buildroot}%{_prefix}/afs/bin/pts
+rm -f %{buildroot}%{_prefix}/afs/bin/tokens
+rm -f %{buildroot}%{_prefix}/afs/bin/tokens.krb
+rm -f %{buildroot}%{_prefix}/afs/bin/udebug
+rm -f %{buildroot}%{_prefix}/afs/bin/vos
 
 # Relocate afsd to legacy path to match systemd files.
-mv $RPM_BUILD_ROOT%{_sbindir}/afsd $RPM_BUILD_ROOT%{_prefix}/vice/etc/afsd
+mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
 
 # Relocate admin utilities to a modern path.
 %if %{kauth_support}
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/kadb_check $RPM_BUILD_ROOT%{_sbindir}/kadb_check
+mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
 %endif
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/prdb_check $RPM_BUILD_ROOT%{_sbindir}/prdb_check
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_check $RPM_BUILD_ROOT%{_sbindir}/vldb_check
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_convert $RPM_BUILD_ROOT%{_sbindir}/vldb_convert
+mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
+mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
+mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
 %if %{krb5support}
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/akeyconvert $RPM_BUILD_ROOT%{_sbindir}/akeyconvert
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/asetkey $RPM_BUILD_ROOT%{_sbindir}/asetkey
+mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
+mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
 %endif
 
 %if %{kauth_support}
 # Relocate PAM files to the standard PAM module path.
-mkdir -p $RPM_BUILD_ROOT%{pamdir}
-mv $RPM_BUILD_ROOT%{_libdir}/pam_afs.krb.so $RPM_BUILD_ROOT%{pamdir}
-mv $RPM_BUILD_ROOT%{_libdir}/pam_afs.so $RPM_BUILD_ROOT%{pamdir}
-ln -sf pam_afs.so $RPM_BUILD_ROOT%{pamdir}/pam_afs.so.1
-ln -sf pam_afs.krb.so $RPM_BUILD_ROOT%{pamdir}/pam_afs.krb.so.1
+mkdir -p %{buildroot}%{pamdir}
+mv %{buildroot}%{_libdir}/pam_afs.krb.so %{buildroot}%{pamdir}
+mv %{buildroot}%{_libdir}/pam_afs.so %{buildroot}%{pamdir}
+ln -sf pam_afs.so %{buildroot}%{pamdir}/pam_afs.so.1
+ln -sf pam_afs.krb.so %{buildroot}%{pamdir}/pam_afs.krb.so.1
 
 # Rename kpasswd to avoid conflicting with krb5 kpasswd.
-mv $RPM_BUILD_ROOT%{_bindir}/kpasswd $RPM_BUILD_ROOT%{_bindir}/kapasswd
-mv $RPM_BUILD_ROOT%{_mandir}/man1/kpasswd.1 $RPM_BUILD_ROOT%{_mandir}/man1/kapasswd.1
+mv %{buildroot}%{_bindir}/kpasswd %{buildroot}%{_bindir}/kapasswd
+mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 %endif
 
 
 # Install client and server systemd files.
-mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
-install -m 755 %{SOURCE38} $RPM_BUILD_ROOT/etc/sysconfig/openafs
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -m 644 %{SOURCE32} $RPM_BUILD_ROOT%{_unitdir}/openafs-client.service
-install -m 644 %{SOURCE37} $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
-install -m 755 %{SOURCE33} $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+mkdir -p %{buildroot}/etc/sysconfig
+install -m 755 %{SOURCE38} %{buildroot}/etc/sysconfig/openafs
+mkdir -p %{buildroot}%{_unitdir}
+install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
+install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
+install -m 755 %{SOURCE33} %{buildroot}%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
 
 # Install server directories.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/etc
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/logs
+mkdir -p %{buildroot}%{_prefix}/afs/etc
+mkdir -p %{buildroot}%{_prefix}/afs/logs
 
 # Install client directories and config files.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/etc
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/cache
-chmod 700 $RPM_BUILD_ROOT%{_prefix}/vice/cache
-install -p -m 644 %{SOURCE39} $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
-install -p -m 644 %{SOURCE20} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.dist
-install -p -m 644 %{SOURCE30} $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
+mkdir -p %{buildroot}%{_prefix}/vice/etc
+mkdir -p %{buildroot}%{_prefix}/vice/cache
+chmod 700 %{buildroot}%{_prefix}/vice/cache
+install -p -m 644 %{SOURCE39} %{buildroot}%{_prefix}/vice/etc/ThisCell
+install -p -m 644 %{SOURCE20} %{buildroot}%{_prefix}/vice/etc/CellServDB.dist
+install -p -m 644 %{SOURCE30} %{buildroot}%{_prefix}/vice/etc/cacheinfo
 
 # Install DKMS source.
-install -d -m 755 $RPM_BUILD_ROOT%{_prefix}/src
-cp -a libafs_tree $RPM_BUILD_ROOT%{_prefix}/src/%{name}-%{dkms_version}
+install -d -m 755 %{buildroot}%{_prefix}/src
+cp -a libafs_tree %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}
 
-cat > $RPM_BUILD_ROOT%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf <<"EOF"
+cat > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf <<"EOF"
 
 PACKAGE_VERSION="%{dkms_version}"
 
@@ -575,23 +575,23 @@ NO_WEAK_MODULES=yes
 EOF
 
 # Install the kernel module source tree.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
+mkdir -p %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
-install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
+    tar xf - -C %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
+install -m 644 LICENSE %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
+install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
+install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/README
 
 # Install documentation.
-mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
+mkdir -p %{buildroot}/$RPM_DOC_DIR/openafs-%{afsvers}
 tar cf - -C doc html pdf | \
-    tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
+    tar xf - -C %{buildroot}/$RPM_DOC_DIR/openafs-%{afsvers}
+install -m 644 %{SOURCE10} %{buildroot}/$RPM_DOC_DIR/openafs-%{afsvers}
+install -m 644 %{SOURCE11} %{buildroot}/$RPM_DOC_DIR/openafs-%{afsvers}
 
 # Install directories for compatiblity links.
-mkdir -p $RPM_BUILD_ROOT%{afswsdir}/bin
-mkdir -p $RPM_BUILD_ROOT%{afswsdir}/etc
+mkdir -p %{buildroot}%{afswsdir}/bin
+mkdir -p %{buildroot}%{afswsdir}/etc
 
 %endif
 
@@ -600,10 +600,10 @@ mkdir -p $RPM_BUILD_ROOT%{afswsdir}/etc
 
 if [ -d src/libafs/MODLOAD-%{kverrel} ] ; then
     srcdir=src/libafs/MODLOAD-%{kverrel}
-    dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}/extra/openafs
+    dstdir=%{buildroot}/lib/modules/%{kverrel}/extra/openafs
 else
     srcdir=src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}
-    dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
+    dstdir=%{buildroot}/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
 fi
 
 mkdir -p ${dstdir}
