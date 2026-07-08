@@ -484,7 +484,7 @@ export KRB5_CONFIG
        || exit 1
 
 # Build the libafs tree
-make %{_smp_mflags} only_libafs_tree || exit 1
+make %{_smp_mflags} only_libafs_tree V=0 || exit 1
 
 %if %{krb5support}
 %if %{?krb5config:1}%{!?krb5config:0}
@@ -494,11 +494,11 @@ export KRB5_CONFIG
 %endif
 
 %if %{build_userspace}
-make %{_smp_mflags} all_nolibafs
+make %{_smp_mflags} all_nolibafs V=0
 %endif
 
 %if %{build_modules}
-make %{_smp_mflags} libafs
+make %{_smp_mflags} libafs V=0
 %endif
 
 ##############################################################################
@@ -522,7 +522,7 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 #-----------------------------------------------------------------------------
 # Install userspace files
 #-----------------------------------------------------------------------------
-make %{_smp_mflags} install_nolibafs DESTDIR="$RPM_BUILD_ROOT"
+make %{_smp_mflags} install_nolibafs V=0 DESTDIR="$RPM_BUILD_ROOT"
 
 # Set the executable bit on libraries in libdir, so rpmbuild knows to
 # create "Provides" entries in the package metadata for the libraries
