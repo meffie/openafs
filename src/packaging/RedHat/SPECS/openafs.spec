@@ -441,20 +441,12 @@ export KRB5_CONFIG="%{krb5config}"
 %endif
 %endif
 
-case %{_arch} in
-       x86_64)                         sysname=amd64_linux26        ;;
-       alpha*)                         sysname=alpha_linux_26       ;;
-       i386|i486|i586|i686|athlon)     sysname=i386_linux26         ;;
-       aarch64)                        sysname=arm64_linux26        ;;
-       *)                              sysname=%{_arch}_linux26     ;;
-esac
-
 config_opts="%{?_with_kauth:--enable-kauth} \
         %{?_with_bitmap_later:--enable-bitmap-later} \
         %{?_with_supergroups:--enable-supergroups} \
         --enable-transarc-paths"
 
-./configure --with-afs-sysname=${sysname} \
+./configure \
        --prefix=%{_prefix} \
        --libdir=%{_libdir} \
        --bindir=%{_bindir} \
