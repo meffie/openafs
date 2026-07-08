@@ -1,10 +1,20 @@
 # Openafs Spec
 
-%define afsvers @PACKAGE_VERSION@
-%define pkgvers @LINUX_PKGVER@
-# for beta/rc releases make pkgrel 0.<tag>
-# for real releases make pkgrel 1 (or more for extra releases)
-%define pkgrel @LINUX_PKGREL@
+
+#-----------------------------------------------------------------------------
+# Version information
+#-----------------------------------------------------------------------------
+%if ! %{defined openafs_version}
+%global openafs_version %{nil}
+%endif
+
+%if ! %{defined package_version}
+%global package_version %{openafs_version}
+%endif
+
+%if ! %{defined package_release}
+%global package_release 1
+%endif
 
 %if %{?packager:0}%{!?packager:1}
 %global packager OpenAFS Maintainers <openafs-bugs@openafs.org>
@@ -65,13 +75,13 @@
 %global kernel_epoch %nil
 %endif
 
-%define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
+%define dkms_version %{package_version}-%{package_release}%{?dist}
 
 
 Summary: OpenAFS distributed filesystem
 Name: openafs
-Version: %{pkgvers}
-Release: %{pkgrel}%{?dist}
+Version: %{package_version}
+Release: %{package_release}%{?dist}
 License: IBM Public License
 URL: https://www.openafs.org
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
@@ -92,9 +102,9 @@ BuildRequires: elfutils-devel
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
-Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
-Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
+Source0: https://www.openafs.org/dl/openafs/%{openafs_version}/openafs-%{openafs_version}-src.tar.bz2
+Source10: https://www.openafs.org/dl/openafs/%{openafs_version}/RELNOTES-%{openafs_version}
+Source11: https://www.openafs.org/dl/openafs/%{openafs_version}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
 Source30: openafs-cacheinfo
 Source32: openafs-client.service
@@ -133,7 +143,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   You probably never need to specify these.
 
 To a kernel module for your running kernel, just run:
-  rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
+  rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
 
 ##############################################################################
 #
@@ -329,7 +339,7 @@ Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 Requires:         %{name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
-Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+Release:          %{package_release}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
@@ -358,7 +368,7 @@ kernel %{kernel_version} for the %{_target_cpu} family of processors.
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Install OpenAFS src
-%setup -q -n openafs-%{afsvers}
+%setup -q -n openafs-%{openafs_version}
 
 ##############################################################################
 #
@@ -381,7 +391,7 @@ config_opts="%{?_with_supergroups:--enable-supergroups} \
        --libdir=%{_libdir} \
        --bindir=%{_bindir} \
        --sbindir=%{_sbindir} \
-       --docdir=%{_docdir}/openafs-%{afsvers} \
+       --docdir=%{_docdir}/openafs-%{openafs_version} \
        --disable-strip-binaries \
        --enable-debug \
 %if %{build_modules}
@@ -552,21 +562,21 @@ EOF
 #-----------------------------------------------------------------------------
 # Install the kernel module source tree.
 #-----------------------------------------------------------------------------
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
+mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{openafs_version}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
-install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
+    tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{openafs_version}/src
+install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.IBM
+install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.Sun
+install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{openafs_version}/README
 
 #-----------------------------------------------------------------------------
 # Install documentation.
 #-----------------------------------------------------------------------------
-mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
+mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{openafs_version}
 tar cf - -C doc html pdf | \
-    tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
+    tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{openafs_version}
+install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{openafs_version}
+install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{openafs_version}
 
 #-----------------------------------------------------------------------------
 # Install directories for compatiblity links.
@@ -732,7 +742,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %files
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/openafs
-%doc %{_docdir}/openafs-%{afsvers}/LICENSE
+%doc %{_docdir}/openafs-%{openafs_version}/LICENSE
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -809,11 +819,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files docs
 %defattr(-,root,root)
-%docdir %{_docdir}/openafs-%{afsvers}
-%dir %{_docdir}/openafs-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/ChangeLog
-%{_docdir}/openafs-%{afsvers}/RELNOTES-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/pdf
+%docdir %{_docdir}/openafs-%{openafs_version}
+%dir %{_docdir}/openafs-%{openafs_version}
+%{_docdir}/openafs-%{openafs_version}/ChangeLog
+%{_docdir}/openafs-%{openafs_version}/RELNOTES-%{openafs_version}
+%{_docdir}/openafs-%{openafs_version}/pdf
 
 %files client
 %defattr(-,root,root)
@@ -983,10 +993,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files kernel-source
 %defattr(-,root,root)
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-%{_prefix}/src/openafs-kernel-%{afsvers}/README
-%{_prefix}/src/openafs-kernel-%{afsvers}/src
+%{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.IBM
+%{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.Sun
+%{_prefix}/src/openafs-kernel-%{openafs_version}/README
+%{_prefix}/src/openafs-kernel-%{openafs_version}/src
 
 %files compat
 %defattr(-,root,root)

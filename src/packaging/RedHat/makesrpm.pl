@@ -457,6 +457,10 @@ open(my $out_fh, '>', $spec_output)
   or die "$progname: Cannot open output spec file '$spec_output': $!";
 
 while (<$in_fh>) {
+    s/^\%global openafs_version.*/%define openafs_version $openafs_version/g;
+    s/^\%global package_version.*/%define package_version $package_version/g;
+    s/^\%global package_release.*/%define package_release $package_release/g;
+
     s/^\%define afsvers.*/%define afsvers $openafs_version/g;
     s/^\%define pkgvers.*/%define pkgvers $package_version/g;
     s/^\%define pkgrel.*/%define pkgrel $package_release/g;
