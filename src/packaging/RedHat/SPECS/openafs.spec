@@ -142,7 +142,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
 
  --without authlibs               Disable authlibs package (default: with authlibs)
  --without krb5                   Disable krb5 support (default: with krb5)
- --with bitmap-later              Enable "bitmap later" support
  --with supergroups               Enable "supergroups"
  --with kauth                     Build the openafs-kauth-server and openafs-kauth-client
                                   packages which contain the legacy kaserver and
@@ -438,7 +437,6 @@ export KRB5_CONFIG="%{krb5config}"
 %endif
 
 config_opts="%{?_with_kauth:--enable-kauth} \
-        %{?_with_bitmap_later:--enable-bitmap-later} \
         %{?_with_supergroups:--enable-supergroups} \
         --enable-transarc-paths"
 
