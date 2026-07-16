@@ -822,22 +822,63 @@ initSyntax(void)
 static void
 CompletionHelper(int argc, char **argv)
 {
-    const char *prev = NULL;
-    const char *cur = NULL;
+	int pos_cword = 0;
+	int nwords = 0;
+	const char *subcommand = NULL;
+	const char *prev = NULL;
+	const char *cur = NULL;
+	char **word_list = NULL;
+	struct cmd_syndesc *ts = NULL;
+	int i = 0;
 
-    if (argc >= 4) {
-	prev = argv[3];
-    }
-    if (argc >= 5) {
-	cur = argv[4];
-    }
-    fprintf(stderr, "DEBUG: prev = '%s', cur = '%s'\n", prev, cur);
+	if (argc >= 5) {
+		pos_cword = atoi(argv[3]);
+		nwords = argc - 4;
+		word_list = &argv[4];
+	} else {
+		return;
+	}
 
-    /* TODO: Process "prev" and "cur" to print list of words. */
-    /*       The linked list of syntaxes is allSyntax */
-    /*       Each syntax has an array of parameters in parms */
+	if (nwords >= 2) {
+		subcommand = word_list[1];
+	}
 
-    printf("one two three four five\n");
+	if (pos_cword >= 0 && pos_cword < nwords) {
+		cur = word_list[pos_cword];
+	}
+
+	if (pos_cword >= 1 && pos_cword - 1 < nwords) {
+		prev = word_list[pos_cword - 1];
+	}
+
+	ts = allSyntax;
+
+	if (pos_cword <= 1) {
+		while (ts != NULL) {
+			if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
+				ts = ts->next;
+			} else {
+				printf("%s ", ts->name);
+				ts = ts->next;
+			}
+		}
+	} else {
+		while (ts != NULL && strcmp(ts->name, subcommand) != 0) {
+			ts = ts->next;
+		}
+		if (ts != NULL) {
+			for (i = 0; i < ts->nParms; i++) {
+				if (ts->parms[i].name != NULL) {
+					printf("%s ", ts->parms[i].name);
+				}
+			}
+			if (ts->parms[CMD_HELPPARM].name != NULL) {
+				printf("%s ", ts->parms[CMD_HELPPARM].name);
+			}
+		}
+	}
+	printf("\n");
+
 }
 
 /* Call the appropriate function, or return syntax error code.  Note: if
