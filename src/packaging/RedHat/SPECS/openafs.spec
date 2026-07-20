@@ -765,7 +765,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{with userspace}
 
 %files
-%defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/openafs
 %doc %{_docdir}/openafs-%{openafs_version}/LICENSE
 %{_bindir}/afsmonitor
@@ -843,7 +842,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/uss_*.8.gz
 
 %files docs
-%defattr(-,root,root)
 %docdir %{_docdir}/openafs-%{openafs_version}
 %dir %{_docdir}/openafs-%{openafs_version}
 %{_docdir}/openafs-%{openafs_version}/ChangeLog
@@ -851,7 +849,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_docdir}/openafs-%{openafs_version}/pdf
 
 %files client
-%defattr(-,root,root)
 %dir %{_prefix}/vice
 %dir %{_prefix}/vice/cache
 %dir %{_prefix}/vice/etc
@@ -880,7 +877,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man5/CellAlias.5.gz
 
 %files server
-%defattr(-,root,root)
 %dir %{_prefix}/afs
 %dir %{_prefix}/afs/bin
 %dir %{_prefix}/afs/etc
@@ -963,13 +959,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/volserver.8.gz
 
 %files authlibs
-%defattr(-,root,root)
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
 %{_libdir}/libkopenafs.so.*
 
 %files authlibs-devel
-%defattr(-,root,root)
 %{_includedir}/kopenafs.h
 %{_libdir}/libafsauthent.a
 %{_libdir}/libafscp.a
@@ -982,7 +976,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libkopenafs.so
 
 %files devel
-%defattr(-,root,root)
 %{_bindir}/afs_compile_et
 %{_bindir}/rxgen
 %{_includedir}/afs
@@ -1012,19 +1005,16 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{with dkms}
 %files -n dkms-%{name}
-%defattr(-,root,root)
 %{_prefix}/src/%{name}-%{dkms_version}
 %endif
 
 %files kernel-source
-%defattr(-,root,root)
 %{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.IBM
 %{_prefix}/src/openafs-kernel-%{openafs_version}/LICENSE.Sun
 %{_prefix}/src/openafs-kernel-%{openafs_version}/README
 %{_prefix}/src/openafs-kernel-%{openafs_version}/src
 
 %files compat
-%defattr(-,root,root)
 %dir %{afswsdir}/bin
 %dir %{afswsdir}/etc
 %ghost %{afswsdir}/bin/afsmonitor
@@ -1052,7 +1042,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/etc/vsys
 
 %files krb5
-%defattr(-,root,root)
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
 %{_sbindir}/akeyconvert
@@ -1067,7 +1056,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{with modules}
 
 %files -n kmod-%{name}
-%defattr(644,root,root,755)
 /lib/modules/%{kernel_version}/extra/%{name}/
 
 %endif
