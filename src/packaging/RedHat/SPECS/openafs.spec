@@ -437,6 +437,12 @@ kernel %{kernel_version} for the %{_target_cpu} family of processors.
 %build
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
+export CFLAGS="$RPM_OPT_FLAGS"
+%if %{krb5support}
+%if %{?krb5config:1}%{!?krb5config:0}
+export KRB5_CONFIG="%{krb5config}"
+%endif
+%endif
 
 case %{_arch} in
        x86_64)                         sysname=amd64_linux26        ;;
@@ -450,15 +456,6 @@ config_opts="%{?_with_kauth:--enable-kauth} \
         %{?_with_bitmap_later:--enable-bitmap-later} \
         %{?_with_supergroups:--enable-supergroups} \
         --enable-transarc-paths"
-
-CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
-
-%if %{krb5support}
-%if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
-%endif
-%endif
 
 ./configure --with-afs-sysname=${sysname} \
        --prefix=%{_prefix} \
@@ -488,8 +485,7 @@ make %{_smp_mflags} only_libafs_tree V=0 || exit 1
 
 %if %{krb5support}
 %if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
+export KRB5_CONFIG="%{krb5config}"
 %endif
 %endif
 
