@@ -504,26 +504,6 @@ rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/udebug
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/vos
 
-# Exclude obsolete or unused files.
-rm -f $RPM_BUILD_ROOT%{_bindir}/dlog
-rm -f $RPM_BUILD_ROOT%{_bindir}/dpass
-rm -f $RPM_BUILD_ROOT%{_bindir}/install
-rm -f $RPM_BUILD_ROOT%{_bindir}/knfs
-rm -f $RPM_BUILD_ROOT%{_bindir}/livesys
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kdb
-rm -f $RPM_BUILD_ROOT%{_sbindir}/rmtsysd
-%if !%{build_authlibs}
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsauthent.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsrpc.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libkopenafs.so*
-%endif
-rm -f $RPM_BUILD_ROOT%{_sbindir}/afsd.fuse
-%if !%{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/pagsh.krb
-%endif
-
 # Relocate afsd to legacy path to match systemd files.
 mv $RPM_BUILD_ROOT%{_sbindir}/afsd $RPM_BUILD_ROOT%{_prefix}/vice/etc/afsd
 
@@ -552,42 +532,6 @@ mv $RPM_BUILD_ROOT%{_bindir}/kpasswd $RPM_BUILD_ROOT%{_bindir}/kapasswd
 mv $RPM_BUILD_ROOT%{_mandir}/man1/kpasswd.1 $RPM_BUILD_ROOT%{_mandir}/man1/kapasswd.1
 %endif
 
-# Exclude obsolete or unused man pages.
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_ftpd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_inetd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_login.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rcp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rlogind.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rsh.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dkload.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/knfs.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/runntp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_list.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_make.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_remove.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dlog.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dpass.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/livesys.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/afsd.fuse.8
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/rmtsysd.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/aklog_dynamic_auth.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/kdb.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/xfs_size_check.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package_test.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/package.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/package.*
-%if !%{krb5support}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/akeyconvert.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/asetkey.*
-%endif
-%if !%{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/pagsh.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/tokens.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.5
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.dir.5
-%endif
 
 # Install client and server systemd files.
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
@@ -869,6 +813,33 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/read_tape.8.gz
 %{_mandir}/man8/uss.8.gz
 %{_mandir}/man8/uss_*.8.gz
+# Exclude obsolete or unused files.
+%exclude %{_bindir}/livesys
+%exclude %{_sbindir}/rmtsysd
+%exclude %{_mandir}/man1/dlog.1.gz
+%exclude %{_mandir}/man1/livesys.1.gz
+%exclude %{_mandir}/man1/symlink.1.gz
+%exclude %{_mandir}/man1/symlink_list.1.gz
+%exclude %{_mandir}/man1/symlink_make.1.gz
+%exclude %{_mandir}/man1/symlink_remove.1.gz
+%exclude %{_mandir}/man8/aklog_dynamic_auth.8.gz
+%exclude %{_mandir}/man8/rmtsysd.8.gz
+%exclude %{_mandir}/man8/xfs_size_check.8.gz
+%if ! %{build_authlibs}
+%exclude %{_libdir}/libafsauthent.so*
+%exclude %{_libdir}/libafsrpc.so*
+%exclude %{_libdir}/libkopenafs.so*
+%endif
+%if ! %{kauth_support}
+%exclude %{_bindir}/tokens.krb
+%exclude %{_bindir}/pagsh.krb
+%exclude %{_mandir}/man5/AuthLog.5.gz
+%exclude %{_mandir}/man5/AuthLog.dir.5.gz
+%endif
+%if ! %{krb5support}
+%exclude %{_mandir}/man8/akeyconvert.*
+%exclude %{_mandir}/man8/asetkey.*
+%endif
 
 %files docs
 %docdir %{_docdir}/openafs-%{afsvers}
@@ -1101,6 +1072,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/kpwvalid.8.gz
 %{_mandir}/man8/kas.8.gz
 %{_mandir}/man8/kas_*.8.gz
+%exclude %{_bindir}/knfs
+%exclude %{_mandir}/man1/knfs.1.gz
 
 %files kauth-server
 %{_prefix}/afs/bin/kaserver
@@ -1113,6 +1086,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/kadb_check.8.gz
 %{_mandir}/man8/ka-forwarder.8.gz
 %{_mandir}/man8/kaserver.8.gz
+%exclude %{_prefix}/afs/bin/kdb
+%exclude %{_mandir}/man8/kdb.8.gz
 %endif
 
 %if %{krb5support}
