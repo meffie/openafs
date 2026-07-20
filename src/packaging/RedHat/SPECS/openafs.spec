@@ -830,7 +830,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{build_userspace}
 
 %files
-%defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/openafs
 %doc %{_docdir}/openafs-%{afsvers}/LICENSE
 %{_bindir}/afsmonitor
@@ -908,7 +907,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/uss_*.8.gz
 
 %files docs
-%defattr(-,root,root)
 %docdir %{_docdir}/openafs-%{afsvers}
 %dir %{_docdir}/openafs-%{afsvers}
 %{_docdir}/openafs-%{afsvers}/ChangeLog
@@ -916,7 +914,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_docdir}/openafs-%{afsvers}/pdf
 
 %files client
-%defattr(-,root,root)
 %dir %{_prefix}/vice
 %dir %{_prefix}/vice/cache
 %dir %{_prefix}/vice/etc
@@ -945,7 +942,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man5/CellAlias.5.gz
 
 %files server
-%defattr(-,root,root)
 %dir %{_prefix}/afs
 %dir %{_prefix}/afs/bin
 %dir %{_prefix}/afs/etc
@@ -1029,14 +1025,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{build_authlibs}
 %files authlibs
-%defattr(-,root,root)
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
 %{_libdir}/libkopenafs.so.*
 %endif
 
 %files authlibs-devel
-%defattr(-,root,root)
 %{_includedir}/kopenafs.h
 %{_libdir}/libafsauthent.a
 %{_libdir}/libafscp.a
@@ -1051,7 +1045,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 %files devel
-%defattr(-,root,root)
 %{_bindir}/afs_compile_et
 %{_bindir}/rxgen
 %{_includedir}/afs
@@ -1081,19 +1074,16 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{build_dkmspkg}
 %files -n dkms-%{name}
-%defattr(-,root,root)
 %{_prefix}/src/%{name}-%{dkms_version}
 %endif
 
 %files kernel-source
-%defattr(-,root,root)
 %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
 %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
 %{_prefix}/src/openafs-kernel-%{afsvers}/README
 %{_prefix}/src/openafs-kernel-%{afsvers}/src
 
 %files compat
-%defattr(-,root,root)
 %dir %{afswsdir}/bin
 %dir %{afswsdir}/etc
 %ghost %{afswsdir}/bin/afsmonitor
@@ -1122,7 +1112,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{kauth_support}
 %files kauth-client
-%defattr(-,root,root)
 %{_sbindir}/kas
 %{_bindir}/klog
 %{_bindir}/klog.krb
@@ -1150,7 +1139,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/kas_*.8.gz
 
 %files kauth-server
-%defattr(-,root,root)
 %{_prefix}/afs/bin/kaserver
 %{_prefix}/afs/bin/ka-forwarder
 %{_sbindir}/kadb_check
@@ -1165,7 +1153,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{krb5support}
 %files krb5
-%defattr(-,root,root)
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
 %{_sbindir}/akeyconvert
@@ -1180,7 +1167,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{build_modules}
 
 %files -n kmod-%{kmod_name}
-%defattr(644,root,root,755)
 /lib/modules/%{kernel_version}/extra/%{kmod_name}/
 
 %endif
