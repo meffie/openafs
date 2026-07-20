@@ -478,20 +478,9 @@ rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/bos
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/fs
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/pts
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens
+rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/udebug
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/vos
-
-# Exclude obsolete or unused files.
-rm -f $RPM_BUILD_ROOT%{_bindir}/dlog
-rm -f $RPM_BUILD_ROOT%{_bindir}/dpass
-rm -f $RPM_BUILD_ROOT%{_bindir}/install
-rm -f $RPM_BUILD_ROOT%{_bindir}/knfs
-rm -f $RPM_BUILD_ROOT%{_bindir}/livesys
-rm -f $RPM_BUILD_ROOT%{_sbindir}/rmtsysd
-rm -f $RPM_BUILD_ROOT%{_sbindir}/afsd.fuse
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/pagsh.krb
 
 # Relocate afsd to legacy path to match init scripts.
 mv $RPM_BUILD_ROOT%{_sbindir}/afsd $RPM_BUILD_ROOT%{_prefix}/vice/etc/afsd
@@ -502,37 +491,6 @@ mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_check $RPM_BUILD_ROOT%{_sbindir}/vldb_
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_convert $RPM_BUILD_ROOT%{_sbindir}/vldb_convert
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/akeyconvert $RPM_BUILD_ROOT%{_sbindir}/akeyconvert
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/asetkey $RPM_BUILD_ROOT%{_sbindir}/asetkey
-
-# Exclude obsolete or unused man pages.
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_ftpd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_inetd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_login.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rcp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rlogind.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rsh.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dkload.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/knfs.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/runntp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_list.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_make.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_remove.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dlog.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dpass.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/livesys.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/afsd.fuse.8
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/rmtsysd.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/aklog_dynamic_auth.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/kdb.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/xfs_size_check.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package_test.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/package.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/package.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/pagsh.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/tokens.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.5
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.dir.5
 
 #-----------------------------------------------------------------------------
 # Install client and server initscripts/systemd files
@@ -840,6 +798,22 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/read_tape.8.gz
 %{_mandir}/man8/uss.8.gz
 %{_mandir}/man8/uss_*.8.gz
+# Exclude obsolete or unused files.
+%exclude %{_bindir}/livesys
+%exclude %{_bindir}/pagsh.krb
+%exclude %{_bindir}/tokens.krb
+%exclude %{_sbindir}/rmtsysd
+%exclude %{_mandir}/man1/dlog.1.gz
+%exclude %{_mandir}/man1/livesys.1.gz
+%exclude %{_mandir}/man1/symlink.1.gz
+%exclude %{_mandir}/man1/symlink_list.1.gz
+%exclude %{_mandir}/man1/symlink_make.1.gz
+%exclude %{_mandir}/man1/symlink_remove.1.gz
+%exclude %{_mandir}/man5/AuthLog.5.gz
+%exclude %{_mandir}/man5/AuthLog.dir.5.gz
+%exclude %{_mandir}/man8/aklog_dynamic_auth.8.gz
+%exclude %{_mandir}/man8/rmtsysd.8.gz
+%exclude %{_mandir}/man8/xfs_size_check.8.gz
 
 %files docs
 %docdir %{_docdir}/openafs-%{openafs_version}
