@@ -819,6 +819,7 @@ initSyntax(void)
     }
 }
 
+/* Shell completion helper called when the -completion-helper flag is used. */
 static void
 CompletionHelper(int argc, char **argv)
 {
@@ -830,7 +831,12 @@ CompletionHelper(int argc, char **argv)
 	char **word_list = NULL;
 	struct cmd_syndesc *ts = NULL;
 	int i = 0;
+	int single_list = 0;
 
+	/*
+	 * If there is at least one word written on the command line, extract COMP_CWORD and the full
+	 * COMP_WORDS array passed by the shell completion script.
+	 */
 	if (argc >= 5) {
 		pos_cword = atoi(argv[3]);
 		nwords = argc - 4;
@@ -853,6 +859,10 @@ CompletionHelper(int argc, char **argv)
 
 	ts = allSyntax;
 
+	/*
+	 * If the command line only contains at most "./comptest" and the subcommand,
+	 * the whole list of subcommands is printed.
+	 */
 	if (pos_cword <= 1) {
 		while (ts != NULL) {
 			if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
@@ -868,12 +878,29 @@ CompletionHelper(int argc, char **argv)
 		}
 		if (ts != NULL) {
 			for (i = 0; i < ts->nParms; i++) {
+				/*
+				 * If the parameter expects a value, treat the current word as its value
+				 * and do not offer option completions here.
+				 */
 				if (ts->parms[i].name != NULL) {
-					printf("%s ", ts->parms[i].name);
+					if (strcmp(prev, ts->parms[i].name) == 0 && (ts->parms[i].type == CMD_SINGLE || ts->parms[i].type == CMD_LIST)) {
+						printf("\n");
+						single_list = 1;
+						break;
+					}
 				}
 			}
-			if (ts->parms[CMD_HELPPARM].name != NULL) {
-				printf("%s ", ts->parms[CMD_HELPPARM].name);
+			/* Print normal options, then add the special -help option. */
+			if (single_list == 0) {
+				for (i = 0; i < ts->nParms; i++) {
+					if (ts->parms[i].name != NULL) {
+						printf("%s ", ts->parms[i].name);
+					}
+				}
+
+				if (ts->parms[CMD_HELPPARM].name != NULL) {
+					printf("%s ", ts->parms[CMD_HELPPARM].name);
+				}
 			}
 		}
 	}
