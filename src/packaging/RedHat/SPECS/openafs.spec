@@ -48,10 +48,6 @@
 # kaserver and related programs.
 %define kauth_support %{?_with_kauth:1}%{!?_with_kauth:0}
 
-# Specify '--without authlibs' if you do not want to build the openafs-authlibs
-# package.
-%define build_authlibs %{?_without_authlibs:0}%{!?_without_authlibs:1}
-
 # Specify '--without krb5' if you do not want to build the openafs-krb5 package
 # to distribute aklog, asetkey, and akeyconvert.
 %define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
@@ -140,7 +136,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   to build against the currently-running
                                   kernel.
 
- --without authlibs               Disable authlibs package (default: with authlibs)
  --without krb5                   Disable krb5 support (default: with krb5)
  --with supergroups               Enable "supergroups"
  --with kauth                     Build the openafs-kauth-server and openafs-kauth-client
@@ -223,7 +218,6 @@ This package provides the source code to allow DKMS to build an
 AFS kernel module.
 %endif
 
-%if %{build_authlibs}
 %package authlibs
 Summary: OpenAFS authentication shared libraries
 Group: Networking/Filesystems
@@ -238,12 +232,9 @@ This package provides a shared version of libafsrpc and libafsauthent.
 None of the programs included with OpenAFS currently use these shared
 libraries; however, third-party software that wishes to perform AFS
 authentication may link against them.
-%endif
 
 %package authlibs-devel
-%if %{build_authlibs}
 Requires: openafs-authlibs = %{version}-%{release}
-%endif
 Requires: openafs-devel = %{version}-%{release}
 Summary: OpenAFS shared library development
 Group: Development/Filesystems
@@ -529,11 +520,6 @@ rm -f $RPM_BUILD_ROOT%{_bindir}/knfs
 rm -f $RPM_BUILD_ROOT%{_bindir}/livesys
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kdb
 rm -f $RPM_BUILD_ROOT%{_sbindir}/rmtsysd
-%if !%{build_authlibs}
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsauthent.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsrpc.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libkopenafs.so*
-%endif
 rm -f $RPM_BUILD_ROOT%{_sbindir}/afsd.fuse
 %if !%{kauth_support}
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
@@ -774,13 +760,11 @@ ln -sf %{_bindir}/pagsh.krb     %{afswsdir}/bin/pagsh.krb
 ln -sf %{_bindir}/tokens.krb    %{afswsdir}/bin/tokens.krb
 %endif
 
-%if %{build_authlibs}
 %post authlibs
 /sbin/ldconfig
 
 %postun authlibs
 /sbin/ldconfig
-%endif
 
 %preun
 if [ $1 = 0 ] ; then
@@ -1049,13 +1033,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/volscan.8.gz
 %{_mandir}/man8/volserver.8.gz
 
-%if %{build_authlibs}
 %files authlibs
 %defattr(-,root,root)
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
 %{_libdir}/libkopenafs.so.*
-%endif
 
 %files authlibs-devel
 %defattr(-,root,root)
@@ -1066,11 +1048,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libafsauthent_pic.a
 %{_libdir}/libafsrpc_pic.a
 %{_libdir}/libkopenafs.a
-%if %{build_authlibs}
 %{_libdir}/libafsauthent.so
 %{_libdir}/libafsrpc.so
 %{_libdir}/libkopenafs.so
-%endif
 
 %files devel
 %defattr(-,root,root)
