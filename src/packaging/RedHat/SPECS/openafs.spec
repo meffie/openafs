@@ -48,10 +48,6 @@
 # kaserver and related programs.
 %define kauth_support %{?_with_kauth:1}%{!?_with_kauth:0}
 
-# Specify '--without krb5' if you do not want to build the openafs-krb5 package
-# to distribute aklog, asetkey, and akeyconvert.
-%define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
-
 #
 # Definitions
 #
@@ -94,9 +90,7 @@ BuildRequires: %{?kdepend:%{kdepend}, } pam-devel, ncurses-devel, make, flex, bi
 BuildRequires: systemd-units
 BuildRequires: perl-devel, swig
 BuildRequires: perl(ExtUtils::Embed)
-%if %{krb5support}
 BuildRequires: krb5-devel
-%endif
 %if %{build_modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
@@ -136,7 +130,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   to build against the currently-running
                                   kernel.
 
- --without krb5                   Disable krb5 support (default: with krb5)
  --with supergroups               Enable "supergroups"
  --with kauth                     Build the openafs-kauth-server and openafs-kauth-client
                                   packages which contain the legacy kaserver and
@@ -343,7 +336,6 @@ service. Generally you should not install this package for new cells or for
 cells using Kerberos v5.
 %endif
 
-%if %{krb5support}
 %package krb5
 Summary: OpenAFS programs to use with krb5
 Requires: openafs = %{version}
@@ -359,7 +351,6 @@ administrative management.
 This package provides compatibility programs so you can use krb5
 to authenticate to AFS services, instead of using AFS's homegrown
 krb4 lookalike services.
-%endif
 
 %endif
 
@@ -421,10 +412,8 @@ kernel %{kernel_version} for the %{_target_cpu} family of processors.
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 export CFLAGS="$RPM_OPT_FLAGS"
-%if %{krb5support}
 %if %{?krb5config:1}%{!?krb5config:0}
 export KRB5_CONFIG="%{krb5config}"
-%endif
 %endif
 
 config_opts="%{?_with_kauth:--enable-kauth} \
@@ -447,9 +436,7 @@ config_opts="%{?_with_kauth:--enable-kauth} \
 %else
        --disable-kernel-module \
 %endif
-%if %{krb5support}
        --with-krb5 \
-%endif
        --with-swig \
        $config_opts \
        || exit 1
@@ -457,10 +444,8 @@ config_opts="%{?_with_kauth:--enable-kauth} \
 # Build the libafs tree
 make %{_smp_mflags} only_libafs_tree V=0 || exit 1
 
-%if %{krb5support}
 %if %{?krb5config:1}%{!?krb5config:0}
 export KRB5_CONFIG="%{krb5config}"
-%endif
 %endif
 
 %if %{build_userspace}
@@ -537,10 +522,8 @@ mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/kadb_check $RPM_BUILD_ROOT%{_sbindir}/kadb_
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/prdb_check $RPM_BUILD_ROOT%{_sbindir}/prdb_check
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_check $RPM_BUILD_ROOT%{_sbindir}/vldb_check
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_convert $RPM_BUILD_ROOT%{_sbindir}/vldb_convert
-%if %{krb5support}
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/akeyconvert $RPM_BUILD_ROOT%{_sbindir}/akeyconvert
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/asetkey $RPM_BUILD_ROOT%{_sbindir}/asetkey
-%endif
 
 %if %{kauth_support}
 # Relocate PAM files to the standard PAM module path.
@@ -581,10 +564,6 @@ rm -f $RPM_BUILD_ROOT%{_mandir}/man8/xfs_size_check.*
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package_test.*
 rm -f $RPM_BUILD_ROOT%{_mandir}/man5/package.*
 rm -f $RPM_BUILD_ROOT%{_mandir}/man8/package.*
-%if !%{krb5support}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/akeyconvert.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/asetkey.*
-%endif
 %if !%{kauth_support}
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/pagsh.krb.1
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/tokens.krb.1
@@ -1165,7 +1144,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/kaserver.8.gz
 %endif
 
-%if %{krb5support}
 %files krb5
 %defattr(-,root,root)
 %{_bindir}/aklog
@@ -1176,7 +1154,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man1/klog.krb5.1.gz
 %{_mandir}/man8/akeyconvert.8.gz
 %{_mandir}/man8/asetkey.8.gz
-%endif
+
 %endif
 
 %if %{build_modules}
