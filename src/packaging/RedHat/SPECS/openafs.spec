@@ -492,10 +492,6 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 # Install userspace files
 make %{_smp_mflags} install_nolibafs DESTDIR="$RPM_BUILD_ROOT"
 
-# Set the executable bit on libraries in libdir, so rpmbuild knows to
-# create "Provides" entries in the package metadata for the libraries
-chmod +x $RPM_BUILD_ROOT%{_libdir}/*.so*
-
 # Exclude duplicated files.
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/bos
 rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/fs
