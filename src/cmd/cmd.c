@@ -827,7 +827,6 @@ CompletionHelper(int argc, char **argv)
 	int nwords = 0;
 	const char *subcommand = NULL;
 	const char *prev = NULL;
-	const char *cur = NULL;
 	char **word_list = NULL;
 	struct cmd_syndesc *ts = NULL;
 	int i = 0;
@@ -847,10 +846,6 @@ CompletionHelper(int argc, char **argv)
 
 	if (nwords >= 2) {
 		subcommand = word_list[1];
-	}
-
-	if (pos_cword >= 0 && pos_cword < nwords) {
-		cur = word_list[pos_cword];
 	}
 
 	if (pos_cword >= 1 && pos_cword - 1 < nwords) {
