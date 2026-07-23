@@ -831,6 +831,7 @@ CompletionHelper(int argc, char **argv)
     struct cmd_syndesc *ts = NULL;
     int i = 0;
     int single_list = 0;
+    int help_typed = 0;
 
     /*
      * If there is at least one word written on the command line, extract COMP_CWORD and the full
@@ -896,9 +897,20 @@ CompletionHelper(int argc, char **argv)
 		}
 
 		if (ts->parms[CMD_HELPPARM].name != NULL) {
-		    printf("%s ", ts->parms[CMD_HELPPARM].name);
+		for (i = 0; i < nwords; i++) {
+			if (strcmp(ts->parms[CMD_HELPPARM].name,
+				word_list[i]) == 0) {
+			help_typed = 1;
+			break;
+			}
 		}
-	    }
+
+		if (help_typed == 0) {
+		printf("%s ", ts->parms[CMD_HELPPARM].name);
+		}
+		}
+		}
+
 	}
     }
     printf("\n");
