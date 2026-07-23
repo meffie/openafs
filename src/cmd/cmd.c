@@ -823,88 +823,85 @@ initSyntax(void)
 static void
 CompletionHelper(int argc, char **argv)
 {
-	int pos_cword = 0;
-	int nwords = 0;
-	const char *subcommand = NULL;
-	const char *prev = NULL;
-	const char *cur = NULL;
-	char **word_list = NULL;
-	struct cmd_syndesc *ts = NULL;
-	int i = 0;
-	int single_list = 0;
+    int pos_cword = 0;
+    int nwords = 0;
+    const char *subcommand = NULL;
+    const char *prev = NULL;
+    char **word_list = NULL;
+    struct cmd_syndesc *ts = NULL;
+    int i = 0;
+    int single_list = 0;
 
-	/*
-	 * If there is at least one word written on the command line, extract COMP_CWORD and the full
-	 * COMP_WORDS array passed by the shell completion script.
-	 */
-	if (argc >= 5) {
-		pos_cword = atoi(argv[3]);
-		nwords = argc - 4;
-		word_list = &argv[4];
-	} else {
-		return;
+    /*
+     * If there is at least one word written on the command line, extract COMP_CWORD and the full
+     * COMP_WORDS array passed by the shell completion script.
+     */
+    if (argc >= 5) {
+	pos_cword = atoi(argv[3]);
+	nwords = argc - 4;
+	word_list = &argv[4];
+    } else {
+	return;
+    }
+
+    if (nwords >= 2) {
+	subcommand = word_list[1];
+    }
+
+    if (pos_cword >= 1 && pos_cword - 1 < nwords) {
+	prev = word_list[pos_cword - 1];
+    }
+
+    ts = allSyntax;
+
+    /*
+     * If the command line only contains at most "./comptest" and the subcommand,
+     * the whole list of subcommands is printed.
+     */
+    if (pos_cword <= 1) {
+	while (ts != NULL) {
+	    if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
+		ts = ts->next;
+	    } else {
+		printf("%s ", ts->name);
+		ts = ts->next;
+	    }
 	}
-
-	if (nwords >= 2) {
-		subcommand = word_list[1];
+    } else {
+	while (ts != NULL && strcmp(ts->name, subcommand) != 0) {
+	    ts = ts->next;
 	}
-
-	if (pos_cword >= 0 && pos_cword < nwords) {
-		cur = word_list[pos_cword];
-	}
-
-	if (pos_cword >= 1 && pos_cword - 1 < nwords) {
-		prev = word_list[pos_cword - 1];
-	}
-
-	ts = allSyntax;
-
-	/*
-	 * If the command line only contains at most "./comptest" and the subcommand,
-	 * the whole list of subcommands is printed.
-	 */
-	if (pos_cword <= 1) {
-		while (ts != NULL) {
-			if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
-				ts = ts->next;
-			} else {
-				printf("%s ", ts->name);
-				ts = ts->next;
-			}
+	if (ts != NULL) {
+	    for (i = 0; i < ts->nParms; i++) {
+		/*
+		 * If the parameter expects a value, treat the current word as its value
+		 * and do not offer option completions here.
+		 */
+		if (ts->parms[i].name != NULL) {
+		    if (strcmp(prev, ts->parms[i].name) == 0
+			&& (ts->parms[i].type == CMD_SINGLE
+			    || ts->parms[i].type == CMD_LIST)) {
+			printf("\n");
+			single_list = 1;
+			break;
+		    }
 		}
-	} else {
-		while (ts != NULL && strcmp(ts->name, subcommand) != 0) {
-			ts = ts->next;
+	    }
+	    /* Print normal options, then add the special -help option. */
+	    if (single_list == 0) {
+		for (i = 0; i < ts->nParms; i++) {
+		    if (ts->parms[i].name != NULL) {
+			printf("%s ", ts->parms[i].name);
+		    }
 		}
-		if (ts != NULL) {
-			for (i = 0; i < ts->nParms; i++) {
-				/*
-				 * If the parameter expects a value, treat the current word as its value
-				 * and do not offer option completions here.
-				 */
-				if (ts->parms[i].name != NULL) {
-					if (strcmp(prev, ts->parms[i].name) == 0 && (ts->parms[i].type == CMD_SINGLE || ts->parms[i].type == CMD_LIST)) {
-						printf("\n");
-						single_list = 1;
-						break;
-					}
-				}
-			}
-			/* Print normal options, then add the special -help option. */
-			if (single_list == 0) {
-				for (i = 0; i < ts->nParms; i++) {
-					if (ts->parms[i].name != NULL) {
-						printf("%s ", ts->parms[i].name);
-					}
-				}
 
-				if (ts->parms[CMD_HELPPARM].name != NULL) {
-					printf("%s ", ts->parms[CMD_HELPPARM].name);
-				}
-			}
+		if (ts->parms[CMD_HELPPARM].name != NULL) {
+		    printf("%s ", ts->parms[CMD_HELPPARM].name);
 		}
+	    }
 	}
-	printf("\n");
+    }
+    printf("\n");
 
 }
 
