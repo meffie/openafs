@@ -14,6 +14,9 @@
 # Disable using lto (link time optimization)
 %global _lto_cflags %{nil}
 
+# Define the location to the legacy workstation directory.
+%global afswsdir /usr/afsws
+
 #
 # Disable setting the source_date_epoch from the top entry of the changelog and
 # instead use the current system time by default.
@@ -355,7 +358,7 @@ allowing cross-platform sharing of files among multiple computers.
 Facilities are provided for access control, authentication, backup and
 administrative management.
 
-This package provides compatibility symlinks in /usr/afsws.  It is
+This package provides compatibility symlinks in %{afswsdir}.  It is
 completely optional, and is only necessary to support legacy
 applications and scripts that hard-code the location of AFS client
 programs.
@@ -802,41 +805,41 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 #-----------------------------------------------------------------------------
 # Install compatiblity links.
 #-----------------------------------------------------------------------------
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afsws/bin
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afsws/etc
-ln -sf %{_prefix}/bin/afsmonitor    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/afsmonitor
-ln -sf %{_prefix}/bin/bos           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/bos
-ln -sf %{_prefix}/bin/fs            $RPM_BUILD_ROOT%{_prefix}/afsws/bin/fs
+mkdir -p $RPM_BUILD_ROOT%{afswsdir}/bin
+mkdir -p $RPM_BUILD_ROOT%{afswsdir}/etc
+ln -sf %{_prefix}/bin/afsmonitor    $RPM_BUILD_ROOT%{afswsdir}/bin/afsmonitor
+ln -sf %{_prefix}/bin/bos           $RPM_BUILD_ROOT%{afswsdir}/bin/bos
+ln -sf %{_prefix}/bin/fs            $RPM_BUILD_ROOT%{afswsdir}/bin/fs
 %if %{kauth_support}
-ln -sf %{_prefix}/bin/kapasswd      $RPM_BUILD_ROOT%{_prefix}/afsws/bin/kapasswd
-ln -sf %{_prefix}/bin/klog          $RPM_BUILD_ROOT%{_prefix}/afsws/bin/klog
-ln -sf %{_prefix}/bin/klog.krb      $RPM_BUILD_ROOT%{_prefix}/afsws/bin/klog.krb
-ln -sf %{_prefix}/bin/pagsh.krb     $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pagsh.krb
-ln -sf %{_prefix}/bin/tokens.krb    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/tokens.krb
+ln -sf %{_prefix}/bin/kapasswd      $RPM_BUILD_ROOT%{afswsdir}/bin/kapasswd
+ln -sf %{_prefix}/bin/klog          $RPM_BUILD_ROOT%{afswsdir}/bin/klog
+ln -sf %{_prefix}/bin/klog.krb      $RPM_BUILD_ROOT%{afswsdir}/bin/klog.krb
+ln -sf %{_prefix}/bin/pagsh.krb     $RPM_BUILD_ROOT%{afswsdir}/bin/pagsh.krb
+ln -sf %{_prefix}/bin/tokens.krb    $RPM_BUILD_ROOT%{afswsdir}/bin/tokens.krb
 %endif
-ln -sf %{_prefix}/bin/pagsh         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pagsh
-ln -sf %{_prefix}/bin/pts           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pts
-ln -sf %{_prefix}/bin/restorevol    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/restorevol
-ln -sf %{_prefix}/bin/scout         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/scout
-ln -sf %{_prefix}/bin/sys           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/sys
-ln -sf %{_prefix}/bin/tokens        $RPM_BUILD_ROOT%{_prefix}/afsws/bin/tokens
-ln -sf %{_prefix}/bin/translate_et  $RPM_BUILD_ROOT%{_prefix}/afsws/bin/translate_et
-ln -sf %{_prefix}/bin/xstat_cm_test $RPM_BUILD_ROOT%{_prefix}/afsws/bin/xstat_cm_test
-ln -sf %{_prefix}/bin/xstat_fs_test $RPM_BUILD_ROOT%{_prefix}/afsws/bin/xstat_fs_test
-ln -sf %{_prefix}/bin/udebug        $RPM_BUILD_ROOT%{_prefix}/afsws/bin/udebug
-ln -sf %{_prefix}/bin/unlog         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/unlog
-ln -sf %{_prefix}/sbin/backup       $RPM_BUILD_ROOT%{_prefix}/afsws/etc/backup
-ln -sf %{_prefix}/sbin/butc         $RPM_BUILD_ROOT%{_prefix}/afsws/etc/butc
-ln -sf %{_prefix}/sbin/fms          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/fms
-ln -sf %{_prefix}/sbin/fstrace      $RPM_BUILD_ROOT%{_prefix}/afsws/etc/fstrace
+ln -sf %{_prefix}/bin/pagsh         $RPM_BUILD_ROOT%{afswsdir}/bin/pagsh
+ln -sf %{_prefix}/bin/pts           $RPM_BUILD_ROOT%{afswsdir}/bin/pts
+ln -sf %{_prefix}/bin/restorevol    $RPM_BUILD_ROOT%{afswsdir}/bin/restorevol
+ln -sf %{_prefix}/bin/scout         $RPM_BUILD_ROOT%{afswsdir}/bin/scout
+ln -sf %{_prefix}/bin/sys           $RPM_BUILD_ROOT%{afswsdir}/bin/sys
+ln -sf %{_prefix}/bin/tokens        $RPM_BUILD_ROOT%{afswsdir}/bin/tokens
+ln -sf %{_prefix}/bin/translate_et  $RPM_BUILD_ROOT%{afswsdir}/bin/translate_et
+ln -sf %{_prefix}/bin/xstat_cm_test $RPM_BUILD_ROOT%{afswsdir}/bin/xstat_cm_test
+ln -sf %{_prefix}/bin/xstat_fs_test $RPM_BUILD_ROOT%{afswsdir}/bin/xstat_fs_test
+ln -sf %{_prefix}/bin/udebug        $RPM_BUILD_ROOT%{afswsdir}/bin/udebug
+ln -sf %{_prefix}/bin/unlog         $RPM_BUILD_ROOT%{afswsdir}/bin/unlog
+ln -sf %{_prefix}/sbin/backup       $RPM_BUILD_ROOT%{afswsdir}/etc/backup
+ln -sf %{_prefix}/sbin/butc         $RPM_BUILD_ROOT%{afswsdir}/etc/butc
+ln -sf %{_prefix}/sbin/fms          $RPM_BUILD_ROOT%{afswsdir}/etc/fms
+ln -sf %{_prefix}/sbin/fstrace      $RPM_BUILD_ROOT%{afswsdir}/etc/fstrace
 %if %{kauth_support}
-ln -sf %{_prefix}/sbin/kas          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/kas
+ln -sf %{_prefix}/sbin/kas          $RPM_BUILD_ROOT%{afswsdir}/etc/kas
 %endif
-ln -sf %{_prefix}/sbin/read_tape    $RPM_BUILD_ROOT%{_prefix}/afsws/etc/read_tape
-ln -sf %{_prefix}/sbin/rxdebug      $RPM_BUILD_ROOT%{_prefix}/afsws/etc/rxdebug
-ln -sf %{_prefix}/sbin/uss          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/uss
-ln -sf %{_prefix}/sbin/vos          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/vos
-ln -sf %{_prefix}/sbin/vsys         $RPM_BUILD_ROOT%{_prefix}/afsws/etc/vsys
+ln -sf %{_prefix}/sbin/read_tape    $RPM_BUILD_ROOT%{afswsdir}/etc/read_tape
+ln -sf %{_prefix}/sbin/rxdebug      $RPM_BUILD_ROOT%{afswsdir}/etc/rxdebug
+ln -sf %{_prefix}/sbin/uss          $RPM_BUILD_ROOT%{afswsdir}/etc/uss
+ln -sf %{_prefix}/sbin/vos          $RPM_BUILD_ROOT%{afswsdir}/etc/vos
+ln -sf %{_prefix}/sbin/vsys         $RPM_BUILD_ROOT%{afswsdir}/etc/vsys
 
 %endif
 
@@ -1294,29 +1297,29 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files compat
 %defattr(-,root,root)
-%{_prefix}/afsws/bin/afsmonitor
-%{_prefix}/afsws/bin/bos
-%{_prefix}/afsws/bin/fs
-%{_prefix}/afsws/bin/pagsh
-%{_prefix}/afsws/bin/pts
-%{_prefix}/afsws/bin/restorevol
-%{_prefix}/afsws/bin/scout
-%{_prefix}/afsws/bin/sys
-%{_prefix}/afsws/bin/tokens
-%{_prefix}/afsws/bin/translate_et
-%{_prefix}/afsws/bin/udebug
-%{_prefix}/afsws/bin/unlog
-%{_prefix}/afsws/bin/xstat_cm_test
-%{_prefix}/afsws/bin/xstat_fs_test
-%{_prefix}/afsws/etc/backup
-%{_prefix}/afsws/etc/butc
-%{_prefix}/afsws/etc/fms
-%{_prefix}/afsws/etc/fstrace
-%{_prefix}/afsws/etc/read_tape
-%{_prefix}/afsws/etc/rxdebug
-%{_prefix}/afsws/etc/uss
-%{_prefix}/afsws/etc/vos
-%{_prefix}/afsws/etc/vsys
+%{afswsdir}/bin/afsmonitor
+%{afswsdir}/bin/bos
+%{afswsdir}/bin/fs
+%{afswsdir}/bin/pagsh
+%{afswsdir}/bin/pts
+%{afswsdir}/bin/restorevol
+%{afswsdir}/bin/scout
+%{afswsdir}/bin/sys
+%{afswsdir}/bin/tokens
+%{afswsdir}/bin/translate_et
+%{afswsdir}/bin/udebug
+%{afswsdir}/bin/unlog
+%{afswsdir}/bin/xstat_cm_test
+%{afswsdir}/bin/xstat_fs_test
+%{afswsdir}/etc/backup
+%{afswsdir}/etc/butc
+%{afswsdir}/etc/fms
+%{afswsdir}/etc/fstrace
+%{afswsdir}/etc/read_tape
+%{afswsdir}/etc/rxdebug
+%{afswsdir}/etc/uss
+%{afswsdir}/etc/vos
+%{afswsdir}/etc/vsys
 
 %if %{kauth_support}
 %files kauth-client
@@ -1332,12 +1335,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/kpwvalid
 %{_bindir}/pagsh.krb
 %{_bindir}/tokens.krb
-%{_prefix}/afsws/bin/kapasswd
-%{_prefix}/afsws/bin/klog
-%{_prefix}/afsws/bin/klog.krb
-%{_prefix}/afsws/bin/pagsh.krb
-%{_prefix}/afsws/bin/tokens.krb
-%{_prefix}/afsws/etc/kas
+%{afswsdir}/bin/kapasswd
+%{afswsdir}/bin/klog
+%{afswsdir}/bin/klog.krb
+%{afswsdir}/bin/pagsh.krb
+%{afswsdir}/bin/tokens.krb
+%{afswsdir}/etc/kas
 %{_mandir}/man1/kapasswd.1.gz
 %{_mandir}/man1/klog.1.gz
 %{_mandir}/man1/klog.krb.1.gz
