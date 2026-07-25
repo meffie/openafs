@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+#
+# Mock wget for makesrpm.pl testing.
+#
+
+set -x
+
+if [[ -n "$WGET_FAIL" ]]; then
+    echo "mock/wget: simulated failure: WGET_FAIL=$WGET_FAIL" >&2
+    exit 1
+fi
+
+echo >&2 "number of args $#";
+if [ $# == 1 ]; then
+    dest="."
+    url="$1"
+elif [ $# == 3 ]; then
+    dest="$2"
+    url="$3"
+fi
+host=$(echo "$url" | sed -e 's@[^:]*://@@' -e 's@/.*@@')
+filename=$(basename "$url")
+
+cat <<__EOF__ >&2
+Mock wget
+--2026-05-10 18:07:25--  ${url}
+Resolving ${host} (${host})... xxx.xxx.xxx.xxx
+Connecting to ${host} (${host})|xxx.xxx.xxx.xxx|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 33002 (32K) [text/plain]
+Saving to: ‘${filename}’
+     0K .......... .......... .......... ..                   100%  690K=0.05s
+2026-05-10 18:07:25 (690 KB/s) - ‘${filename}’ saved [33002/33002]
+__EOF__
+
+echo "Dummy file." > $dest/$filename
