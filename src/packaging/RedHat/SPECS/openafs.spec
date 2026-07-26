@@ -104,7 +104,6 @@ Packager: %{packager}
 %if %{?vendor:1}%{!?vendor:0}
 Vendor: %{vendor}
 %endif
-Group: Networking/Filesystems
 BuildRequires: pam-devel, ncurses-devel, make, flex, bison
 BuildRequires: systemd-units
 BuildRequires: perl-devel, swig
@@ -182,7 +181,6 @@ Requires: %{name}-kmod >= %{version}
 Provides: %{name}-kmod-common = %{version}
 
 Summary: OpenAFS Filesystem Client
-Group: Networking/Filesystem
 
 %description client
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -196,7 +194,6 @@ AFS.
 %package server
 Requires: openafs = %{version}
 Summary: OpenAFS Filesystem Server
-Group: Networking/Filesystems
 Requires: systemd-units
 Requires(post): systemd-units, systemd-sysv
 Requires(preun): systemd-units
@@ -214,7 +211,6 @@ Cell.
 %if %{build_dkmspkg}
 %package -n dkms-%{name}
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
-Group:          Development/Kernel
 Provides:       openafs-kernel = %{version}
 Provides:       %{name}-kmod = %{version}
 Requires(pre):  dkms, make, flex
@@ -234,7 +230,6 @@ AFS kernel module.
 %if %{build_authlibs}
 %package authlibs
 Summary: OpenAFS authentication shared libraries
-Group: Networking/Filesystems
 
 %description authlibs
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -254,7 +249,6 @@ Requires: openafs-authlibs = %{version}-%{release}
 %endif
 Requires: openafs-devel = %{version}-%{release}
 Summary: OpenAFS shared library development
-Group: Development/Filesystems
 
 %description authlibs-devel
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -268,7 +262,6 @@ libraries.
 
 %package devel
 Summary: OpenAFS Development Libraries and Headers
-Group: Development/Filesystems
 Requires: openafs = %{version}-%{release}
 
 %description devel
@@ -284,7 +277,6 @@ shared libraries.
 %package docs
 Summary: OpenAFS user and administrator documentation
 Requires: openafs = %{version}-%{release}
-Group: Networking/Filesystems
 BuildRequires: perl-core
 
 %description docs
@@ -298,7 +290,6 @@ administrators.
 
 %package kernel-source
 Summary: OpenAFS Kernel Module source tree
-Group: Networking/Filesystems
 Provides: openafs-kernel = %{version}
 Provides: %{name}-kmod = %{version}
 
@@ -314,7 +305,6 @@ module.
 %package compat
 Summary: OpenAFS client compatibility symlinks
 Requires: openafs = %{version}
-Group: Networking/Filesystems
 
 %description compat
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -331,7 +321,6 @@ programs.
 %package kauth-client
 Summary: OpenAFS Kauth Client support
 Requires: openafs
-Group: Networking/Filesystems
 
 %description kauth-client
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -347,7 +336,6 @@ cells using Kerberos v5.
 %package kauth-server
 Summary: OpenAFS Kauth Server support
 Requires: openafs
-Group: Networking/Filesystems
 
 %description kauth-server
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -364,7 +352,6 @@ cells using Kerberos v5.
 %package krb5
 Summary: OpenAFS programs to use with krb5
 Requires: openafs = %{version}
-Group: Networking/Filesystems
 BuildRequires: krb5-devel
 
 %description krb5
@@ -384,7 +371,6 @@ krb4 lookalike services.
 
 %package -n kmod-%{kmod_name}
 Summary:          %{kmod_name} kernel module
-Group:            System Environment/Kernel
 Provides:         kernel-modules = %{kernel_epoch}%{kernel_version}
 Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Provides:         openafs-kernel = %{version}
