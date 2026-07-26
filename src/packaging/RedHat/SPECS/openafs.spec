@@ -135,9 +135,13 @@ Packager: %{packager}
 %if %{?vendor:1}%{!?vendor:0}
 Vendor: %{vendor}
 %endif
-BuildRequires: ncurses-devel, make, flex, bison
+BuildRequires: ncurses-devel
+BuildRequires: make
+BuildRequires: flex
+BuildRequires: bison
 BuildRequires: systemd-units
-BuildRequires: perl-devel, swig
+BuildRequires: perl-devel
+BuildRequires: swig
 BuildRequires: perl(ExtUtils::Embed)
 BuildRequires: krb5-devel
 %if %{with modules}
@@ -177,12 +181,13 @@ OpenAFS packages but are not necessarily tied to a client or server.
 %if %{with userspace}
 
 %package client
-Requires: binutils, openafs = %{version}
+Requires: openafs = %{version}
+Requires: binutils
 Requires: systemd-units
-Requires(post): systemd-units, systemd-sysv
+Requires(post): systemd-units
+Requires(post): systemd-sysv
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-
 Requires: %{name}-kmod >= %{version}
 Provides: %{name}-kmod-common = %{version}
 
@@ -201,7 +206,8 @@ AFS.
 Requires: openafs = %{version}
 Summary: OpenAFS Filesystem Server
 Requires: systemd-units
-Requires(post): systemd-units, systemd-sysv
+Requires(post): systemd-units
+Requires(post): systemd-sysv
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 
@@ -219,7 +225,9 @@ Cell.
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Provides:       openafs-kernel = %{version}
 Provides:       %{name}-kmod = %{version}
-Requires(pre):  dkms, make, flex
+Requires(pre):  dkms
+Requires(pre):  make
+Requires(pre):  flex
 Requires(post): dkms
 Requires:       %{name}-kmod-common = %{version}
 
