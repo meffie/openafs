@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use lib $ENV{C_TAP_SOURCE} . "/tests-lib/perl5";
+use afstest qw(src_path obj_path);
+use Test::More;
+
+sub completion_helper {
+    my $output;
+
+    my $cmd_wrapper = obj_path("tests/cmdwrap");
+    my $comptest = obj_path("tests/cmd/comptest");
+    my @args = ($cmd_wrapper, $comptest, '-completion-helper', '--');
+    push(@args, @_);
+
+    open(my $pipe, "-|", @args) or BAIL_OUT("Unable to run '@args': $!");
+    $output = do { local $/; <$pipe> };
+    chomp $output;
+    if (!close($pipe)) {
+        if ($!) {
+            BAIL_OUT("Failed to close pipe: $!");
+        }
+        my $exit_code = $? >> 8;
+        my $signal = $? & 127;
+
+        if ($signal) {
+            my $coredump = ($? & 128) ? " (core dumped)" : "";
+            BAIL_OUT("'@args' died with signal $signal$coredump");
+        }
+        BAIL_OUT("Command '@args' failed with exit code ${exit_code} (status $?)");
+    }
+    return $output;
+}
+
+my @test_cases = (
+    {
+        name => 'top-level completions',
+        args => ['1', 'comptest'],
+        expected => 'apropos five four help one three two version ',
+    },
+    {
+        name => 'options for "one" command',
+        args => ['2', 'comptest', 'one', '-'],
+        expected => '-apple -banana -peach -pear -plum -help ',
+    },
+
+    # TODO: Many, many more tests. Be sure to check "edge cases".
+);
+
+plan tests => scalar @test_cases;
+
+foreach my $test (@test_cases) {
+    my $got = completion_helper(@{$test->{args}});
+    is($got, $test->{expected}, $test->{name});
+}
