@@ -36,13 +36,53 @@ sub completion_helper {
 my @test_cases = (
     {
         name => 'top-level completions',
-        args => ['1', 'comptest'],
+        args => ['1', 'comptest', ''],
         expected => 'apropos five four help one three two version ',
     },
     {
         name => 'options for "one" command',
         args => ['2', 'comptest', 'one', '-'],
         expected => '-apple -banana -peach -pear -plum -help ',
+    },
+    {
+        name => 'options for "duo" command alias',
+        args => ['2', 'comptest', 'duo', '-'],
+        expected => '-apple -banana -peach -orange -lime -help ',
+    },
+    {
+        name => 'do not repeat -help option',
+        args => ['3', 'comptest', 'one', '-help', '-'],
+        expected => '-apple -banana -peach -pear -plum ',
+    },
+    {
+        name => 'no options for CMD_SINGLE value position',
+        args => ['3', 'comptest', 'one', '-banana', '-'],
+        expected => '',
+    },
+    {
+        name => 'no options for CMD_LIST value position',
+        args => ['3', 'comptest', 'one', '-peach', '-'],
+        expected => '',
+    },
+    {
+        name => 'zero pos_cword has no completions',
+        args => ['0', 'comptest', 'one', '-'],
+        expected => '',
+    },
+    {
+        name => 'negative pos_cword has no completions',
+        args => ['-1', 'comptest', 'one', '-'],
+        expected => '',
+    },
+    {
+        name => 'out of range pos_cword has no completions',
+        args => ['3', 'comptest', 'one', '-'],
+        expected => '',
+    },
+    {
+        name => 'unknown command has no completions',
+        args => ['2', 'comptest', 'unknown', '-'],
+        expected => '',
     },
 
     # TODO: Many, many more tests. Be sure to check "edge cases".

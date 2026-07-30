@@ -845,6 +845,11 @@ CompletionHelper(int argc, char **argv)
 	return;
     }
 
+	if (pos_cword <= 0 || pos_cword >= nwords) {
+	printf("\n");
+	return;
+	}
+
     if (nwords >= 2) {
 	subcommand = word_list[1];
     }
@@ -882,7 +887,6 @@ CompletionHelper(int argc, char **argv)
 		    if (strcmp(prev, ts->parms[i].name) == 0
 			&& (ts->parms[i].type == CMD_SINGLE
 			    || ts->parms[i].type == CMD_LIST)) {
-			printf("\n");
 			single_list = 1;
 			break;
 		    }
