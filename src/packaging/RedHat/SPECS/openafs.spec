@@ -643,7 +643,6 @@ ln -sf %{_sbindir}/fms          %{afswsdir}/etc/fms
 ln -sf %{_sbindir}/fstrace      %{afswsdir}/etc/fstrace
 ln -sf %{_sbindir}/read_tape    %{afswsdir}/etc/read_tape
 ln -sf %{_sbindir}/rxdebug      %{afswsdir}/etc/rxdebug
-ln -sf %{_sbindir}/uss          %{afswsdir}/etc/uss
 ln -sf %{_sbindir}/vos          %{afswsdir}/etc/vos
 ln -sf %{_sbindir}/vsys         %{afswsdir}/etc/vsys
 
@@ -756,7 +755,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/rxstat_get_version
 %{_sbindir}/rxstat_query_peer
 %{_sbindir}/rxstat_query_process
-%{_sbindir}/uss
 %{_sbindir}/vos
 %{_sbindir}/vsys
 %{_libdir}/libafshcrypto.so.*
@@ -785,8 +783,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man5/afsmonitor.5.gz
 %{_mandir}/man5/butc.5.gz
 %{_mandir}/man5/butc_logs.5.gz
-%{_mandir}/man5/uss.5.gz
-%{_mandir}/man5/uss_bulk.5.gz
 %{_mandir}/man8/backup.8.gz
 %{_mandir}/man8/backup_*.8.gz
 %{_mandir}/man8/bos.8.gz
@@ -796,13 +792,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/fstrace.8.gz
 %{_mandir}/man8/fstrace_*.8.gz
 %{_mandir}/man8/read_tape.8.gz
-%{_mandir}/man8/uss.8.gz
-%{_mandir}/man8/uss_*.8.gz
 # Exclude obsolete or unused files.
 %exclude %{_bindir}/livesys
 %exclude %{_bindir}/pagsh.krb
 %exclude %{_bindir}/tokens.krb
 %exclude %{_sbindir}/rmtsysd
+%exclude %{_sbindir}/uss
 %exclude %{_mandir}/man1/dlog.1.gz
 %exclude %{_mandir}/man1/livesys.1.gz
 %exclude %{_mandir}/man1/symlink.1.gz
@@ -811,8 +806,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man1/symlink_remove.1.gz
 %exclude %{_mandir}/man5/AuthLog.5.gz
 %exclude %{_mandir}/man5/AuthLog.dir.5.gz
+%exclude %{_mandir}/man5/uss.5.gz
+%exclude %{_mandir}/man5/uss_bulk.5.gz
 %exclude %{_mandir}/man8/aklog_dynamic_auth.8.gz
 %exclude %{_mandir}/man8/rmtsysd.8.gz
+%exclude %{_mandir}/man8/uss.8.gz
+%exclude %{_mandir}/man8/uss_*.8.gz
 %exclude %{_mandir}/man8/xfs_size_check.8.gz
 
 %files docs
@@ -1011,7 +1010,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/etc/fstrace
 %ghost %{afswsdir}/etc/read_tape
 %ghost %{afswsdir}/etc/rxdebug
-%ghost %{afswsdir}/etc/uss
 %ghost %{afswsdir}/etc/vos
 %ghost %{afswsdir}/etc/vsys
 
