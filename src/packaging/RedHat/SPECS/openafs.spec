@@ -1,5 +1,16 @@
 # Openafs Spec
 
+#-----------------------------------------------------------------------------
+# Constants
+#-----------------------------------------------------------------------------
+# Disable link time optimization (lto)
+%global _lto_cflags %{nil}
+
+# Disable setting the source_date_epoch from the top entry of the changelog.
+%define source_date_epoch_from_changelog 0
+
+# Define the location to the legacy workstation directory.
+%global afswsdir /usr/afsws
 
 #-----------------------------------------------------------------------------
 # Version information
@@ -28,22 +39,6 @@
 %global source_date_epoch %(date +%%s)
 %endif
 
-
-# Disable using lto (link time optimization)
-%global _lto_cflags %{nil}
-
-# Define the location to the legacy workstation directory.
-%global afswsdir /usr/afsws
-
-#
-# Disable setting the source_date_epoch from the top entry of the changelog and
-# instead use the current system time by default.
-#
-# Note: Downstream packagers which use this reference spec are encouraged
-#       to set source_date_epoch_from_changelog to 1 and update the changelog
-#       on each release to set the source_date_epoch.
-#
-%define source_date_epoch_from_changelog 0
 
 %{!?build_dkmspkg: %define build_dkmspkg 1}
 
