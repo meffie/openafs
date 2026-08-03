@@ -135,7 +135,7 @@ Packager: %{packager}
 %if %{?vendor:1}%{!?vendor:0}
 Vendor: %{vendor}
 %endif
-BuildRequires: %{?kdepend:%{kdepend}, } ncurses-devel, make, flex, bison
+BuildRequires: ncurses-devel, make, flex, bison
 BuildRequires: systemd-units
 BuildRequires: perl-devel, swig
 BuildRequires: perl(ExtUtils::Embed)
