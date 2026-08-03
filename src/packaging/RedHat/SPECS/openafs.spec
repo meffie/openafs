@@ -672,24 +672,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 %endif
 
-%triggerun -- openafs-client < 1.6.0-1
-# Save the current service runlevel info
-# User must manually run systemd-sysv-convert --apply httpd
-# to migrate them to systemd targets
-/usr/bin/systemd-sysv-convert --save openafs-client >/dev/null 2>&1 ||:
-
-# Run this because the SysV package being removed won't do it
-/sbin/chkconfig --del openafs-client >/dev/null 2>&1 || :
-
-%triggerun -- openafs-server < 1.6.0-1
-# Save the current service runlevel info
-# User must manually run systemd-sysv-convert --apply httpd
-# to migrate them to systemd targets
-/usr/bin/systemd-sysv-convert --save openafs-server >/dev/null 2>&1 ||:
-
-# Run this because the SysV package being removed won't do it
-/sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
-
 %if %{with module}
 %post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
