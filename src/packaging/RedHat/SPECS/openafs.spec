@@ -63,7 +63,6 @@
 #
 # Definitions
 #
-%define depmod /usr/sbin/depmod
 
 %define kmod_name openafs
 
@@ -395,11 +394,11 @@ Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Provides:         openafs-kernel = %{version}
 Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
-Requires(post):   %{depmod}
-Requires(postun): %{depmod}
+Requires(post):   /usr/sbin/depmod
+Requires(postun): /usr/sbin/depmod
 Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
-BuildRequires: elfutils-devel
+BuildRequires:    elfutils-devel
 
 %description -n kmod-%{kmod_name}
 This package provides the %{kmod_name} kernel modules built for the Linux
@@ -871,10 +870,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{build_modules}
 %post -n kmod-%{kmod_name}
-%{depmod} -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
+/usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
 
 %postun -n kmod-%{kmod_name}
-%{depmod} -aF /boot/System.map-%{kernel_version} %{kernel_version} &> /dev/null || :
+/usr/sbin/depmod -aF /boot/System.map-%{kernel_version} %{kernel_version} &> /dev/null || :
 %endif
 
 ##############################################################################
