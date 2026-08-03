@@ -1,4 +1,56 @@
-# Openafs Spec
+#==============================================================================
+# OpenAFS spec file for RHEL family distributions
+#
+# This spec file can be used to build OpenAFS packages for Red Hat Enterprise
+# Linux 8 and later (RHEL8+) and compatible distributions.  Downstream packagers are
+# encouraged to adapt it to their specific needs.
+#
+# The following options can be passed to the `rpmbuild` command to customize
+# the build process.
+#
+#   --define "openafs_version <version>"  The version of the OpenAFS source
+#                                         archive.
+#
+#   --define "package_version <version>"  The RPM Version tag.
+#                                         (default: openafs_version)
+#
+#   --define "package_release <release>"  The RPM Release tag.
+#                                         (default: 1)
+#
+#   --define "packager <name>"            The Packager tag.
+#                                         (default: OpenAFS Maintainers)
+#
+#   --define "vendor <name>"              The Vendor tag (default: none)
+#
+#   --define "source_date_epoch <epoch>"  The build timestamp. (default:
+#                                         current system time)
+#
+#   --define "kernel_version <version>"   The kernel version (including the
+#                                         arch suffix) (default: current running kernel)
+#
+#   --define "kernel_release <release>"   The kernel version (without the arch
+#                                         suffix). (default: set from kernel_version)
+#
+#   --define "kernel_source_dir <path>"   The path to the kernel headers
+#                                         and build system (default: autodetect)
+#
+#   --define "krb5config <path>"          The path to the Kerberos configuration
+#                                         (default: none)
+#
+#   --without userspace                   Do not build userspace packages
+#                                         (default: --with userspace)
+#
+#   --without modules                     Do not the build kernel module package
+#                                         (default: --with modules)
+#
+#   --without dkms                        Do not build the DKMS package
+#                                         (default: --with dkms)
+#
+#   --with supergroups                    Enable supergroup support in the
+#                                         Protection Server (ptserver)
+#                                         (default: --without supergroup)
+#
+#==============================================================================
 
 #-----------------------------------------------------------------------------
 # Constants
@@ -117,26 +169,6 @@ administrative management.
 
 This package provides common files shared across all the various
 OpenAFS packages but are not necessarily tied to a client or server.
-
-The OpenAFS SRPM can be rebuilt with the following options:
-
- --define "source_date_epoch 1712832000"  Specify the build timestamp. The default
-                                          is the current system time.
-
- --define "kernel_version 3.19.3-100.fc20.i686" Specify the specific kernel version
-                                  to build modules against. The default is
-                                  to build against the currently-running
-                                  kernel.
-
- --with supergroups               Enable "supergroups"
-
- --target=i386                    The target architecture to build for.
-
- --without userspace              Do not build userspace tools
- --without modules                Do not build kernel modules
-
-To a kernel module for your running kernel, just run:
-  rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
 
 ##############################################################################
 #
