@@ -39,26 +39,18 @@
 %global source_date_epoch %(date +%%s)
 %endif
 
+#-----------------------------------------------------------------------------
+# Build conditionals
+#-----------------------------------------------------------------------------
+%bcond_without userspace
+%bcond_without modules
+%bcond_without dkms
+%bcond_with    supergroups
 
-%{!?build_dkmspkg: %define build_dkmspkg 1}
-
-#
-# Determine presence of rpmbuild command line --define arguments and set
-# defaults if not present.
-#
-%define build_userspace_on_cmdline %{?build_userspace:1}%{!?build_userspace:0}
-%define build_modules_on_cmdline %{?build_modules:1}%{!?build_modules:0}
-
-%if !%{build_userspace_on_cmdline}
-%define build_userspace 1
-%endif
-%if !%{build_modules_on_cmdline}
-%define build_modules 1
-%endif
-
-#
-# Definitions
-#
+#-----------------------------------------------------------------------------
+# Kernel module constants
+#-----------------------------------------------------------------------------
+%if %{with modules}
 
 %if %{?kernel_version:0}%{!?kernel_version:1}
 %if %{?kernvers:1}%{!?kernvers:0}
@@ -75,6 +67,8 @@
 %global kernel_epoch 1:
 %else
 %global kernel_epoch %nil
+%endif
+
 %endif
 
 
@@ -95,7 +89,7 @@ BuildRequires: systemd-units
 BuildRequires: perl-devel, swig
 BuildRequires: perl(ExtUtils::Embed)
 BuildRequires: krb5-devel
-%if %{build_modules}
+%if %{with modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
 %endif
@@ -138,9 +132,8 @@ The OpenAFS SRPM can be rebuilt with the following options:
 
  --target=i386                    The target architecture to build for.
 
- --define "build_userspace 1"     Request building of userspace tools
- --define "build_modules 1"       Request building of kernel modules
-                                  You probably never need to specify these.
+ --without userspace              Do not build userspace tools
+ --without modules                Do not build kernel modules
 
 To a kernel module for your running kernel, just run:
   rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
@@ -150,7 +143,7 @@ To a kernel module for your running kernel, just run:
 # build the userspace side of things if so requested
 #
 ##############################################################################
-%if %{build_userspace}
+%if %{with userspace}
 
 %package client
 Requires: binutils, openafs = %{version}
@@ -192,7 +185,7 @@ administrative management.
 This package provides basic server support to host files in an AFS
 Cell.
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %package -n dkms-%{name}
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Group:          Development/Kernel
@@ -327,7 +320,7 @@ krb4 lookalike services.
 # build the kernel modules if so requested
 #
 ##############################################################################
-%if %{build_modules}
+%if %{with modules}
 
 %package -n kmod-%{name}
 Summary:          %{name} kernel module
@@ -360,8 +353,8 @@ kernel %{kernel_version} for the %{_target_cpu} family of processors.
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 : @@@
 : @@@ kernel version:     %{kverrel}
-: @@@ build userspace:    %{build_userspace}
-: @@@ build modules:      %{build_modules}
+: @@@ build userspace:    %{with userspace}
+: @@@ build modules:      %{with modules}
 : @@@ arch:               %{_arch}
 : @@@ target cpu:         %{_target_cpu}
 : @@@
@@ -383,9 +376,6 @@ export CFLAGS="$RPM_OPT_FLAGS"
 export KRB5_CONFIG="%{krb5config}"
 %endif
 
-config_opts="%{?_with_supergroups:--enable-supergroups} \
-        --enable-transarc-paths"
-
 ./configure \
        --prefix=%{_prefix} \
        --libdir=%{_libdir} \
@@ -394,7 +384,7 @@ config_opts="%{?_with_supergroups:--enable-supergroups} \
        --docdir=%{_docdir}/openafs-%{openafs_version} \
        --disable-strip-binaries \
        --enable-debug \
-%if %{build_modules}
+%if %{with modules}
        --with-linux-kernel-packaging \
 %if %{?kernel_source_dir:1}%{!?kernel_source_dir:0}
        --with-linux-kernel-headers=%{kernel_source_dir} \
@@ -405,7 +395,10 @@ config_opts="%{?_with_supergroups:--enable-supergroups} \
        --with-krb5 \
        --with-swig \
        --disable-kauth \
-       $config_opts \
+%if %{with supergroups}
+       --enable-supergroups \
+%endif
+       --enable-transarc-paths \
        || exit 1
 
 # Build the libafs tree
@@ -415,11 +408,11 @@ make %{_smp_mflags} only_libafs_tree V=0 || exit 1
 export KRB5_CONFIG="%{krb5config}"
 %endif
 
-%if %{build_userspace}
+%if %{with userspace}
 make %{_smp_mflags} all_nolibafs V=0
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 make %{_smp_mflags} libafs V=0
 %endif
 
@@ -437,7 +430,7 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 ### Install userspace
 ###
 ##############################################################################
-%if %{build_userspace}
+%if %{with userspace}
 
 #-----------------------------------------------------------------------------
 # Install userspace files
@@ -591,7 +584,7 @@ mkdir -p $RPM_BUILD_ROOT%{afswsdir}/etc
 ### Install modules
 ###
 ##############################################################################
-%if %{build_modules}
+%if %{with modules}
 
 srcdir=src/libafs/MODLOAD-%{kernel_version}
 dstdir=$RPM_BUILD_ROOT/lib/modules/%{kernel_version}/extra/openafs
@@ -606,7 +599,7 @@ install -m 755 ${srcdir}/openafs.ko ${dstdir}/openafs.ko
 ### scripts
 ###
 ##############################################################################
-%if %{build_userspace}
+%if %{with userspace}
 
 %post client
 if [ $1 -eq 1 ] ; then
@@ -695,7 +688,7 @@ fi
 %postun server
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %post -n dkms-%{name}
 dkms add -m %{name} -v %{dkms_version} --rpm_safe_upgrade
 dkms build -m %{name} -v %{dkms_version} --rpm_safe_upgrade
@@ -724,7 +717,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 # Run this because the SysV package being removed won't do it
 /sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
 
-%if %{build_modules}
+%if %{with module}
 %post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
 
@@ -737,7 +730,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 ### file lists
 ###
 ##############################################################################
-%if %{build_userspace}
+%if %{with userspace}
 
 %files
 %defattr(-,root,root)
@@ -985,7 +978,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/perl/ukernel.so
 %{_mandir}/man3/AFS::ukernel.3.gz
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %files -n dkms-%{name}
 %defattr(-,root,root)
 %{_prefix}/src/%{name}-%{dkms_version}
@@ -1039,7 +1032,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 
 %files -n kmod-%{name}
 %defattr(644,root,root,755)
