@@ -64,8 +64,6 @@
 # Definitions
 #
 
-%define kmod_name openafs
-
 %if %{?kernel_version:0}%{!?kernel_version:1}
 %if %{?kernvers:1}%{!?kernvers:0}
 %{warn: kernvers is deprecated; Use --define "kernel_version <version>"}
@@ -386,22 +384,22 @@ krb4 lookalike services.
 ##############################################################################
 %if %{build_modules}
 
-%package -n kmod-%{kmod_name}
-Summary:          %{kmod_name} kernel module
+%package -n kmod-%{name}
+Summary:          %{name} kernel module
 Group:            System Environment/Kernel
 Provides:         kernel-modules = %{kernel_epoch}%{kernel_version}
-Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides:         %{name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Provides:         openafs-kernel = %{version}
 Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
-Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
+Requires:         %{name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
-%description -n kmod-%{kmod_name}
-This package provides the %{kmod_name} kernel modules built for the Linux
+%description -n kmod-%{name}
+This package provides the %{name} kernel modules built for the Linux
 kernel %{kernel_version} for the %{_target_cpu} family of processors.
 
 %endif
@@ -869,10 +867,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 /sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
 
 %if %{build_modules}
-%post -n kmod-%{kmod_name}
+%post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
 
-%postun -n kmod-%{kmod_name}
+%postun -n kmod-%{name}
 /usr/sbin/depmod -aF /boot/System.map-%{kernel_version} %{kernel_version} &> /dev/null || :
 %endif
 
@@ -1233,9 +1231,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{build_modules}
 
-%files -n kmod-%{kmod_name}
+%files -n kmod-%{name}
 %defattr(644,root,root,755)
-/lib/modules/%{kernel_version}/extra/%{kmod_name}/
+/lib/modules/%{kernel_version}/extra/%{name}/
 
 %endif
 
