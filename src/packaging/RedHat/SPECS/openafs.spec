@@ -16,8 +16,16 @@
 %global package_release 1
 %endif
 
-%if %{?packager:0}%{!?packager:1}
+%if ! %{defined packager}
 %global packager OpenAFS Maintainers <openafs-bugs@openafs.org>
+%endif
+
+%if ! %{defined dkms_version}
+%global dkms_version %{package_version}-%{package_release}%{?dist}
+%endif
+
+%if ! %{defined source_date_epoch}
+%global source_date_epoch %(date +%%s)
 %endif
 
 
@@ -36,7 +44,6 @@
 #       on each release to set the source_date_epoch.
 #
 %define source_date_epoch_from_changelog 0
-%{!?source_date_epoch: %global source_date_epoch %(date +%%s)}
 
 %{!?build_dkmspkg: %define build_dkmspkg 1}
 
@@ -74,8 +81,6 @@
 %else
 %global kernel_epoch %nil
 %endif
-
-%define dkms_version %{package_version}-%{package_release}%{?dist}
 
 
 Summary: OpenAFS distributed filesystem
