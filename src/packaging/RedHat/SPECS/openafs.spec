@@ -706,16 +706,11 @@ mkdir -p $RPM_BUILD_ROOT%{afswsdir}/etc
 ##############################################################################
 %if %{build_modules}
 
-if [ -d src/libafs/MODLOAD-%{kverrel} ] ; then
-    srcdir=src/libafs/MODLOAD-%{kverrel}
-    dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}/extra/openafs
-else
-    srcdir=src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}
-    dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
-fi
-
+srcdir=src/libafs/MODLOAD-%{kernel_version}
+dstdir=$RPM_BUILD_ROOT/lib/modules/%{kernel_version}/extra/openafs
 mkdir -p ${dstdir}
 install -m 755 ${srcdir}/openafs.ko ${dstdir}/openafs.ko
+
 %endif
 
 ##############################################################################
