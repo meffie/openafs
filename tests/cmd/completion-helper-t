@@ -84,6 +84,26 @@ my @test_cases = (
         args => ['2', 'comptest', 'unknown', '-'],
         expected => '',
     },
+    {
+        name => 'do not repeat CMD_SINGLE option',
+        args => ['4', 'comptest', 'one', '-banana', 'value1', '-'],
+        expected => '-apple -peach -pear -plum -help ',
+    },
+    {
+        name => 'do not repeat multiple CMD_SINGLE options',
+        args => ['6', 'comptest', 'one', '-plum', 'value1', '-banana', 'value2', '-'],
+        expected => '-apple -peach -pear -help ',
+    },
+    {
+        name => 'do not repeat CMD_FLAG option',
+        args => ['3', 'comptest', 'one', '-apple', '-'],
+        expected => '-banana -peach -pear -plum -help ',
+    },
+    {
+        name => 'allow repeated CMD_LIST option',
+        args => ['4', 'comptest', 'one', '-peach', 'value1', '-'],
+        expected => '-apple -banana -peach -pear -plum -help ',
+    },
 
     # TODO: Many, many more tests. Be sure to check "edge cases".
 );

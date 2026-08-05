@@ -830,8 +830,10 @@ CompletionHelper(int argc, char **argv)
     char **word_list = NULL;
     struct cmd_syndesc *ts = NULL;
     int i = 0;
+	int j = 0;
     int single_list = 0;
     int help_typed = 0;
+	int already_used = 0;
 
     /*
      * If there is at least one word written on the command line, extract COMP_CWORD and the full
@@ -896,7 +898,20 @@ CompletionHelper(int argc, char **argv)
 	    if (single_list == 0) {
 		for (i = 0; i < ts->nParms; i++) {
 		    if (ts->parms[i].name != NULL) {
+			already_used = 0;
+			/*
+			 * Do not repeat options that were already used, unless
+			 * they are CMD_LIST options.
+			 */
+			for (j = 0; j < nwords; j++) {
+			if (strcmp(word_list[j], ts->parms[i].name) == 0) {
+			already_used = 1;
+			break;
+			}
+			}
+			if (already_used == 0 || ts->parms[i].type == CMD_LIST) {
 			printf("%s ", ts->parms[i].name);
+			}
 		    }
 		}
 
