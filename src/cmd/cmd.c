@@ -819,7 +819,12 @@ initSyntax(void)
     }
 }
 
-/* Shell completion helper called when the -completion-helper flag is used. */
+/**
+ * Shell completion helper called when the -completion-helper flag is used.
+ *
+ * TODO: We really could use some explaination here. What is the expected
+ *       argc and arvg arrays?
+ */
 static void
 CompletionHelper(int argc, char **argv)
 {
@@ -830,14 +835,15 @@ CompletionHelper(int argc, char **argv)
     char **word_list = NULL;
     struct cmd_syndesc *ts = NULL;
     int i = 0;
-	int j = 0;
+    int j = 0;
     int single_list = 0;
     int help_typed = 0;
-	int already_used = 0;
+    int already_used = 0;
 
     /*
-     * If there is at least one word written on the command line, extract COMP_CWORD and the full
-     * COMP_WORDS array passed by the shell completion script.
+     * If there is at least one word written on the command line, extract
+     * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
+     * script.
      */
     if (argc >= 5) {
 	pos_cword = atoi(argv[3]);
@@ -847,10 +853,10 @@ CompletionHelper(int argc, char **argv)
 	return;
     }
 
-	if (pos_cword <= 0 || pos_cword >= nwords) {
+    if (pos_cword <= 0 || pos_cword >= nwords) {
 	printf("\n");
 	return;
-	}
+    }
 
     if (nwords >= 2) {
 	subcommand = word_list[1];
@@ -882,8 +888,8 @@ CompletionHelper(int argc, char **argv)
 	if (ts != NULL) {
 	    for (i = 0; i < ts->nParms; i++) {
 		/*
-		 * If the parameter expects a value, treat the current word as its value
-		 * and do not offer option completions here.
+		 * If the parameter expects a value, treat the current word as
+		 * its value and do not offer option completions here.
 		 */
 		if (ts->parms[i].name != NULL) {
 		    if (strcmp(prev, ts->parms[i].name) == 0
@@ -904,36 +910,36 @@ CompletionHelper(int argc, char **argv)
 			 * they are CMD_LIST options.
 			 */
 			for (j = 0; j < nwords; j++) {
-			if (strcmp(word_list[j], ts->parms[i].name) == 0) {
-			already_used = 1;
-			break;
+			    if (strcmp(word_list[j], ts->parms[i].name) == 0) {
+				already_used = 1;
+				break;
+			    }
 			}
-			}
-			if (already_used == 0 || ts->parms[i].type == CMD_LIST) {
-			printf("%s ", ts->parms[i].name);
+			if (already_used == 0
+			    || ts->parms[i].type == CMD_LIST) {
+			    printf("%s ", ts->parms[i].name);
 			}
 		    }
 		}
 
 		if (ts->parms[CMD_HELPPARM].name != NULL) {
-		for (i = 0; i < nwords; i++) {
+		    for (i = 0; i < nwords; i++) {
 			if (strcmp(ts->parms[CMD_HELPPARM].name,
-				word_list[i]) == 0) {
-			help_typed = 1;
-			break;
+				   word_list[i]) == 0) {
+			    help_typed = 1;
+			    break;
 			}
-		}
+		    }
 
-		if (help_typed == 0) {
-		printf("%s ", ts->parms[CMD_HELPPARM].name);
+		    if (help_typed == 0) {
+			printf("%s ", ts->parms[CMD_HELPPARM].name);
+		    }
 		}
-		}
-		}
+	    }
 
 	}
     }
     printf("\n");
-
 }
 
 /* Call the appropriate function, or return syntax error code.  Note: if
