@@ -23,3 +23,5 @@ complete -F _openafs_cmd_completion pts
 complete -F _openafs_cmd_completion vos
 complete -F _openafs_cmd_completion volinfo
 complete -F _openafs_cmd_completion volscan
+complete -F _openafs_cmd_completion xstat_cm_test
+complete -F _openafs_cmd_completion xstat_fs_test
