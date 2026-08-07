@@ -788,15 +788,6 @@ if [ $1 = 0 ] ; then
 fi
 %endif
 
-# openafs-authlib scriptlets
-%if %{build_authlibs}
-%post authlibs
-/sbin/ldconfig
-
-%postun authlibs
-/sbin/ldconfig
-%endif
-
 # dkms-openafs scriptlets
 %if %{build_dkmspkg}
 %post -n dkms-%{name}
