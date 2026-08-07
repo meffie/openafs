@@ -17,6 +17,7 @@ sub completion_helper {
     open(my $pipe, "-|", @args) or BAIL_OUT("Unable to run '@args': $!");
     $output = do { local $/; <$pipe> };
     chomp $output;
+    $output =~ s/\s+$//; # remove trailing whitespaces
     if (!close($pipe)) {
         if ($!) {
             BAIL_OUT("Failed to close pipe: $!");
@@ -37,22 +38,22 @@ my @test_cases = (
     {
         name => 'top-level completions',
         args => ['1', 'comptest', ''],
-        expected => 'apropos five four help one three two version ',
+        expected => 'apropos five four help one three two version',
     },
     {
         name => 'options for "one" command',
         args => ['2', 'comptest', 'one', '-'],
-        expected => '-apple -banana -peach -pear -plum -help ',
+        expected => '-apple -banana -peach -pear -plum -help',
     },
     {
         name => 'options for "duo" command alias',
         args => ['2', 'comptest', 'duo', '-'],
-        expected => '-apple -banana -peach -orange -lime -help ',
+        expected => '-apple -banana -peach -orange -lime -help',
     },
     {
         name => 'do not repeat -help option',
         args => ['3', 'comptest', 'one', '-help', '-'],
-        expected => '-apple -banana -peach -pear -plum ',
+        expected => '-apple -banana -peach -pear -plum',
     },
     {
         name => 'no options for CMD_SINGLE value position',
@@ -87,22 +88,47 @@ my @test_cases = (
     {
         name => 'do not repeat CMD_SINGLE option',
         args => ['4', 'comptest', 'one', '-banana', 'value1', '-'],
-        expected => '-apple -peach -pear -plum -help ',
+        expected => '-apple -peach -pear -plum -help',
     },
     {
         name => 'do not repeat multiple CMD_SINGLE options',
         args => ['6', 'comptest', 'one', '-plum', 'value1', '-banana', 'value2', '-'],
-        expected => '-apple -peach -pear -help ',
+        expected => '-apple -peach -pear -help',
     },
     {
         name => 'do not repeat CMD_FLAG option',
         args => ['3', 'comptest', 'one', '-apple', '-'],
-        expected => '-banana -peach -pear -plum -help ',
+        expected => '-banana -peach -pear -plum -help',
     },
     {
         name => 'allow repeated CMD_LIST option',
         args => ['4', 'comptest', 'one', '-peach', 'value1', '-'],
-        expected => '-apple -banana -peach -pear -plum -help ',
+        expected => '-apple -banana -peach -pear -plum -help',
+    },
+    {
+        name => 'CMD_LIST repeated multiple times',
+        args => ['6', 'comptest', 'one', '-peach', 'value1', '-peach', 'value2', '-'],
+        expected => '-apple -banana -peach -pear -plum -help',
+    },
+    {
+        name => 'all single options used',
+        args => ['8', 'comptest', 'one', '-banana', 'val1', '-plum', 'v2', '-apple', '-pear', '-'],
+        expected => '-peach -help',
+    },
+    {
+        name => 'empty subcommand',
+        args => ['2', 'comptest', '', '-'],
+        expected => '',
+    },
+    {
+        name => 'whitespace subcommand',
+        args => ['2', 'comptest', ' ', '-'],
+        expected => '',
+    },
+    {
+        name => 'non-numeric pos_cword',
+        args => ['abc', 'comptest', 'one', '-'],
+        expected => '',
     },
 
     # TODO: Many, many more tests. Be sure to check "edge cases".
