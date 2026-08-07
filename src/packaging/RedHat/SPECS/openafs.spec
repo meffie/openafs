@@ -772,14 +772,6 @@ ln -sf %{_bindir}/pagsh.krb     %{afswsdir}/bin/pagsh.krb
 ln -sf %{_bindir}/tokens.krb    %{afswsdir}/bin/tokens.krb
 %endif
 
-%if %{build_authlibs}
-%post authlibs
-/sbin/ldconfig
-
-%postun authlibs
-/sbin/ldconfig
-%endif
-
 %preun
 if [ $1 = 0 ] ; then
     [ -d /afs ] && rmdir /afs
