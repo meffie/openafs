@@ -703,6 +703,7 @@ install -m 755 ${srcdir}/openafs.ko ${dstdir}/openafs.ko
 #-----------------------------------------------------------------------------
 %if %{build_userspace}
 
+# openafs-client scriptlets
 %post client
 if [ $1 -eq 1 ] ; then
     # Initial installation
@@ -725,11 +726,24 @@ fi
   cat CellServDB.local CellServDB.dist > CellServDB ; \
   chmod 644 CellServDB )
 
+%systemd_post openafs-server.client
+
+%preun client
+%systemd_preun openafs-client.service
+
+%postun client
+%systemd_postun openafs-client.service
+
+# openafs-server scriptlets
 %post server
-if [ $1 -eq 1 ] ; then
-    # Initial installation
-    /bin/systemctl daemon-reload >/dev/null 2>&1 || :
-fi
+%systemd_post openafs-server.service
+
+%preun server
+%systemd_preun openafs-server.service
+
+%postun server
+%systemd_postun openafs-server.service
+
 
 %post compat
 # Create compatiblity links.
@@ -778,24 +792,6 @@ if [ $1 = 0 ] ; then
     :
 fi
 
-%preun client
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable openafs-client.service > /dev/null 2>&1 || :
-    /bin/systemctl stop openafs-client.service > /dev/null 2>&1 || :
-fi
-
-%preun server
-if [ $1 -eq 0 ] ; then
-    /bin/systemctl --no-reload disable openafs-server.service > /dev/null 2>&1 || :
-    /bin/systemctl stop openafs-server.service > /dev/null 2>&1 || :
-fi
-
-%postun client
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-
-%postun server
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
 
 %if %{build_dkmspkg}
 %post -n dkms-%{name}
