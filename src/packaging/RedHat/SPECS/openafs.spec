@@ -43,16 +43,12 @@
 #
 %define build_userspace_on_cmdline %{?build_userspace:1}%{!?build_userspace:0}
 %define build_modules_on_cmdline %{?build_modules:1}%{!?build_modules:0}
-%define debugspec_on_cmdline %{?debugspec:1}%{!?debugspec:0}
 
 %if !%{build_userspace_on_cmdline}
 %define build_userspace 1
 %endif
 %if !%{build_modules_on_cmdline}
 %define build_modules 1
-%endif
-%if !%{debugspec_on_cmdline}
-%define debugspec 0
 %endif
 
 # Specify '--with kauth' if you want to build packages containing the legacy
@@ -487,8 +483,6 @@ make %{_smp_mflags} libafs
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 
-[ $RPM_BUILD_ROOT != / ] && rm -rf $RPM_BUILD_ROOT
-
 %if %{build_userspace}
 
 # Install userspace files
@@ -671,14 +665,6 @@ fi
 mkdir -p ${dstdir}
 install -m 755 ${srcdir}/openafs.ko ${dstdir}/openafs.ko
 %endif
-
-#-----------------------------------------------------------------------------
-# Clean stage
-#-----------------------------------------------------------------------------
-%clean
-[ "$RPM_BUILD_ROOT" != "/" -a "x%{debugspec}" != "x1" ] && \
-        rm -fr $RPM_BUILD_ROOT
-
 
 #-----------------------------------------------------------------------------
 # Scriptlets
