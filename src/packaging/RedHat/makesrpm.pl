@@ -487,7 +487,8 @@ if ($prepare_only) {
 open(my $rpmbuild, "-|",
      "rpmbuild", "-bs", "--nodeps",
      "--define", "dist %undefined",
-     "--define", "build_modules 0",
+     "--define", "build_modules 0",  # For old spec files.
+     "--without", "modules",
      "--define", "_topdir $abs_topdir",
      $spec_output)
     or die "$progname: Failed to start rpmbuild: $!\n";

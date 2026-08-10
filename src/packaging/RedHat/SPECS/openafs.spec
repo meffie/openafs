@@ -7,6 +7,10 @@
 #
 #-----------------------------------------------------------------------------
 
+# Handle old macro names
+Source99: openafs-compat.macros
+%include %{_specdir}/../SOURCES/openafs-compat.macros
+
 #
 # Constants
 #
@@ -41,17 +45,14 @@
 # Build conditionals
 #
 
-%{!?build_dkmspkg: %define build_dkmspkg 1}
+# Specify '--without dkms' if you do not want to build the dkms-openafs package.
+%bcond_without dkms
 
-%define build_userspace_on_cmdline %{?build_userspace:1}%{!?build_userspace:0}
-%define build_modules_on_cmdline %{?build_modules:1}%{!?build_modules:0}
+# Specify '--without userspace' if you do not want to build the userspace packages.
+%bcond_without userspace
 
-%if !%{build_userspace_on_cmdline}
-%define build_userspace 1
-%endif
-%if !%{build_modules_on_cmdline}
-%define build_modules 1
-%endif
+# Specify '--without modules' if you do not want to build the kmod-openafs package.
+%bcond_without modules
 
 # Specify '--with kauth' if you want to build packages containing the legacy
 # kaserver and related programs.
@@ -68,7 +69,7 @@
 #
 # Kernel module definitions
 #
-%if %{build_modules}
+%if %{with modules}
 
 %if %{?kernvers:0}%{!?kernvers:1}
 %global kernvers %(uname -r)
@@ -113,7 +114,7 @@ BuildRequires: perl(ExtUtils::Embed)
 %if %{with krb5}
 BuildRequires: krb5-devel
 %endif
-%if %{build_modules}
+%if %{with modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
 %endif
@@ -125,6 +126,7 @@ Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
 Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
 Source21: openafs-CellServDB.local
+Source29: openafs-compat.macros
 Source30: openafs-cacheinfo
 Source32: openafs-client.service
 Source33: openafs-client-systemd-helper.sh
@@ -175,7 +177,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
 To a kernel module for your running kernel, just run:
   rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
 
-%if %{build_userspace}
+%if %{with userspace}
 
 %package client
 Summary: OpenAFS Filesystem Client
@@ -215,7 +217,7 @@ administrative management.
 This package provides basic server support to host files in an AFS
 Cell.
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %package -n dkms-%{name}
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Provides:       %{name}-kernel = %{version}
@@ -376,7 +378,7 @@ krb4 lookalike services.
 
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 
 %package -n kmod-%{name}
 Summary:          OpenAFS kernel module
@@ -405,8 +407,8 @@ kernel %{kernvers}.
 : @@@
 : @@@ kernel version:     %{kverrel}
 : @@@ PAM modules dir:    %{pamdir}
-: @@@ build userspace:    %{build_userspace}
-: @@@ build modules:      %{build_modules}
+: @@@ build userspace:    %{with userspace}
+: @@@ build modules:      %{with modules}
 : @@@ arch:               %{_arch}
 : @@@ target cpu:         %{_target_cpu}
 : @@@
@@ -434,7 +436,7 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
        --disable-strip-binaries \
        --enable-debug \
        --with-linux-kernel-packaging \
-%if %{build_modules}
+%if %{with modules}
        --enable-kernel-module \
        --with-linux-kernel-headers=%{ksrcdir} \
 %else
@@ -452,14 +454,14 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %endif
        --enable-transarc-paths
 
-%if %{build_userspace} && %{build_modules}
+%if %{with userspace} && %{with modules}
 TARGET=all
-%elif %{build_userspace}
+%elif %{with userspace}
 TARGET=all_nolibafs
-%elif %{build_modules}
+%elif %{with modules}
 TARGET=libafs
 %else
-%{error:At least one of build_userspace or build_modules must be enabled.}
+%{error:At least one of --with userspace or --with modules is required.}
 %endif
 
 %make_build only_libafs_tree $TARGET V=0
@@ -471,7 +473,7 @@ TARGET=libafs
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 
-%if %{build_userspace}
+%if %{with userspace}
 
 # Install userspace files
 make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
@@ -560,7 +562,7 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/
 %endif
 
 # Install kernel modules
-%if %{build_modules}
+%if %{with modules}
 
 mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
@@ -573,14 +575,14 @@ install -m 755 \
 # Check stage
 #-----------------------------------------------------------------------------
 %check
-%if %{build_userspace}
+%if %{with userspace}
 make check
 %endif
 
 #-----------------------------------------------------------------------------
 # Scriptlets
 #-----------------------------------------------------------------------------
-%if %{build_userspace}
+%if %{with userspace}
 
 # openafs scriptlets
 %preun
@@ -676,7 +678,7 @@ fi
 %endif
 
 # dkms-openafs scriptlets
-%if %{build_dkmspkg}
+%if %{with dkms}
 %post -n dkms-%{name}
 dkms add -m %{name} -v %{dkms_version} --rpm_safe_upgrade
 dkms build -m %{name} -v %{dkms_version} --rpm_safe_upgrade
@@ -688,7 +690,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 # kmod-openafs scriptlets
-%if %{build_modules}
+%if %{with modules}
 %post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
 
@@ -699,7 +701,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 #-----------------------------------------------------------------------------
 # File lists
 #-----------------------------------------------------------------------------
-%if %{build_userspace}
+%if %{with userspace}
 
 %files
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -981,7 +983,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/perl/ukernel.so
 %doc %{_mandir}/man3/AFS::ukernel.3.*
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %files -n dkms-%{name}
 %{_prefix}/src/%{name}-%{dkms_version}
 %endif
@@ -1077,7 +1079,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 
 %files -n kmod-%{name}
 %{kmodulesdir}/extra/%{name}/%{name}.ko
