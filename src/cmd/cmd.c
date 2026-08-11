@@ -826,10 +826,10 @@ static void
 PrintCompletionOptions(struct cmd_syndesc *ts,
 		       const char *prev, char **word_list, int nwords)
 {
-    int i = 0;
-    int j = 0;
-    int single_list = 0;
-    int already_used = 0;
+    int i;
+    int j;
+    int single_list;
+    int already_used;
 
     for (i = 0; i < CMD_MAXPARMS; i++) {
 	/*
@@ -888,12 +888,12 @@ PrintCompletionOptions(struct cmd_syndesc *ts,
 static void
 CompletionHelper(int argc, char **argv)
 {
-    int pos_cword = 0;
-    int nwords = 0;
+    int pos_cword;
+    int nwords;
+    char **word_list;
     const char *subcommand = NULL;
     const char *prev = NULL;
-    char **word_list = NULL;
-    struct cmd_syndesc *ts = NULL;
+    struct cmd_syndesc *ts;
 
     /*
      * If there is at least one word written on the command line, extract
@@ -925,6 +925,7 @@ CompletionHelper(int argc, char **argv)
 
     /* Print options for commands that don't have subcommands. */
     if (ts != NULL && ts->name == NULL) {
+	/* BUG: prev may be NULL here. */
 	PrintCompletionOptions(ts, prev, word_list, nwords);
     } else if (pos_cword <= 1) {
 	/*
@@ -948,6 +949,7 @@ CompletionHelper(int argc, char **argv)
 	    ts = ts->next;
 	}
 	if (ts != NULL) {
+	    /* BUG: prev may be NULL here. */
 	    PrintCompletionOptions(ts, prev, word_list, nwords);
 	}
     }
