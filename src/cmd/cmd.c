@@ -824,50 +824,49 @@ initSyntax(void)
  */
 static void
 PrintCompletionOptions(struct cmd_syndesc *ts,
-		const char *prev, char **word_list, int nwords)
+		       const char *prev, char **word_list, int nwords)
 {
-	int i = 0;
-	int j = 0;
-	int single_list = 0;
-	int already_used = 0;
+    int i = 0;
+    int j = 0;
+    int single_list = 0;
+    int already_used = 0;
 
-	for (i = 0; i < CMD_MAXPARMS; i++) {
+    for (i = 0; i < CMD_MAXPARMS; i++) {
 	/*
 	 * If the parameter expects a value, treat the current word as
 	 * its value and do not offer option completions here.
 	 */
 	if (ts->parms[i].name != NULL) {
-		if (strcmp(prev, ts->parms[i].name) == 0
-			&& (ts->parms[i].type == CMD_SINGLE
-			    || ts->parms[i].type == CMD_LIST)) {
+	    if (strcmp(prev, ts->parms[i].name) == 0
+		&& (ts->parms[i].type == CMD_SINGLE
+		    || ts->parms[i].type == CMD_LIST)) {
 		single_list = 1;
 		break;
-		}
+	    }
 	}
-	}
+    }
 
-	/* Print available options. */
-	if (single_list == 0) {
+    /* Print available options. */
+    if (single_list == 0) {
 	for (i = 0; i < CMD_MAXPARMS; i++) {
-		if (ts->parms[i].name != NULL) {
+	    if (ts->parms[i].name != NULL) {
 		already_used = 0;
 		/*
 		 * Do not repeat options that were already used, unless
 		 * they are CMD_LIST options.
 		 */
 		for (j = 0; j < nwords; j++) {
-			if (strcmp(word_list[j], ts->parms[i].name) == 0) {
+		    if (strcmp(word_list[j], ts->parms[i].name) == 0) {
 			already_used = 1;
 			break;
-			}
+		    }
 		}
-		if (already_used == 0
-			|| ts->parms[i].type == CMD_LIST) {
-			printf("%s ", ts->parms[i].name);
+		if (already_used == 0 || ts->parms[i].type == CMD_LIST) {
+		    printf("%s ", ts->parms[i].name);
 		}
-		}
+	    }
 	}
-	}
+    }
 }
 
 /**
@@ -924,31 +923,32 @@ CompletionHelper(int argc, char **argv)
 
     ts = allSyntax;
 
-	/* Print options for commands that don't have subcommands. */
-	if (ts != NULL && ts->name == NULL) {
+    /* Print options for commands that don't have subcommands. */
+    if (ts != NULL && ts->name == NULL) {
 	PrintCompletionOptions(ts, prev, word_list, nwords);
-	} else if (pos_cword <= 1) {
+    } else if (pos_cword <= 1) {
 	/*
-     * If the current word is the subcommand, the whole list
+	 * If the current word is the subcommand, the whole list
 	 * of subcommands is printed.
-     */
+	 */
 	while (ts != NULL) {
 	    if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
 		ts = ts->next;
 	    } else {
 		if (ts->name != NULL) {
-		printf("%s ", ts->name);
+		    printf("%s ", ts->name);
 		}
 		ts = ts->next;
 	    }
 	}
 	/* Print options for commands that have both subcommands and options. */
     } else {
-	while (ts != NULL && (ts->name == NULL || strcmp(ts->name, subcommand) != 0)) {
+	while (ts != NULL
+	       && (ts->name == NULL || strcmp(ts->name, subcommand) != 0)) {
 	    ts = ts->next;
 	}
 	if (ts != NULL) {
-	PrintCompletionOptions(ts, prev, word_list, nwords);
+	    PrintCompletionOptions(ts, prev, word_list, nwords);
 	}
     }
     printf("\n");
