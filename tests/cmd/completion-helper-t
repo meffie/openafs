@@ -130,8 +130,6 @@ my @test_cases = (
         args => ['abc', 'comptest', 'one', '-'],
         expected => '',
     },
-
-    # TODO: Many, many more tests. Be sure to check "edge cases".
 );
 
 plan tests => scalar @test_cases;
