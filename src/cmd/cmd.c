@@ -900,13 +900,13 @@ CompletionHelper(int argc, char **argv)
      * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
      * script.
      */
-    if (argc >= 5) {
-	pos_cword = atoi(argv[3]);
-	nwords = argc - 4;
-	word_list = &argv[4];
-    } else {
+    if (argc < 5) {
 	return;
     }
+
+    pos_cword = atoi(argv[3]);
+    nwords = argc - 4;
+    word_list = &argv[4];
 
     if (pos_cword <= 0 || pos_cword >= nwords) {
 	printf("\n");
