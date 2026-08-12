@@ -4,7 +4,7 @@
 #
 # Source this file to register the completions.
 #
-#   $ source openafs_completion.sh
+#   $ source openafs_completion.bash
 #
 
 _openafs_cmd_completion()

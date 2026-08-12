@@ -831,13 +831,15 @@ PrintCompletionOptions(struct cmd_syndesc *ts,
     int single_list;
     int already_used;
 
+    single_list = 0;
     for (i = 0; i < CMD_MAXPARMS; i++) {
 	/*
 	 * If the parameter expects a value, treat the current word as
 	 * its value and do not offer option completions here.
 	 */
 	if (ts->parms[i].name != NULL) {
-	    if (strcmp(prev, ts->parms[i].name) == 0
+	    if (prev != NULL
+		&& strcmp(prev, ts->parms[i].name) == 0
 		&& (ts->parms[i].type == CMD_SINGLE
 		    || ts->parms[i].type == CMD_LIST)) {
 		single_list = 1;
@@ -909,7 +911,6 @@ CompletionHelper(int argc, char **argv)
     word_list = &argv[4];
 
     if (pos_cword <= 0 || pos_cword >= nwords) {
-	printf("\n");
 	return;
     }
 
@@ -925,7 +926,6 @@ CompletionHelper(int argc, char **argv)
 
     /* Print options for commands that don't have subcommands. */
     if (ts != NULL && ts->name == NULL) {
-	/* BUG: prev may be NULL here. */
 	PrintCompletionOptions(ts, prev, word_list, nwords);
     } else if (pos_cword <= 1) {
 	/*
@@ -949,7 +949,6 @@ CompletionHelper(int argc, char **argv)
 	    ts = ts->next;
 	}
 	if (ts != NULL) {
-	    /* BUG: prev may be NULL here. */
 	    PrintCompletionOptions(ts, prev, word_list, nwords);
 	}
     }
