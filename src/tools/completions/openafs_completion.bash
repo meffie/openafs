@@ -7,6 +7,53 @@
 #   $ source openafs_completion.bash
 #
 
+_OPENAFS_COMMANDS=(
+    afsd
+    afsd.fuse
+    afsio
+    akeyconvert
+    bos
+    butc
+    cmdebug
+    dafssync-debug
+    fs
+    fssync-debug
+    fstrace
+    klog.krb5
+    livesys
+    prdb_check
+    pts
+    pt_util
+    read_tape
+    restorevol
+    rxdebug
+    rxstat_clear_peer
+    rxstat_clear_process
+    rxstat_disable_peer
+    rxstat_disable_process
+    rxstat_enable_peer
+    rxstat_enable_process
+    rxstat_get_peer
+    rxstat_get_process
+    rxstat_get_version
+    rxstat_query_peer
+    rxstat_query_process
+    salvsync-debug
+    scout
+    sys
+    tokens
+    udebug
+    unlog
+    vldb_check
+    vldb_convert
+    voldump
+    volinfo
+    volscan
+    vos
+    xstat_cm_test
+    xstat_fs_test
+)
+
 _openafs_cmd_completion()
 {
     local cur="${COMP_WORDS[COMP_CWORD]}"
@@ -17,11 +64,6 @@ _openafs_cmd_completion()
 }
 
 # Register command completions.
-complete -F _openafs_cmd_completion bos
-complete -F _openafs_cmd_completion fs
-complete -F _openafs_cmd_completion pts
-complete -F _openafs_cmd_completion vos
-complete -F _openafs_cmd_completion volinfo
-complete -F _openafs_cmd_completion volscan
-complete -F _openafs_cmd_completion xstat_cm_test
-complete -F _openafs_cmd_completion xstat_fs_test
+for cmd in "${_OPENAFS_COMMANDS[@]}"; do
+    complete -F _openafs_cmd_completion $cmd
+done
