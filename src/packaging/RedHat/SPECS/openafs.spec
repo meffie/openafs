@@ -113,6 +113,7 @@ Source35: openafs-README
 Source37: openafs-server.service
 Source38: openafs.sysconfig
 Source39: openafs-ThisCell
+Source40: openafs-dkms.conf
 
 %description
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -565,23 +566,9 @@ install -p -m 644 %{SOURCE30} %{buildroot}%{_prefix}/vice/etc/cacheinfo
 # Install DKMS source.
 install -d -m 755 %{buildroot}%{_prefix}/src
 cp -a libafs_tree %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}
-
-cat > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf <<"EOF"
-
-PACKAGE_VERSION="%{dkms_version}"
-
-# Items below here should not have to change with each driver version.
-PACKAGE_NAME="%{name}"
-MAKE[0]='./configure --with-linux-kernel-headers=${kernel_source_dir} --with-linux-kernel-packaging && make && mv src/libafs/MODLOAD-*/openafs.ko .'
-CLEAN=true
-
-BUILT_MODULE_NAME[0]="$PACKAGE_NAME"
-DEST_MODULE_LOCATION[0]="/extra/$PACKAGE_NAME/"
-STRIP[0]=no
-AUTOINSTALL=yes
-NO_WEAK_MODULES=yes
-
-EOF
+sed -e 's/@NAME@/%{name}/' \
+    -e 's/@PACKAGE_VERSION@/%{dkms_version}/' \
+    %{SOURCE40} > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf
 
 # Install the kernel module source tree.
 mkdir -p %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
