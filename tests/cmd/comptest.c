@@ -63,6 +63,7 @@ main(int argc, char *argv[])
     cmd_AddParm(syntax, "-banana", CMD_SINGLE, CMD_REQUIRED, "example");
     cmd_AddParm(syntax, "-peach", CMD_LIST, CMD_OPTIONAL, "example");
     cmd_AddParm(syntax, "-lime", CMD_FLAG, CMD_OPTIONAL, "example");
+    cmd_AddParm(syntax, "-invisible", CMD_FLAG, (CMD_OPTIONAL | CMD_HIDE), "example");
 
     syntax = cmd_CreateSyntax("four", command_proc, NULL, 0, "test command four");
     cmd_AddParm(syntax, "-apple", CMD_FLAG, CMD_OPTIONAL, "example");
