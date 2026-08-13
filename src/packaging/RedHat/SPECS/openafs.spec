@@ -408,6 +408,10 @@ kernel %{kernvers}.
 
 %setup -q -n %{srcdir}
 
+# Add the change log and release notes to source tree.
+cp -p %{SOURCE10} .
+cp -p %{SOURCE11} .
+
 #-----------------------------------------------------------------------------
 # Build stage
 #-----------------------------------------------------------------------------
@@ -586,13 +590,6 @@ tar cf - -C libafs_tree . | \
 install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
 install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
 install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
-
-# Install documentation.
-mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-tar cf - -C doc html pdf | \
-    tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 
 %endif
 
@@ -776,43 +773,43 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/vsys
 %{_libdir}/libafshcrypto.so.*
 %{_libdir}/librokenafs.so.*
-%{_mandir}/man1/afs.1.gz
-%{_mandir}/man1/afsmonitor.1.gz
-%{_mandir}/man1/fs.1.gz
-%{_mandir}/man1/fs_*.1.gz
-%{_mandir}/man1/pagsh.1.gz
-%{_mandir}/man1/pts.1.gz
-%{_mandir}/man1/pts_*.1.gz
-%{_mandir}/man1/restorevol.1.gz
-%{_mandir}/man1/rxdebug.1.gz
-%{_mandir}/man1/scout.1.gz
-%{_mandir}/man1/sys.1.gz
-%{_mandir}/man1/tokens.1.gz
-%{_mandir}/man1/translate_et.1.gz
-%{_mandir}/man1/udebug.1.gz
-%{_mandir}/man1/unlog.1.gz
-%{_mandir}/man1/vos.1.gz
-%{_mandir}/man1/vos_*.1.gz
-%{_mandir}/man1/xstat_cm_test.1.gz
-%{_mandir}/man1/xstat_fs_test.1.gz
-%{_mandir}/man5/CellServDB.5.gz
-%{_mandir}/man5/ThisCell.5.gz
-%{_mandir}/man5/afsmonitor.5.gz
-%{_mandir}/man5/butc.5.gz
-%{_mandir}/man5/butc_logs.5.gz
-%{_mandir}/man5/uss.5.gz
-%{_mandir}/man5/uss_bulk.5.gz
-%{_mandir}/man8/backup.8.gz
-%{_mandir}/man8/backup_*.8.gz
-%{_mandir}/man8/bos.8.gz
-%{_mandir}/man8/bos_*.8.gz
-%{_mandir}/man8/butc.8.gz
-%{_mandir}/man8/fms.8.gz
-%{_mandir}/man8/fstrace.8.gz
-%{_mandir}/man8/fstrace_*.8.gz
-%{_mandir}/man8/read_tape.8.gz
-%{_mandir}/man8/uss.8.gz
-%{_mandir}/man8/uss_*.8.gz
+%doc %{_mandir}/man1/afs.1.*
+%doc %{_mandir}/man1/afsmonitor.1.*
+%doc %{_mandir}/man1/fs.1.*
+%doc %{_mandir}/man1/fs_*.1.*
+%doc %{_mandir}/man1/pagsh.1.*
+%doc %{_mandir}/man1/pts.1.*
+%doc %{_mandir}/man1/pts_*.1.*
+%doc %{_mandir}/man1/restorevol.1.*
+%doc %{_mandir}/man1/rxdebug.1.*
+%doc %{_mandir}/man1/scout.1.*
+%doc %{_mandir}/man1/sys.1.*
+%doc %{_mandir}/man1/tokens.1.*
+%doc %{_mandir}/man1/translate_et.1.*
+%doc %{_mandir}/man1/udebug.1.*
+%doc %{_mandir}/man1/unlog.1.*
+%doc %{_mandir}/man1/vos.1.*
+%doc %{_mandir}/man1/vos_*.1.*
+%doc %{_mandir}/man1/xstat_cm_test.1.*
+%doc %{_mandir}/man1/xstat_fs_test.1.*
+%doc %{_mandir}/man5/CellServDB.5.*
+%doc %{_mandir}/man5/ThisCell.5.*
+%doc %{_mandir}/man5/afsmonitor.5.*
+%doc %{_mandir}/man5/butc.5.*
+%doc %{_mandir}/man5/butc_logs.5.*
+%doc %{_mandir}/man5/uss.5.*
+%doc %{_mandir}/man5/uss_bulk.5.*
+%doc %{_mandir}/man8/backup.8.*
+%doc %{_mandir}/man8/backup_*.8.*
+%doc %{_mandir}/man8/bos.8.*
+%doc %{_mandir}/man8/bos_*.8.*
+%doc %{_mandir}/man8/butc.8.*
+%doc %{_mandir}/man8/fms.8.*
+%doc %{_mandir}/man8/fstrace.8.*
+%doc %{_mandir}/man8/fstrace_*.8.*
+%doc %{_mandir}/man8/read_tape.8.*
+%doc %{_mandir}/man8/uss.8.*
+%doc %{_mandir}/man8/uss_*.8.*
 # Exclude obsolete or unused files.
 %exclude %{_bindir}/livesys
 %exclude %{_sbindir}/rmtsysd
@@ -843,11 +840,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files docs
 %defattr(-,root,root)
-%docdir %{_docdir}/openafs-%{afsvers}
-%dir %{_docdir}/openafs-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/ChangeLog
-%{_docdir}/openafs-%{afsvers}/RELNOTES-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/pdf
+%doc ChangeLog
+%doc RELNOTES-%{afsvers}
+%doc doc/pdf
 
 %files client
 %defattr(-,root,root)
@@ -868,16 +863,16 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
 %{_prefix}/vice/etc/openafs-client-systemd-helper.sh
-%{_mandir}/man1/cmdebug.1.gz
-%{_mandir}/man1/up.1.gz
-%{_mandir}/man5/afs.5.gz
-%{_mandir}/man5/afs_cache.5.gz
-%{_mandir}/man5/afs_volume_header.5.gz
-%{_mandir}/man5/afszcm.cat.5.gz
-%{_mandir}/man5/cacheinfo.5.gz
-%{_mandir}/man8/afsd.8.gz
-%{_mandir}/man8/vsys.8.gz
-%{_mandir}/man5/CellAlias.5.gz
+%doc %{_mandir}/man1/cmdebug.1.*
+%doc %{_mandir}/man1/up.1.*
+%doc %{_mandir}/man5/afs.5.*
+%doc %{_mandir}/man5/afs_cache.5.*
+%doc %{_mandir}/man5/afs_volume_header.5.*
+%doc %{_mandir}/man5/afszcm.cat.5.*
+%doc %{_mandir}/man5/cacheinfo.5.*
+%doc %{_mandir}/man8/afsd.8.*
+%doc %{_mandir}/man8/vsys.8.*
+%doc %{_mandir}/man5/CellAlias.5.*
 
 %files server
 %defattr(-,root,root)
@@ -911,56 +906,56 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/vldb_convert
 %{_sbindir}/voldump
 %{_unitdir}/openafs-server.service
-%{_mandir}/man5/BackupLog.5.gz
-%{_mandir}/man5/BosConfig.5.gz
-%{_mandir}/man5/BosLog.5.gz
-%{_mandir}/man5/FORCESALVAGE.5.gz
-%{_mandir}/man5/FileLog.5.gz
-%{_mandir}/man5/KeyFile.5.gz
-%{_mandir}/man5/KeyFileExt.5.gz
-%{_mandir}/man5/NetInfo.5.gz
-%{_mandir}/man5/NetRestrict.5.gz
-%{_mandir}/man5/NoAuth.5.gz
-%{_mandir}/man5/PtLog.5.gz
-%{_mandir}/man5/SALVAGE.fs.5.gz
-%{_mandir}/man5/SalvageLog.5.gz
-%{_mandir}/man5/sysid.5.gz
-%{_mandir}/man5/UserList.5.gz
-%{_mandir}/man5/VLLog.5.gz
-%{_mandir}/man5/VolserLog.5.gz
-%{_mandir}/man5/bdb.DB0.5.gz
-%{_mandir}/man5/fms.log.5.gz
-%{_mandir}/man5/krb.conf.5.gz
-%{_mandir}/man5/krb.excl.5.gz
-%{_mandir}/man5/prdb.DB0.5.gz
-%{_mandir}/man5/salvage.lock.5.gz
-%{_mandir}/man5/tapeconfig.5.gz
-%{_mandir}/man5/vldb.DB0.5.gz
-%{_mandir}/man8/bosserver.8.gz
-%{_mandir}/man8/buserver.8.gz
-%{_mandir}/man8/fileserver.8.gz
-%{_mandir}/man8/dafileserver.8.gz
-%{_mandir}/man8/dafssync-debug.8.gz
-%{_mandir}/man8/dafssync-debug_*.8.gz
-%{_mandir}/man8/dasalvager.8.gz
-%{_mandir}/man8/davolserver.8.gz
-%{_mandir}/man8/fssync-debug.8.gz
-%{_mandir}/man8/fssync-debug_*.8.gz
-%{_mandir}/man8/prdb_check.8.gz
-%{_mandir}/man8/ptserver.8.gz
-%{_mandir}/man8/pt_util.8.gz
-%{_mandir}/man8/salvager.8.gz
-%{_mandir}/man8/salvageserver.8.gz
-%{_mandir}/man8/state_analyzer.8.gz
-%{_mandir}/man8/upclient.8.gz
-%{_mandir}/man8/upserver.8.gz
-%{_mandir}/man8/vldb_check.8.gz
-%{_mandir}/man8/vldb_convert.8.gz
-%{_mandir}/man8/vlserver.8.gz
-%{_mandir}/man8/voldump.8.gz
-%{_mandir}/man8/volinfo.8.gz
-%{_mandir}/man8/volscan.8.gz
-%{_mandir}/man8/volserver.8.gz
+%doc %{_mandir}/man5/BackupLog.5.*
+%doc %{_mandir}/man5/BosConfig.5.*
+%doc %{_mandir}/man5/BosLog.5.*
+%doc %{_mandir}/man5/FORCESALVAGE.5.*
+%doc %{_mandir}/man5/FileLog.5.*
+%doc %{_mandir}/man5/KeyFile.5.*
+%doc %{_mandir}/man5/KeyFileExt.5.*
+%doc %{_mandir}/man5/NetInfo.5.*
+%doc %{_mandir}/man5/NetRestrict.5.*
+%doc %{_mandir}/man5/NoAuth.5.*
+%doc %{_mandir}/man5/PtLog.5.*
+%doc %{_mandir}/man5/SALVAGE.fs.5.*
+%doc %{_mandir}/man5/SalvageLog.5.*
+%doc %{_mandir}/man5/sysid.5.*
+%doc %{_mandir}/man5/UserList.5.*
+%doc %{_mandir}/man5/VLLog.5.*
+%doc %{_mandir}/man5/VolserLog.5.*
+%doc %{_mandir}/man5/bdb.DB0.5.*
+%doc %{_mandir}/man5/fms.log.5.*
+%doc %{_mandir}/man5/krb.conf.5.*
+%doc %{_mandir}/man5/krb.excl.5.*
+%doc %{_mandir}/man5/prdb.DB0.5.*
+%doc %{_mandir}/man5/salvage.lock.5.*
+%doc %{_mandir}/man5/tapeconfig.5.*
+%doc %{_mandir}/man5/vldb.DB0.5.*
+%doc %{_mandir}/man8/bosserver.8.*
+%doc %{_mandir}/man8/buserver.8.*
+%doc %{_mandir}/man8/fileserver.8.*
+%doc %{_mandir}/man8/dafileserver.8.*
+%doc %{_mandir}/man8/dafssync-debug.8.*
+%doc %{_mandir}/man8/dafssync-debug_*.8.*
+%doc %{_mandir}/man8/dasalvager.8.*
+%doc %{_mandir}/man8/davolserver.8.*
+%doc %{_mandir}/man8/fssync-debug.8.*
+%doc %{_mandir}/man8/fssync-debug_*.8.*
+%doc %{_mandir}/man8/prdb_check.8.*
+%doc %{_mandir}/man8/ptserver.8.*
+%doc %{_mandir}/man8/pt_util.8.*
+%doc %{_mandir}/man8/salvager.8.*
+%doc %{_mandir}/man8/salvageserver.8.*
+%doc %{_mandir}/man8/state_analyzer.8.*
+%doc %{_mandir}/man8/upclient.8.*
+%doc %{_mandir}/man8/upserver.8.*
+%doc %{_mandir}/man8/vldb_check.8.*
+%doc %{_mandir}/man8/vldb_convert.8.*
+%doc %{_mandir}/man8/vlserver.8.*
+%doc %{_mandir}/man8/voldump.8.*
+%doc %{_mandir}/man8/volinfo.8.*
+%doc %{_mandir}/man8/volscan.8.*
+%doc %{_mandir}/man8/volserver.8.*
 
 %if %{build_authlibs}
 %files authlibs
@@ -1008,11 +1003,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/librxkad.a
 %{_libdir}/librxstat.a
 %{_libdir}/libubik.a
-%{_mandir}/man1/rxgen.1.gz
-%{_mandir}/man1/afs_compile_et.1.gz
+%doc %{_mandir}/man1/rxgen.1.*
+%doc %{_mandir}/man1/afs_compile_et.1.*
 %{_libdir}/perl/AFS/ukernel.pm
 %{_libdir}/perl/ukernel.so
-%{_mandir}/man3/AFS::ukernel.3.gz
+%doc %{_mandir}/man3/AFS::ukernel.3.*
 
 %if %{build_dkmspkg}
 %files -n dkms-%{name}
@@ -1022,9 +1017,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files kernel-source
 %defattr(-,root,root)
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-%{_prefix}/src/openafs-kernel-%{afsvers}/README
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/README
 %{_prefix}/src/openafs-kernel-%{afsvers}/src
 
 %files compat
@@ -1073,14 +1068,14 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/bin/pagsh.krb
 %ghost %{afswsdir}/bin/tokens.krb
 %ghost %{afswsdir}/etc/kas
-%{_mandir}/man1/kapasswd.1.gz
-%{_mandir}/man1/klog.1.gz
-%{_mandir}/man1/klog.krb.1.gz
-%{_mandir}/man1/pagsh.krb.1.gz
-%{_mandir}/man1/tokens.krb.1.gz
-%{_mandir}/man8/kpwvalid.8.gz
-%{_mandir}/man8/kas.8.gz
-%{_mandir}/man8/kas_*.8.gz
+%doc %{_mandir}/man1/kapasswd.1.*
+%doc %{_mandir}/man1/klog.1.*
+%doc %{_mandir}/man1/klog.krb.1.*
+%doc %{_mandir}/man1/pagsh.krb.1.*
+%doc %{_mandir}/man1/tokens.krb.1.*
+%doc %{_mandir}/man8/kpwvalid.8.*
+%doc %{_mandir}/man8/kas.8.*
+%doc %{_mandir}/man8/kas_*.8.*
 %exclude %{_bindir}/knfs
 %exclude %{_mandir}/man1/knfs.1.*
 
@@ -1089,13 +1084,13 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_prefix}/afs/bin/kaserver
 %{_prefix}/afs/bin/ka-forwarder
 %{_sbindir}/kadb_check
-%{_mandir}/man5/AuthLog.5.gz
-%{_mandir}/man5/AuthLog.dir.5.gz
-%{_mandir}/man5/kaserver.DB0.5.gz
-%{_mandir}/man5/kaserverauxdb.5.gz
-%{_mandir}/man8/kadb_check.8.gz
-%{_mandir}/man8/ka-forwarder.8.gz
-%{_mandir}/man8/kaserver.8.gz
+%doc %{_mandir}/man5/AuthLog.5.*
+%doc %{_mandir}/man5/AuthLog.dir.5.*
+%doc %{_mandir}/man5/kaserver.DB0.5.*
+%doc %{_mandir}/man5/kaserverauxdb.5.*
+%doc %{_mandir}/man8/kadb_check.8.*
+%doc %{_mandir}/man8/ka-forwarder.8.*
+%doc %{_mandir}/man8/kaserver.8.*
 %exclude %{_prefix}/afs/bin/kdb
 %exclude %{_mandir}/man8/kdb.8.*
 %endif
@@ -1107,10 +1102,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/klog.krb5
 %{_sbindir}/akeyconvert
 %{_sbindir}/asetkey
-%{_mandir}/man1/aklog.1.gz
-%{_mandir}/man1/klog.krb5.1.gz
-%{_mandir}/man8/akeyconvert.8.gz
-%{_mandir}/man8/asetkey.8.gz
+%doc %{_mandir}/man1/aklog.1.*
+%doc %{_mandir}/man1/klog.krb5.1.*
+%doc %{_mandir}/man8/akeyconvert.8.*
+%doc %{_mandir}/man8/asetkey.8.*
 %endif
 %endif
 
