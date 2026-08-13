@@ -819,6 +819,142 @@ initSyntax(void)
     }
 }
 
+/*
+ * Print the available options for a command.
+ */
+static void
+PrintCompletionOptions(struct cmd_syndesc *ts,
+		       const char *prev, char **word_list, int nwords)
+{
+    int i;
+    int j;
+    int single_list;
+    int already_used;
+
+    single_list = 0;
+    for (i = 0; i < CMD_MAXPARMS; i++) {
+	/*
+	 * If the parameter expects a value, treat the current word as
+	 * its value and do not offer option completions here.
+	 */
+	if (ts->parms[i].name != NULL) {
+	    if (prev != NULL
+		&& strcmp(prev, ts->parms[i].name) == 0
+		&& (ts->parms[i].type == CMD_SINGLE
+		    || ts->parms[i].type == CMD_LIST)) {
+		single_list = 1;
+		break;
+	    }
+	}
+    }
+
+    /* Print available options. */
+    if (single_list == 0) {
+	for (i = 0; i < CMD_MAXPARMS; i++) {
+	    if (ts->parms[i].name != NULL) {
+		already_used = 0;
+		/*
+		 * Do not repeat options that were already used, unless
+		 * they are CMD_LIST options.
+		 */
+		for (j = 0; j < nwords; j++) {
+		    if (strcmp(word_list[j], ts->parms[i].name) == 0) {
+			already_used = 1;
+			break;
+		    }
+		}
+		if (already_used == 0 || ts->parms[i].type == CMD_LIST) {
+		    printf("%s ", ts->parms[i].name);
+		}
+	    }
+	}
+    }
+}
+
+/**
+ * Shell completion helper called when the -completion-helper flag is used.
+ *
+ * Prints possible completions to stdout based on the command line context
+ * passed by the shell completion script.
+ *
+ * argv[0]              program name
+ * argv[1]              "-completion-helper"
+ * argv[2]              "--"
+ * argv[3]              COMP_CWORD
+ * argv[4..argc - 1]    COMP_WORDS
+ *
+ * Prints subcommand names if COMP_CWORD is 1 or the available options
+ * for the given subcommand if COMP_CWORD is >= 2. For commands without
+ * subcommands, prints the available options directly.
+ */
+static void
+CompletionHelper(int argc, char **argv)
+{
+    int pos_cword;
+    int nwords;
+    char **word_list;
+    const char *subcommand = NULL;
+    const char *prev = NULL;
+    struct cmd_syndesc *ts;
+
+    /*
+     * If there is at least one word written on the command line, extract
+     * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
+     * script.
+     */
+    if (argc < 5) {
+	return;
+    }
+
+    pos_cword = atoi(argv[3]);
+    nwords = argc - 4;
+    word_list = &argv[4];
+
+    if (pos_cword <= 0 || pos_cword >= nwords) {
+	return;
+    }
+
+    if (nwords >= 2) {
+	subcommand = word_list[1];
+    }
+
+    if (pos_cword >= 1 && pos_cword - 1 < nwords) {
+	prev = word_list[pos_cword - 1];
+    }
+
+    ts = allSyntax;
+
+    /* Print options for commands that don't have subcommands. */
+    if (ts != NULL && ts->name == NULL) {
+	PrintCompletionOptions(ts, prev, word_list, nwords);
+    } else if (pos_cword <= 1) {
+	/*
+	 * If the current word is the subcommand, the whole list
+	 * of subcommands is printed.
+	 */
+	while (ts != NULL) {
+	    if (ts->flags & (CMD_ALIAS | CMD_HIDDEN)) {
+		ts = ts->next;
+	    } else {
+		if (ts->name != NULL) {
+		    printf("%s ", ts->name);
+		}
+		ts = ts->next;
+	    }
+	}
+	/* Print options for commands that have both subcommands and options. */
+    } else {
+	while (ts != NULL
+	       && (ts->name == NULL || strcmp(ts->name, subcommand) != 0)) {
+	    ts = ts->next;
+	}
+	if (ts != NULL) {
+	    PrintCompletionOptions(ts, prev, word_list, nwords);
+	}
+    }
+    printf("\n");
+}
+
 /* Call the appropriate function, or return syntax error code.  Note: if
  * no opcode is specified, an initialization routine exists, and it has
  * NOT been called before, we invoke the special initialization opcode
@@ -848,6 +984,11 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
 
     /*Remember the program name */
     pname = argv[0];
+
+    if (argc > 1 && strcmp(argv[1], "-completion-helper") == 0) {
+	CompletionHelper(argc, argv);
+	return CMD_HELP;
+    }
 
     if (noOpcodes) {
 	if (argc == 1) {
