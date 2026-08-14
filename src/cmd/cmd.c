@@ -820,7 +820,16 @@ initSyntax(void)
 }
 
 /*
- * Print the available options for a command.
+ * Print completion options for the given command syntax.
+ *
+ * ts           - the command being completed.
+ * prev         - word immediately preceding the word being completed.
+ * word_list    - words entered on the command line.
+ * nwords       - number of words in word_list.
+ *
+ * Do not print hidden options or options that have already
+ * been used, except for CMD_LIST options. If the previous
+ * word is an option that expects a value, do not print anything.
  */
 static void
 PrintCompletionOptions(struct cmd_syndesc *ts,
@@ -851,7 +860,7 @@ PrintCompletionOptions(struct cmd_syndesc *ts,
     /* Print available options. */
     if (single_list == 0) {
 	for (i = 0; i < CMD_MAXPARMS; i++) {
-	    if (ts->parms[i].name != NULL) {
+	    if (ts->parms[i].name != NULL && !(ts->parms[i].flags & CMD_HIDE)) {
 		already_used = 0;
 		/*
 		 * Do not repeat options that were already used, unless
@@ -877,39 +886,18 @@ PrintCompletionOptions(struct cmd_syndesc *ts,
  * Prints possible completions to stdout based on the command line context
  * passed by the shell completion script.
  *
- * argv[0]              program name
- * argv[1]              "-completion-helper"
- * argv[2]              "--"
- * argv[3]              COMP_CWORD
- * argv[4..argc - 1]    COMP_WORDS
- *
  * Prints subcommand names if COMP_CWORD is 1 or the available options
  * for the given subcommand if COMP_CWORD is >= 2. For commands without
  * subcommands, prints the available options directly.
  */
 static void
-CompletionHelper(int argc, char **argv)
+CompletionHelper(int pos_cword, int nwords, char **word_list)
 {
-    int pos_cword;
-    int nwords;
-    char **word_list;
     const char *subcommand = NULL;
     const char *prev = NULL;
     struct cmd_syndesc *ts;
 
-    /*
-     * If there is at least one word written on the command line, extract
-     * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
-     * script.
-     */
-    if (argc < 5) {
-	return;
-    }
-
-    pos_cword = atoi(argv[3]);
-    nwords = argc - 4;
-    word_list = &argv[4];
-
+	/* pos_cword is the index of the word currently being completed. */
     if (pos_cword <= 0 || pos_cword >= nwords) {
 	return;
     }
@@ -970,6 +958,9 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     int positional;
     int ambig;
     int code = 0;
+    int pos_cword;
+    int nwords;
+    char **word_list;
     char *param = NULL;
     char *embeddedvalue = NULL;
     static int initd = 0;	/*Is this the first time this routine has been called? */
@@ -986,8 +977,19 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     pname = argv[0];
 
     if (argc > 1 && strcmp(argv[1], "-completion-helper") == 0) {
-	CompletionHelper(argc, argv);
+    /*
+     * If there is at least one word written on the command line, extract
+     * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
+     * script.
+     */
+    if (argc < 5) {
 	return CMD_HELP;
+    }
+    pos_cword = atoi(argv[3]);
+    nwords = argc - 4;
+    word_list = &argv[4];
+    CompletionHelper(pos_cword, nwords, word_list);
+    return CMD_HELP;
     }
 
     if (noOpcodes) {

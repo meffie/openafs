@@ -34,6 +34,19 @@ sub completion_helper {
     return $output;
 }
 
+# Each test case simulates a call to:
+#
+#   comptest -completion-helper -- COMP_CWORD COMP_WORDS[0] COMP_WORDS[1] ...
+#
+# where:
+#   COMP_CWORD          - the index of the word currently being completed
+#   COMP_WORDS[0]       - the command name (for example, "comptest")
+#   COMP_WORDS[1]       - the subcommand name (for example, "one")
+#   COMP_WORDS[2...]    - the rest of the words on the command line
+#
+# For example, args => ['--', '2', 'comptest', 'one', '-'] simulates the
+# completion after typing "comptest one -<TAB>".
+
 my @test_cases = (
     {
         name => 'empty',
