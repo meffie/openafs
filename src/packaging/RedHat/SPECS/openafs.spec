@@ -542,8 +542,8 @@ mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 
 
 # Install client and server systemd files.
-mkdir -p %{buildroot}/etc/sysconfig
-install -m 755 %{SOURCE38} %{buildroot}/etc/sysconfig/openafs
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/openafs
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
@@ -735,7 +735,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files
 %defattr(-,root,root)
-%config(noreplace) /etc/sysconfig/openafs
+%config(noreplace) %{_sysconfdir}/sysconfig/openafs
 %doc LICENSE
 %{_bindir}/afsmonitor
 %{_bindir}/bos
