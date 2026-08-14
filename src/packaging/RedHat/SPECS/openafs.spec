@@ -58,8 +58,6 @@
 # to distribute aklog, asetkey, and akeyconvert.
 %define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
 
-%define kmod_name openafs
-
 %if %{?kernvers:0}%{!?kernvers:1}
 %global kernvers %(uname -r)
 %endif
@@ -373,21 +371,21 @@ krb4 lookalike services.
 
 %if %{build_modules}
 
-%package -n kmod-%{kmod_name}
-Summary:          %{kmod_name} kernel module
+%package -n kmod-%{name}
+Summary:          %{name} kernel module
 Group:            System Environment/Kernel
-Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides:         %{name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Provides:         openafs-kernel = %{version}
 Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
-Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
+Requires:         %{name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
-%description -n kmod-%{kmod_name}
-This package provides the %{kmod_name} kernel modules built for the Linux
+%description -n kmod-%{name}
+This package provides the %{name} kernel modules built for the Linux
 kernel %{kernvers}.
 
 %endif
@@ -584,10 +582,10 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/
 # Install kernel modules
 %if %{build_modules}
 
-mkdir -p %{buildroot}%{kmodulesdir}/extra/openafs
+mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
     src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}/openafs.ko \
-    %{buildroot}%{kmodulesdir}/extra/openafs/openafs.ko
+    %{buildroot}%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
 
@@ -709,10 +707,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 # kmod-openafs scriptlets
 %if %{build_modules}
-%post -n kmod-%{kmod_name}
+%post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
 
-%postun -n kmod-%{kmod_name}
+%postun -n kmod-%{name}
 /usr/sbin/depmod -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
 %endif
 
@@ -1099,9 +1097,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %if %{build_modules}
 
-%files -n kmod-%{kmod_name}
+%files -n kmod-%{name}
 %defattr(644,root,root,755)
-%{kmodulesdir}/extra/%{kmod_name}/%{kmod_name}.ko
+%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
 
