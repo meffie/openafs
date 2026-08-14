@@ -168,7 +168,7 @@ To a kernel module for your running kernel, just run:
 %if %{build_userspace}
 
 %package client
-Requires: openafs = %{version}
+Requires: %{name} = %{version}
 Requires: binutils
 Requires: systemd-units
 Requires(post): systemd-units
@@ -191,7 +191,7 @@ This package provides basic client support to mount and manipulate
 AFS.
 
 %package server
-Requires: openafs = %{version}
+Requires: %{name} = %{version}
 Summary: OpenAFS Filesystem Server
 Requires: systemd-units
 Requires(post): systemd-units, systemd-sysv
@@ -210,7 +210,7 @@ Cell.
 %if %{build_dkmspkg}
 %package -n dkms-%{name}
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
-Provides:       openafs-kernel = %{version}
+Provides:       %{name}-kernel = %{version}
 Provides:       %{name}-kmod = %{version}
 Requires(pre):  dkms
 Requires(pre):  make
@@ -246,9 +246,9 @@ authentication may link against them.
 
 %package authlibs-devel
 %if %{build_authlibs}
-Requires: openafs-authlibs = %{version}-%{release}
+Requires: %{name}-authlibs = %{version}-%{release}
 %endif
-Requires: openafs-devel = %{version}-%{release}
+Requires: %{name}-devel = %{version}-%{release}
 Summary: OpenAFS shared library development
 
 %description authlibs-devel
@@ -263,7 +263,7 @@ libraries.
 
 %package devel
 Summary: OpenAFS Development Libraries and Headers
-Requires: openafs = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 
 %description devel
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -277,7 +277,7 @@ shared libraries.
 
 %package docs
 Summary: OpenAFS user and administrator documentation
-Requires: openafs = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 BuildRequires: perl-core
 
 %description docs
@@ -291,7 +291,7 @@ administrators.
 
 %package kernel-source
 Summary: OpenAFS Kernel Module source tree
-Provides: openafs-kernel = %{version}
+Provides: %{name}-kernel = %{version}
 Provides: %{name}-kmod = %{version}
 
 %description kernel-source
@@ -305,7 +305,7 @@ module.
 
 %package compat
 Summary: OpenAFS client compatibility symlinks
-Requires: openafs = %{version}
+Requires: %{name} = %{version}
 
 %description compat
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -321,7 +321,7 @@ programs.
 %if %{kauth_support}
 %package kauth-client
 Summary: OpenAFS Kauth Client support
-Requires: openafs
+Requires: %{name}
 
 %description kauth-client
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -336,7 +336,7 @@ cells using Kerberos v5.
 
 %package kauth-server
 Summary: OpenAFS Kauth Server support
-Requires: openafs
+Requires: %{name}
 
 %description kauth-server
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -352,7 +352,7 @@ cells using Kerberos v5.
 %if %{krb5support}
 %package krb5
 Summary: OpenAFS programs to use with krb5
-Requires: openafs = %{version}
+Requires: %{name} = %{version}
 BuildRequires: krb5-devel
 
 %description krb5
@@ -371,9 +371,9 @@ krb4 lookalike services.
 %if %{build_modules}
 
 %package -n kmod-%{name}
-Summary:          %{name} kernel module
+Summary:          OpenAFS kernel module
 Provides:         %{name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
-Provides:         openafs-kernel = %{version}
+Provides:         %{name}-kernel = %{version}
 Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 Requires:         %{name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
 Requires(post):   /usr/sbin/depmod
@@ -383,7 +383,7 @@ BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
 %description -n kmod-%{name}
-This package provides the %{name} kernel modules built for the Linux
+This package provides the OpenAFS kernel modules built for the Linux
 kernel %{kernvers}.
 
 %endif
@@ -515,7 +515,7 @@ mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 
 # Install client and server systemd files.
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/openafs
+install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
@@ -542,12 +542,12 @@ sed -e 's/@NAME@/%{name}/' \
     %{SOURCE40} > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf
 
 # Install the kernel module source tree.
-mkdir -p %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
+mkdir -p %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
-install -m 644 LICENSE %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/README
+    tar xf - -C %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
+install -m 644 LICENSE %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
+install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
+install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/README
 
 %endif
 
@@ -590,23 +590,23 @@ if [ ! -d /afs ]; then
     chmod 0555 /afs
     [ -x /sbin/restorecon ] && /sbin/restorecon /afs
 fi
-%systemd_post openafs-client.service
+%systemd_post %{name}-client.service
 
 %preun client
-%systemd_preun openafs-client.service
+%systemd_preun %{name}-client.service
 
 %postun client
-%systemd_postun openafs-client.service
+%systemd_postun %{name}-client.service
 
 # openafs-server scriptlets
 %post server
-%systemd_post openafs-server.service
+%systemd_post %{name}-server.service
 
 %preun server
-%systemd_preun openafs-server.service
+%systemd_preun %{name}-server.service
 
 %postun server
-%systemd_postun openafs-server.service
+%systemd_postun %{name}-server.service
 
 # openafs-comp scriptlets
 %post compat
@@ -694,7 +694,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{build_userspace}
 
 %files
-%config(noreplace) %{_sysconfdir}/sysconfig/openafs
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %doc LICENSE
 %doc ChangeLog
 %doc RELNOTES-%{afsvers}
@@ -979,10 +979,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 %files kernel-source
-%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-%doc %{_prefix}/src/openafs-kernel-%{afsvers}/README
-%{_prefix}/src/openafs-kernel-%{afsvers}/src
+%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
+%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
+%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/README
+%{_prefix}/src/%{name}-kernel-%{afsvers}/src
 
 %files compat
 %ghost %{afswsdir}/bin/afsmonitor
