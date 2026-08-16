@@ -680,8 +680,9 @@ make check
 # openafs scriptlets
 %preun
 if [ $1 = 0 ] ; then
-    [ -d /afs ] && rmdir /afs
-    :
+    if [ -d /afs ]; then
+        rmdir /afs || :
+    fi
 fi
 
 # openafs-client scriptlets
