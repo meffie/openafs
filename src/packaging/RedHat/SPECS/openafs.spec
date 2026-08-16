@@ -677,6 +677,14 @@ make check
 #-----------------------------------------------------------------------------
 %if %{build_userspace}
 
+# openafs scriptlets
+%preun
+if [ $1 = 0 ] ; then
+    [ -d /afs ] && rmdir /afs
+    :
+fi
+
+# openafs-client scriptlets
 %post client
 if [ $1 -eq 1 ] ; then
     # Initial installation
@@ -688,10 +696,8 @@ if [ ! -d /afs ]; then
     chmod 0755 /afs
     [ -x /sbin/restorecon ] && /sbin/restorecon /afs
 fi
-
 # Create the CellServDB
 [ -f /usr/vice/etc/CellServDB.local ] || touch /usr/vice/etc/CellServDB.local
-
 ( cd /usr/vice/etc ; \
   if [ -h CellServDB ]; then \
     rm -f CellServDB; \
@@ -699,12 +705,33 @@ fi
   cat CellServDB.local CellServDB.dist > CellServDB ; \
   chmod 644 CellServDB )
 
+%preun client
+if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable openafs-client.service > /dev/null 2>&1 || :
+    /bin/systemctl stop openafs-client.service > /dev/null 2>&1 || :
+fi
+
+%postun client
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+
+# openafs-server scriptlets
 %post server
 if [ $1 -eq 1 ] ; then
     # Initial installation
     /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 fi
 
+%preun server
+if [ $1 -eq 0 ] ; then
+    /bin/systemctl --no-reload disable openafs-server.service > /dev/null 2>&1 || :
+    /bin/systemctl stop openafs-server.service > /dev/null 2>&1 || :
+fi
+
+%postun server
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+
+# openafs-comp scriptlets
 %post compat
 # Create compatiblity links.
 mkdir -p %{afswsdir}/bin
@@ -740,6 +767,7 @@ if [ $1 = 0 ] ; then
     rmdir %{afswsdir} >/dev/null 2>/dev/null || :
 fi
 
+# openafs-kauth-client scriptlets
 %if %{kauth_support}
 %post kauth-client
 # Create compatiblity links.
@@ -760,6 +788,7 @@ if [ $1 = 0 ] ; then
 fi
 %endif
 
+# openafs-authlib scriptlets
 %if %{build_authlibs}
 %post authlibs
 /sbin/ldconfig
@@ -768,31 +797,7 @@ fi
 /sbin/ldconfig
 %endif
 
-%preun
-if [ $1 = 0 ] ; then
-    [ -d /afs ] && rmdir /afs
-    :
-fi
-
-%preun client
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable openafs-client.service > /dev/null 2>&1 || :
-    /bin/systemctl stop openafs-client.service > /dev/null 2>&1 || :
-fi
-
-%preun server
-if [ $1 -eq 0 ] ; then
-    /bin/systemctl --no-reload disable openafs-server.service > /dev/null 2>&1 || :
-    /bin/systemctl stop openafs-server.service > /dev/null 2>&1 || :
-fi
-
-%postun client
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-
-%postun server
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-
+# dkms-openafs scriptlets
 %if %{build_dkmspkg}
 %post -n dkms-%{name}
 dkms add -m %{name} -v %{dkms_version} --rpm_safe_upgrade
@@ -804,6 +809,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 %endif
 
+# kmod-openafs scriptlets
 %if %{build_modules}
 %post -n kmod-%{kmod_name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
