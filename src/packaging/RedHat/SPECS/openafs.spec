@@ -104,6 +104,7 @@ Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.ta
 Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
 Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
+Source21: openafs-CellServDB.local
 Source30: openafs-cacheinfo
 Source32: openafs-client.service
 Source33: openafs-client-systemd-helper.sh
@@ -614,6 +615,7 @@ mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/cache
 chmod 700 $RPM_BUILD_ROOT%{_prefix}/vice/cache
 install -p -m 644 %{SOURCE39} $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
 install -p -m 644 %{SOURCE20} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.dist
+install -p -m 644 %{SOURCE21} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.local
 install -p -m 644 %{SOURCE30} $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
 
 # Install DKMS source.
@@ -693,14 +695,6 @@ if [ ! -d /afs ]; then
     chmod 0755 /afs
     [ -x /sbin/restorecon ] && /sbin/restorecon /afs
 fi
-# Create the CellServDB
-[ -f /usr/vice/etc/CellServDB.local ] || touch /usr/vice/etc/CellServDB.local
-( cd /usr/vice/etc ; \
-  if [ -h CellServDB ]; then \
-    rm -f CellServDB; \
-  fi; \
-  cat CellServDB.local CellServDB.dist > CellServDB ; \
-  chmod 644 CellServDB )
 %systemd_post openafs-client.service
 
 %preun client
@@ -895,6 +889,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %dir %{_prefix}/vice/etc
 %dir %{_prefix}/vice/etc/C
 %{_prefix}/vice/etc/CellServDB.dist
+%config(noreplace) %{_prefix}/vice/etc/CellServDB.local
 %config(noreplace) %{_prefix}/vice/etc/ThisCell
 %config(noreplace) %{_prefix}/vice/etc/cacheinfo
 %{_bindir}/afsio
