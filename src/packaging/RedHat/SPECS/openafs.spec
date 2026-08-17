@@ -692,7 +692,7 @@ fi
 if [ ! -d /afs ]; then
     mkdir /afs
     chown root:root /afs
-    chmod 0755 /afs
+    chmod 0555 /afs
     [ -x /sbin/restorecon ] && /sbin/restorecon /afs
 fi
 %systemd_post openafs-client.service
