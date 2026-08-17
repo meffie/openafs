@@ -66,6 +66,11 @@
 
 %global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
 
+# The kernel modules installation path.
+%if ! %{defined kmodulesdir}
+%global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
+%endif
+
 %if 0%{?amzn} >= 2023
 %global kernel_epoch 1:
 %else
@@ -133,10 +138,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   to build modules against. The default is
                                   to build against the currently-running
                                   kernel.
- --define "kbase /lib/modules/"   The base location to look for kernel headers
- --define "kend /build"           The 'end' location to look for kernels
-                                  The build will define ksrvdir as
-                                  %%{kbase}<kernvers>%%{kend}
 
  --without authlibs               Disable authlibs package (default: with authlibs)
  --without krb5                   Disable krb5 support (default: with krb5)
@@ -152,7 +153,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "build_modules 1"       Request building of kernel modules
                                   You probably never need to specify these.
 
- --define "kmoddir /lib/modules"  This is the base location where modules
+ --define "kmodulesdir <path>"    This is the base location where modules
                                   will be installed.  You probably don't
                                   need to change this ever.
 
@@ -583,10 +584,10 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/
 # Install kernel modules
 %if %{build_modules}
 
-mkdir -p %{buildroot}/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
+mkdir -p %{buildroot}%{kmodulesdir}/extra/openafs
 install -m 755 \
     src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}/openafs.ko \
-    %{buildroot}/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs/openafs.ko
+    %{buildroot}%{kmodulesdir}/extra/openafs/openafs.ko
 
 %endif
 
@@ -1100,7 +1101,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files -n kmod-%{kmod_name}
 %defattr(644,root,root,755)
-/lib/modules/%{kernvers}/extra/%{kmod_name}/
+%{kmodulesdir}/extra/%{kmod_name}/%{kmod_name}.ko
 
 %endif
 
