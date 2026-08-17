@@ -8,7 +8,10 @@ the command syntax definitions.
 
 ## How it works
 
-Commands built with `libcmd` support an internal `-completion-helper` option. When called with this option, instead of running normally, the command prints a list of possible completions for the current word being typed, based on the command's syntax (subcommands and options).
+Commands built with `libcmd` support an internal `-completion-helper` option.
+When called with this option, instead of running normally, the command prints a
+list of possible completions for the current word being typed, based on the
+command's syntax (subcommands and options).
 
 The helper is invoked in the following form:
 
@@ -114,7 +117,10 @@ these forms of `vos create` are equivalent:
     vos create -server a -partition b -name c
     vos create a b c
 
-The completion helper does not currently model these positional mappings. It does not identify which parameter a positional argument corresponds to.
+The completion helper does not currently model these positional mappings. It
+does not identify which parameter a positional argument corresponds to.
 
-Since completion is based on the syntax registered with the `cmd` library, new subcommands and options of an already supported command are automatically available to the completion helper. New command executables
-must still be added to the command list in the shell completion scripts.
+Since completion is based on the syntax registered with the `cmd` library, new
+subcommands and options of an already supported command are automatically
+available to the completion helper. New command executables must still be added
+to the command list in the shell completion scripts.
