@@ -819,17 +819,19 @@ initSyntax(void)
     }
 }
 
-/*
+/**
  * Print completion options for the given command syntax.
- *
- * ts           - the command being completed.
- * prev         - word immediately preceding the word being completed.
- * word_list    - words entered on the command line.
- * nwords       - number of words in word_list.
  *
  * Do not print hidden options or options that have already
  * been used, except for CMD_LIST options. If the previous
  * word is an option that expects a value, do not print anything.
+ *
+ * @param ts           the command being completed.
+ * @param prev         word immediately preceding the word being completed.
+ * @param word_list    words entered on the command line.
+ * @nwords             number of words in word_list.
+ *
+ * @return none
  */
 static void
 PrintCompletionOptions(struct cmd_syndesc *ts,
@@ -958,9 +960,6 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     int positional;
     int ambig;
     int code = 0;
-    int pos_cword;
-    int nwords;
-    char **word_list;
     char *param = NULL;
     char *embeddedvalue = NULL;
     static int initd = 0;	/*Is this the first time this routine has been called? */
@@ -977,19 +976,18 @@ cmd_Parse(int argc, char **argv, struct cmd_syndesc **outsyntax)
     pname = argv[0];
 
     if (argc > 1 && strcmp(argv[1], "-completion-helper") == 0) {
-    /*
-     * If there is at least one word written on the command line, extract
-     * COMP_CWORD and the full COMP_WORDS array passed by the shell completion
-     * script.
-     */
-    if (argc < 5) {
+	/*
+	 * If there is at least one word on the command line, extract
+	 * COMP_CWORD and the full COMP_WORDS array passed by the shell
+	 * completion script.
+	 */
+	if (argc >= 5) {
+	    int pos_cword = atoi(argv[3]);
+	    int nwords = argc - 4;
+	    char **word_list = &argv[4];
+	    CompletionHelper(pos_cword, nwords, word_list);
+	}
 	return CMD_HELP;
-    }
-    pos_cword = atoi(argv[3]);
-    nwords = argc - 4;
-    word_list = &argv[4];
-    CompletionHelper(pos_cword, nwords, word_list);
-    return CMD_HELP;
     }
 
     if (noOpcodes) {
