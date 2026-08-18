@@ -91,7 +91,6 @@ Version: %{pkgvers}
 Release: %{pkgrel}%{?dist}
 License: IBM Public License
 URL: https://www.openafs.org
-BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Group: Networking/Filesystems
 BuildRequires: pam-devel, ncurses-devel, make, flex, bison
 BuildRequires: systemd-units
