@@ -584,7 +584,7 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/
 
 mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
-    src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}/openafs.ko \
+    src/libafs/MODLOAD-%{kernvers}/openafs.ko \
     %{buildroot}%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
