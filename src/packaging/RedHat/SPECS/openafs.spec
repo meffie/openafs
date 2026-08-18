@@ -445,9 +445,6 @@ CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
 %if %{kauth_support}
        --enable-kauth \
 %endif
-%if 0%{?_with_bitmap_later}
-       --enable-bitmap-later \
-%endif
 %if 0%{?_with_supergroups}
        --enable-supergroups \
 %endif
