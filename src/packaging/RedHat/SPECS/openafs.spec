@@ -168,6 +168,7 @@ To a kernel module for your running kernel, just run:
 %if %{build_userspace}
 
 %package client
+Summary: OpenAFS Filesystem Client
 Requires: %{name} = %{version}
 Requires: binutils
 Requires: systemd-units
@@ -175,11 +176,8 @@ Requires(post): systemd-units
 Requires(post): systemd-sysv
 Requires(preun): systemd-units
 Requires(postun): systemd-units
-
 Requires: %{name}-kmod >= %{version}
 Provides: %{name}-kmod-common = %{version}
-
-Summary: OpenAFS Filesystem Client
 
 %description client
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -191,8 +189,8 @@ This package provides basic client support to mount and manipulate
 AFS.
 
 %package server
-Requires: %{name} = %{version}
 Summary: OpenAFS Filesystem Server
+Requires: %{name} = %{version}
 Requires: systemd-units
 Requires(post): systemd-units, systemd-sysv
 Requires(preun): systemd-units
