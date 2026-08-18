@@ -43,9 +43,13 @@ Source99: openafs-compat.macros
 %global package_release 1
 %endif
 
+%if ! %{defined dkms_version}
 %global dkms_version %{package_version}-%{package_release}%{?dist}
+%endif
 
-%{!?source_date_epoch: %global source_date_epoch %(date +%%s)}
+%if ! %{defined source_date_epoch}
+%global source_date_epoch %(date +%%s)
+%endif
 
 #
 # Build conditionals
@@ -81,7 +85,7 @@ Source99: openafs-compat.macros
 #
 %if %{with modules}
 
-%if %{?kernvers:0}%{!?kernvers:1}
+%if ! %{defined kernvers}
 %global kernvers %(uname -r)
 %endif
 
