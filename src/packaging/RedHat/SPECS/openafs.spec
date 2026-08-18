@@ -101,10 +101,8 @@ Source99: openafs-compat.macros
 %global ksrcdir %{_usrsrc}/kernels/%{kernvers}
 %endif
 
-%if 0%{?amzn} >= 2023
-%global kernel_epoch 1:
-%else
-%global kernel_epoch %nil
+%if ! %{defined kernel_epoch} && 0%{?amzn} >= 2023
+%global kernel_epoch 1
 %endif
 
 %endif
@@ -397,12 +395,12 @@ krb4 lookalike services.
 Summary:          OpenAFS kernel module
 Provides:         %{name}-kmod = %{version}-%{release}
 Provides:         %{name}-kernel = %{version}
-Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+Requires:         kernel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%{kverrel}
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{package_release}.%(echo %{kverrel} | tr - _)
-BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%{kverrel}
 BuildRequires:    elfutils-devel
 
 %description -n kmod-%{name}
