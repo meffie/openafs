@@ -433,6 +433,7 @@ CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
        --enable-debug \
        --with-linux-kernel-packaging \
 %if %{build_modules}
+       --enable-kernel-module \
        --with-linux-kernel-headers=${ksrc} \
 %else
        --disable-kernel-module \
