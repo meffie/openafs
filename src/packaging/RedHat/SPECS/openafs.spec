@@ -111,7 +111,6 @@ BuildRequires: elfutils-devel
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
 Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
-%define srcdir openafs-%{afsvers}
 Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
 Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
@@ -405,7 +404,7 @@ kernel %{kernvers}.
 : @@@
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-%setup -q -n %{srcdir}
+%setup -q -n openafs-%{afsvers}
 
 # Add the change log and release notes to source tree.
 cp -p %{SOURCE10} .
