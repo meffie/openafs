@@ -419,13 +419,6 @@ cp -p %{SOURCE11} .
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 
-config_opts="%{?_with_kauth:--enable-kauth} \
-        %{?_with_bitmap_later:--enable-bitmap-later} \
-        %{?_with_supergroups:--enable-supergroups} \
-        --enable-transarc-paths"
-
-# Configure AFS
-
 # The path to the kernel headers for the target kernel version.
 ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}
 
@@ -448,7 +441,16 @@ CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
        --with-krb5 \
 %endif
        --with-swig \
-       $config_opts
+%if %{kauth_support}
+       --enable-kauth \
+%endif
+%if 0%{?_with_bitmap_later}
+       --enable-bitmap-later \
+%endif
+%if 0%{?_with_supergroups}
+       --enable-supergroups \
+%endif
+       --enable-transarc-paths
 
 # Build the libafs tree
 make %{_smp_mflags} only_libafs_tree
