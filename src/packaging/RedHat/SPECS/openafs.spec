@@ -19,13 +19,13 @@ Source99: openafs-compat.macros
 %global _lto_cflags %{nil}
 
 # Disable getting the source date epoch from the change log.
-%define source_date_epoch_from_changelog 0
+%global source_date_epoch_from_changelog 0
 
 # Define the location to the legacy workstation directory.
 %global afswsdir /usr/afsws
 
 # Define the location of the PAM security module directory.
-%define pamdir /%{_lib}/security
+%global pamdir /%{_lib}/security
 
 #
 # Version information
@@ -43,7 +43,7 @@ Source99: openafs-compat.macros
 %global package_release 1
 %endif
 
-%define dkms_version %{package_version}-%{package_release}%{?dist}
+%global dkms_version %{package_version}-%{package_release}%{?dist}
 
 %{!?source_date_epoch: %global source_date_epoch %(date +%%s)}
 
