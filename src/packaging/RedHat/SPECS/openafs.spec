@@ -722,6 +722,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %files
 %config(noreplace) %{_sysconfdir}/sysconfig/openafs
 %doc LICENSE
+%doc ChangeLog
+%doc RELNOTES-%{afsvers}
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -824,8 +826,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 %files docs
-%doc ChangeLog
-%doc RELNOTES-%{afsvers}
 %doc doc/pdf
 
 %files client
