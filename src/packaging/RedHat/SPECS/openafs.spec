@@ -31,13 +31,19 @@ Source99: openafs-compat.macros
 # Version information
 #
 
-%define afsvers @PACKAGE_VERSION@
-%define pkgvers @LINUX_PKGVER@
-# for beta/rc releases make pkgrel 0.<tag>
-# for real releases make pkgrel 1 (or more for extra releases)
-%define pkgrel @LINUX_PKGREL@
+%if ! %{defined openafs_version}
+%global openafs_version %{nil}
+%endif
 
-%define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
+%if ! %{defined package_version}
+%global package_version %{openafs_version}
+%endif
+
+%if ! %{defined package_release}
+%global package_release 1
+%endif
+
+%define dkms_version %{package_version}-%{package_release}%{?dist}
 
 %{!?source_date_epoch: %global source_date_epoch %(date +%%s)}
 
@@ -98,8 +104,8 @@ Source99: openafs-compat.macros
 
 Summary: OpenAFS distributed filesystem
 Name: openafs
-Version: %{pkgvers}
-Release: %{pkgrel}%{?dist}
+Version: %{package_version}
+Release: %{package_release}%{?dist}
 License: IBM Public License
 URL: https://www.openafs.org
 BuildRequires: pam-devel
@@ -121,12 +127,11 @@ BuildRequires: elfutils-devel
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
-Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
-Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
+Source0: https://www.openafs.org/dl/openafs/%{openafs_version}/openafs-%{openafs_version}-src.tar.bz2
+Source10: https://www.openafs.org/dl/openafs/%{openafs_version}/RELNOTES-%{openafs_version}
+Source11: https://www.openafs.org/dl/openafs/%{openafs_version}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
 Source21: openafs-CellServDB.local
-Source29: openafs-compat.macros
 Source30: openafs-cacheinfo
 Source32: openafs-client.service
 Source33: openafs-client-systemd-helper.sh
@@ -175,7 +180,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   need to change this ever.
 
 To a kernel module for your running kernel, just run:
-  rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
+  rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
 
 %if %{with userspace}
 
@@ -388,7 +393,7 @@ Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
-Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+Release:          %{package_release}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
@@ -414,7 +419,7 @@ kernel %{kernvers}.
 : @@@
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-%setup -q -n openafs-%{afsvers}
+%setup -q -n openafs-%{openafs_version}
 
 # Add the change log and release notes to source tree.
 cp -p %{SOURCE10} .
@@ -552,12 +557,12 @@ sed -e 's/@NAME@/%{name}/' \
     %{SOURCE40} > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf
 
 # Install the kernel module source tree.
-mkdir -p %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
+mkdir -p %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
-install -m 644 LICENSE %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/README
+    tar xf - -C %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
+install -m 644 LICENSE %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.IBM
+install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.Sun
+install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/README
 
 %endif
 
@@ -707,7 +712,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %doc LICENSE
 %doc ChangeLog
-%doc RELNOTES-%{afsvers}
+%doc RELNOTES-%{openafs_version}
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -989,10 +994,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 %files kernel-source
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/README
-%{_prefix}/src/%{name}-kernel-%{afsvers}/src
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.IBM
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.Sun
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/README
+%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
 
 %files compat
 %ghost %{afswsdir}/bin/afsmonitor
