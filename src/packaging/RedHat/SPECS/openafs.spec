@@ -455,11 +455,10 @@ export KRB5_CONFIG
        --with-krb5 \
 %endif
        --with-swig \
-       $config_opts \
-       || exit 1
+       $config_opts
 
 # Build the libafs tree
-make %{_smp_mflags} only_libafs_tree || exit 1
+make %{_smp_mflags} only_libafs_tree
 
 %if %{krb5support}
 %if %{?krb5config:1}%{!?krb5config:0}
