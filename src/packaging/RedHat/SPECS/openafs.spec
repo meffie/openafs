@@ -431,13 +431,6 @@ ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}
 
 CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
 
-%if %{krb5support}
-%if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
-%endif
-%endif
-
 ./configure \
        --prefix=%{_prefix} \
        --libdir=%{_libdir} \
@@ -459,13 +452,6 @@ export KRB5_CONFIG
 
 # Build the libafs tree
 make %{_smp_mflags} only_libafs_tree
-
-%if %{krb5support}
-%if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
-%endif
-%endif
 
 %if %{build_userspace}
 make %{_smp_mflags} all_nolibafs
