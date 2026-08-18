@@ -91,9 +91,14 @@ Version: %{pkgvers}
 Release: %{pkgrel}%{?dist}
 License: IBM Public License
 URL: https://www.openafs.org
-BuildRequires: pam-devel, ncurses-devel, make, flex, bison
+BuildRequires: pam-devel
+BuildRequires: ncurses-devel
+BuildRequires: make
+BuildRequires: flex
+BuildRequires: bison
 BuildRequires: systemd-units
-BuildRequires: perl-devel, swig
+BuildRequires: perl-devel
+BuildRequires: swig
 BuildRequires: perl(ExtUtils::Embed)
 %if %{krb5support}
 BuildRequires: krb5-devel
@@ -164,9 +169,11 @@ To a kernel module for your running kernel, just run:
 %if %{build_userspace}
 
 %package client
-Requires: binutils, openafs = %{version}
+Requires: openafs = %{version}
+Requires: binutils
 Requires: systemd-units
-Requires(post): systemd-units, systemd-sysv
+Requires(post): systemd-units
+Requires(post): systemd-sysv
 Requires(preun): systemd-units
 Requires(postun): systemd-units
 
@@ -206,7 +213,9 @@ Cell.
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Provides:       openafs-kernel = %{version}
 Provides:       %{name}-kmod = %{version}
-Requires(pre):  dkms, make, flex
+Requires(pre):  dkms
+Requires(pre):  make
+Requires(pre):  flex
 Requires(post): dkms
 Requires:       %{name}-kmod-common = %{version}
 
