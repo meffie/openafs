@@ -423,8 +423,7 @@ cp -p %{SOURCE11} .
 %build
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
-
-CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
+%set_build_flags
 
 ./configure \
        --prefix=%{_prefix} \
