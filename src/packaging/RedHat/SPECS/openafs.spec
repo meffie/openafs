@@ -55,15 +55,15 @@
 
 # Specify '--with kauth' if you want to build packages containing the legacy
 # kaserver and related programs.
-%define kauth_support %{?_with_kauth:1}%{!?_with_kauth:0}
+%bcond_with kauth
 
 # Specify '--without authlibs' if you do not want to build the openafs-authlibs
 # package.
-%define build_authlibs %{?_without_authlibs:0}%{!?_without_authlibs:1}
+%bcond_without authlibs
 
 # Specify '--without krb5' if you do not want to build the openafs-krb5 package
 # to distribute aklog, asetkey, and akeyconvert.
-%define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
+%bcond_without krb5
 
 #
 # Kernel module definitions
@@ -110,7 +110,7 @@ BuildRequires: systemd-units
 BuildRequires: perl-devel
 BuildRequires: swig
 BuildRequires: perl(ExtUtils::Embed)
-%if %{krb5support}
+%if %{with krb5}
 BuildRequires: krb5-devel
 %endif
 %if %{build_modules}
@@ -236,7 +236,7 @@ This package provides the source code to allow DKMS to build an
 AFS kernel module.
 %endif
 
-%if %{build_authlibs}
+%if %{with authlibs}
 %package authlibs
 Summary: OpenAFS authentication shared libraries
 
@@ -253,7 +253,7 @@ authentication may link against them.
 %endif
 
 %package authlibs-devel
-%if %{build_authlibs}
+%if %{with authlibs}
 Requires: %{name}-authlibs = %{version}-%{release}
 %endif
 Requires: %{name}-devel = %{version}-%{release}
@@ -326,7 +326,7 @@ completely optional, and is only necessary to support legacy
 applications and scripts that hard-code the location of AFS client
 programs.
 
-%if %{kauth_support}
+%if %{with kauth}
 %package kauth-client
 Summary: OpenAFS Kauth Client support
 Requires: %{name}
@@ -357,7 +357,7 @@ service. Generally you should not install this package for new cells or for
 cells using Kerberos v5.
 %endif
 
-%if %{krb5support}
+%if %{with krb5}
 %package krb5
 Summary: OpenAFS programs to use with krb5
 Requires: %{name} = %{version}
@@ -440,11 +440,11 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %else
        --disable-kernel-module \
 %endif
-%if %{krb5support}
+%if %{with krb5}
        --with-krb5 \
 %endif
        --with-swig \
-%if %{kauth_support}
+%if %{with kauth}
        --enable-kauth \
 %endif
 %if 0%{?_with_supergroups}
@@ -479,7 +479,7 @@ make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 # Exclude duplicated files.
 rm -f %{buildroot}%{_prefix}/afs/bin/bos
 rm -f %{buildroot}%{_prefix}/afs/bin/fs
-%if %{kauth_support}
+%if %{with kauth}
 rm -f %{buildroot}%{_prefix}/afs/bin/kas
 rm -f %{buildroot}%{_prefix}/afs/bin/klog
 rm -f %{buildroot}%{_prefix}/afs/bin/klog.krb
@@ -496,18 +496,18 @@ rm -f %{buildroot}%{_prefix}/afs/bin/vos
 mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
 
 # Relocate admin utilities to a modern path.
-%if %{kauth_support}
+%if %{with kauth}
 mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
 %endif
 mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
-%if %{krb5support}
+%if %{with krb5}
 mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
 mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
 %endif
 
-%if %{kauth_support}
+%if %{with kauth}
 # Relocate PAM files to the standard PAM module path.
 mkdir -p %{buildroot}%{pamdir}
 mv %{buildroot}%{_libdir}/pam_afs.krb.so %{buildroot}%{pamdir}
@@ -641,7 +641,7 @@ ln -sf %{_sbindir}/fms          %{afswsdir}/etc/fms
 ln -sf %{_sbindir}/fstrace      %{afswsdir}/etc/fstrace
 ln -sf %{_sbindir}/read_tape    %{afswsdir}/etc/read_tape
 ln -sf %{_sbindir}/rxdebug      %{afswsdir}/etc/rxdebug
-%if %{kauth_support}
+%if %{with kauth}
 ln -sf %{_sbindir}/uss          %{afswsdir}/etc/uss
 %endif
 ln -sf %{_sbindir}/vos          %{afswsdir}/etc/vos
@@ -655,7 +655,7 @@ if [ $1 = 0 ] ; then
 fi
 
 # openafs-kauth-client scriptlets
-%if %{kauth_support}
+%if %{with kauth}
 %post kauth-client
 # Create compatiblity links.
 mkdir -p %{afswsdir}/bin
@@ -737,7 +737,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/rxstat_get_version
 %{_sbindir}/rxstat_query_peer
 %{_sbindir}/rxstat_query_process
-%if %{kauth_support}
+%if %{with kauth}
 %{_sbindir}/uss
 %endif
 %{_sbindir}/vos
@@ -768,7 +768,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/afsmonitor.5.*
 %doc %{_mandir}/man5/butc.5.*
 %doc %{_mandir}/man5/butc_logs.5.*
-%if %{kauth_support}
+%if %{with kauth}
 %doc %{_mandir}/man5/uss.5.*
 %doc %{_mandir}/man5/uss_bulk.5.*
 %endif
@@ -781,7 +781,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/fstrace.8.*
 %doc %{_mandir}/man8/fstrace_*.8.*
 %doc %{_mandir}/man8/read_tape.8.*
-%if %{kauth_support}
+%if %{with kauth}
 %doc %{_mandir}/man8/uss.8.*
 %doc %{_mandir}/man8/uss_*.8.*
 %endif
@@ -797,12 +797,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/aklog_dynamic_auth.8.*
 %exclude %{_mandir}/man8/rmtsysd.8.*
 %exclude %{_mandir}/man8/xfs_size_check.8.*
-%if ! %{build_authlibs}
+%if %{without authlibs}
 %exclude %{_libdir}/libafsauthent.so*
 %exclude %{_libdir}/libafsrpc.so*
 %exclude %{_libdir}/libkopenafs.so*
 %endif
-%if ! %{kauth_support}
+%if %{without kauth}
 %exclude %{_bindir}/tokens.krb
 %exclude %{_bindir}/pagsh.krb
 %exclude %{_mandir}/man5/AuthLog.5.*
@@ -813,7 +813,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/uss.8.*
 %exclude %{_mandir}/man8/uss_*.8.*
 %endif
-%if ! %{krb5support}
+%if %{without krb5}
 %exclude %{_mandir}/man8/akeyconvert.*
 %exclude %{_mandir}/man8/asetkey.*
 %endif
@@ -932,7 +932,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/volscan.8.*
 %doc %{_mandir}/man8/volserver.8.*
 
-%if %{build_authlibs}
+%if %{with authlibs}
 %files authlibs
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
@@ -947,7 +947,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libafsauthent_pic.a
 %{_libdir}/libafsrpc_pic.a
 %{_libdir}/libkopenafs.a
-%if %{build_authlibs}
+%if %{with authlibs}
 %{_libdir}/libafsauthent.so
 %{_libdir}/libafsrpc.so
 %{_libdir}/libkopenafs.so
@@ -1013,13 +1013,13 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/etc/fstrace
 %ghost %{afswsdir}/etc/read_tape
 %ghost %{afswsdir}/etc/rxdebug
-%if %{kauth_support}
+%if %{with kauth}
 %ghost %{afswsdir}/etc/uss
 %endif
 %ghost %{afswsdir}/etc/vos
 %ghost %{afswsdir}/etc/vsys
 
-%if %{kauth_support}
+%if %{with kauth}
 %files kauth-client
 %{_sbindir}/kas
 %{_bindir}/klog
@@ -1064,7 +1064,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/kdb.8.*
 %endif
 
-%if %{krb5support}
+%if %{with krb5}
 %files krb5
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
