@@ -72,6 +72,10 @@ Source99: openafs-compat.macros
 # to distribute aklog, asetkey, and akeyconvert.
 %bcond_without krb5
 
+# Specify '--with supergroups' if you want to build the ptserver and pts with
+# the supergroups features and disk formats.
+%bcond_with supergroups
+
 #
 # Kernel module definitions
 #
@@ -454,7 +458,7 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %if %{with kauth}
        --enable-kauth \
 %endif
-%if 0%{?_with_supergroups}
+%if %{with supergroups}
        --enable-supergroups \
 %endif
        --enable-transarc-paths
