@@ -69,6 +69,11 @@
 %global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
 %endif
 
+# The path to the kernel headers for the target kernel version.
+%if ! %{defined ksrcdir}
+%global ksrcdir %{_usrsrc}/kernels/%{kernvers}
+%endif
+
 %if 0%{?amzn} >= 2023
 %global kernel_epoch 1:
 %else
@@ -419,9 +424,6 @@ cp -p %{SOURCE11} .
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 
-# The path to the kernel headers for the target kernel version.
-ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}
-
 CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
 
 ./configure \
@@ -434,7 +436,7 @@ CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
        --with-linux-kernel-packaging \
 %if %{build_modules}
        --enable-kernel-module \
-       --with-linux-kernel-headers=${ksrc} \
+       --with-linux-kernel-headers=%{ksrcdir} \
 %else
        --disable-kernel-module \
 %endif
