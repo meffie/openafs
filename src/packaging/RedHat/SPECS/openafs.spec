@@ -451,16 +451,17 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %endif
        --enable-transarc-paths
 
-# Build the libafs tree
-make %{_smp_mflags} only_libafs_tree
-
-%if %{build_userspace}
-make %{_smp_mflags} all_nolibafs
+%if %{build_userspace} && %{build_modules}
+TARGET=all
+%elif %{build_userspace}
+TARGET=all_nolibafs
+%elif %{build_modules}
+TARGET=libafs
+%else
+%{error:At least one of build_userspace or build_modules must be enabled.}
 %endif
 
-%if %{build_modules}
-make %{_smp_mflags} libafs
-%endif
+%make_build only_libafs_tree $TARGET V=0
 
 #-----------------------------------------------------------------------------
 # Install stage
