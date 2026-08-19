@@ -334,9 +334,8 @@ BuildRequires: krb5-devel
 
 %description krb5
 %{common_description}
-This package provides compatibility programs so you can use krb5
-to authenticate to AFS services, instead of using OpenAFS's homegrown
-krb4 lookalike services.
+This package provides compatibility programs so you can use a
+Kerberos realm to authenticate to AFS services.
 %endif
 
 %endif
