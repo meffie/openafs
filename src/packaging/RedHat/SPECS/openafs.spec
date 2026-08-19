@@ -89,8 +89,6 @@ Source99: openafs-compat.macros
 %global kernel_version %(uname -r)
 %endif
 
-%global kverrel %(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
-
 # The kernel modules installation path.
 %if ! %{defined kmodulesdir}
 %global kmodulesdir %{_prefix}/lib/modules/%{kernel_version}
@@ -395,12 +393,12 @@ krb4 lookalike services.
 Summary:          OpenAFS kernel module
 Provides:         %{name}-kmod = %{version}-%{release}
 Provides:         %{name}-kernel = %{version}
-Requires:         kernel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%{kverrel}
+Requires:         kernel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
-Release:          %{package_release}.%(echo %{kverrel} | tr - _)
-BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%{kverrel}
+Release:          %{package_release}.%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//' | tr - _)
+BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
 BuildRequires:    elfutils-devel
 
 %description -n kmod-%{name}
@@ -416,7 +414,7 @@ kernel %{kernel_version}.
 
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 : @@@
-: @@@ kernel version:     %{kverrel}
+: @@@ kernel version:     %{kernel_version}
 : @@@ PAM modules dir:    %{pamdir}
 : @@@ build userspace:    %{with userspace}
 : @@@ build modules:      %{with modules}
