@@ -280,8 +280,7 @@ BuildRequires: perl-core
 
 %description docs
 %{common_description}
-This package provides HTML documentation for OpenAFS users and system
-administrators.
+This package provides historical reference documentation for OpenAFS.
 
 %package kernel-source
 Summary: OpenAFS Kernel Module source tree
