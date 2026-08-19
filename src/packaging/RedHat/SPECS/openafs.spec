@@ -5,6 +5,26 @@
 # (RHEL), and RHEL-compatible distributions such as Fedora, CentOS Stream,
 # AlmaLinux, Rocky Linux, Oracle Linux, and Amazon Linux.
 #
+# rpmbuild options:
+#
+#   --define "openafs_version <version>"  The version of the OpenAFS source archive
+#   --define "package_version <version>"  The RPM Version tag. (default: openafs_version)
+#   --define "package_release <release>"  The RPM Release tag. (default: 1)
+#   --define "source_date_epoch <epoch>"  The build timestamp. (default: current system time)
+#   --define "kernel_version <version>"   The kernel version (default: current running kernel)
+#   --define "kenrel_epoch"               The kernel epoch number (default: platform dependent)
+#   --define "ksrcdir <path>"             The path to the kernel headers
+#                                         (default: /usr/src/kernels/<kernel_version>)
+#   --define "kmodulesdir <path>"         Kernel modules installation base path
+#                                         (default: /usr/lib/modules/<kernel_version>)
+#   --without userspace                   Do not build userspace packages (default: --with userspace)
+#   --without modules                     Do not the build kernel module package (default: --with modules)
+#   --without dkms                        Do not build the DKMS package (default: --with dkms)
+#   --without authlibs                    Disable authlibs package (default: with authlibs)
+#   --without krb5                        Disable krb5 support (default: with krb5)
+#   --with supergroups                    Enable supergroup support (default: --without supergroup)
+#   --with kauth                          Build the obsolete kauth packages (default: --without kauth)
+#
 #-----------------------------------------------------------------------------
 
 # Handle old macro names
@@ -62,30 +82,13 @@ administrative management.
 # Build conditionals
 #
 
-# Specify '--without dkms' if you do not want to build the dkms-openafs package.
 %bcond_without dkms
-
-# Specify '--without userspace' if you do not want to build the userspace packages.
 %bcond_without userspace
-
-# Specify '--without modules' if you do not want to build the kmod-openafs package.
 %bcond_without modules
-
-# Specify '--with kauth' if you want to build packages containing the legacy
-# kaserver and related programs.
-%bcond_with kauth
-
-# Specify '--without authlibs' if you do not want to build the openafs-authlibs
-# package.
+%bcond_with    kauth
 %bcond_without authlibs
-
-# Specify '--without krb5' if you do not want to build the openafs-krb5 package
-# to distribute aklog, asetkey, and akeyconvert.
 %bcond_without krb5
-
-# Specify '--with supergroups' if you want to build the ptserver and pts with
-# the supergroups features and disk formats.
-%bcond_with supergroups
+%bcond_with    supergroups
 
 #
 # Kernel module definitions
@@ -96,12 +99,10 @@ administrative management.
 %global kernel_version %(uname -r)
 %endif
 
-# The kernel modules installation path.
 %if ! %{defined kmodulesdir}
 %global kmodulesdir %{_prefix}/lib/modules/%{kernel_version}
 %endif
 
-# The path to the kernel headers for the target kernel version.
 %if ! %{defined ksrcdir}
 %global ksrcdir %{_usrsrc}/kernels/%{kernel_version}
 %endif
@@ -157,37 +158,6 @@ Source40: openafs-dkms.conf
 %{common_description}
 This package provides common files shared across all the various
 OpenAFS packages but are not necessarily tied to a client or server.
-
-The OpenAFS SRPM can be rebuilt with the following options:
-
- --define "source_date_epoch 1712832000"  Specify the build timestamp. The default
-                                          is the current system time.
-
- --define "kernel_version 3.19.3-100.fc20.i686" Specify the specific kernel version
-                                  to build modules against. The default is
-                                  to build against the currently-running
-                                  kernel.
-
- --without authlibs               Disable authlibs package (default: with authlibs)
- --without krb5                   Disable krb5 support (default: with krb5)
- --with bitmap-later              Enable "bitmap later" support
- --with supergroups               Enable "supergroups"
- --with kauth                     Build the openafs-kauth-server and openafs-kauth-client
-                                  packages which contain the legacy kaserver and
-                                  related programs. (default: --without kauth)
-
- --target=i386                    The target architecture to build for.
-
- --define "build_userspace 1"     Request building of userspace tools
- --define "build_modules 1"       Request building of kernel modules
-                                  You probably never need to specify these.
-
- --define "kmodulesdir <path>"    This is the base location where modules
-                                  will be installed.  You probably don't
-                                  need to change this ever.
-
-To a kernel module for your running kernel, just run:
-  rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
 
 %if %{with userspace}
 
