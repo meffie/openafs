@@ -38,3 +38,11 @@
 %global _without_dkms --without-dkms
 %endif
 %endif
+
+#
+# Convert --define "kernvers <version>" to --define "kernel_version <version>"
+#
+%if %{defined kernvers} && ! %{defined kernel_version}
+%{warn:--define kernvers is deprecated; use --define kernel_version}
+%global kernel_version %{kernvers}
+%endif
