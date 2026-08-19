@@ -15,6 +15,13 @@ Source99: openafs-compat.macros
 # Constants
 #
 
+%global common_description %{expand:
+The AFS distributed filesystem.  AFS is a distributed filesystem
+allowing cross-platform sharing of files among multiple computers.
+Facilities are provided for access control, authentication, backup and
+administrative management.
+}
+
 # Disable link time optimization (lto).
 %global _lto_cflags %{nil}
 
@@ -147,11 +154,7 @@ Source39: openafs-ThisCell
 Source40: openafs-dkms.conf
 
 %description
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides common files shared across all the various
 OpenAFS packages but are not necessarily tied to a client or server.
 
@@ -201,11 +204,7 @@ Requires: %{name}-kmod >= %{version}
 Provides: %{name}-kmod-common = %{version}
 
 %description client
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides basic client support to mount and manipulate
 AFS.
 
@@ -218,11 +217,7 @@ Requires(preun): systemd-units
 Requires(postun): systemd-units
 
 %description server
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides basic server support to host files in an AFS
 Cell.
 
@@ -238,11 +233,7 @@ Requires(post): dkms
 Requires:       %{name}-kmod-common = %{version}
 
 %description -n dkms-%{name}
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides the source code to allow DKMS to build an
 AFS kernel module.
 %endif
@@ -252,11 +243,7 @@ AFS kernel module.
 Summary: OpenAFS authentication shared libraries
 
 %description authlibs
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides a shared version of libafsrpc and libafsauthent.
 None of the programs included with OpenAFS currently use these shared
 libraries; however, third-party software that wishes to perform AFS
@@ -271,11 +258,7 @@ Requires: %{name}-devel = %{version}-%{release}
 Summary: OpenAFS shared library development
 
 %description authlibs-devel
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package includes the static versions of libafsrpc and
 libafsauthent, and symlinks required for building against the dynamic
 libraries.
@@ -285,11 +268,7 @@ Summary: OpenAFS Development Libraries and Headers
 Requires: %{name} = %{version}-%{release}
 
 %description devel
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides static development libraries and headers needed
 to compile AFS applications.  Note: AFS currently does not provide
 shared libraries.
@@ -300,11 +279,7 @@ Requires: %{name} = %{version}-%{release}
 BuildRequires: perl-core
 
 %description docs
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides HTML documentation for OpenAFS users and system
 administrators.
 
@@ -314,11 +289,7 @@ Provides: %{name}-kernel = %{version}
 Provides: %{name}-kmod = %{version}
 
 %description kernel-source
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides the source code to build your own AFS kernel
 module.
 
@@ -327,11 +298,7 @@ Summary: OpenAFS client compatibility symlinks
 Requires: %{name} = %{version}
 
 %description compat
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides compatibility symlinks in %{afswsdir}.  It is
 completely optional, and is only necessary to support legacy
 applications and scripts that hard-code the location of AFS client
@@ -343,11 +310,7 @@ Summary: OpenAFS Kauth Client support
 Requires: %{name}
 
 %description kauth-client
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides the legacy KAServer client programs and the PAM module
 for authentication with the OpenAFS KAserver; a deprecated authentication
 service.  Generally you should not install this package for new cells or for
@@ -358,11 +321,7 @@ Summary: OpenAFS Kauth Server support
 Requires: %{name}
 
 %description kauth-server
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides the legacy OpenAFS KAServer; a deprecated authentication
 service. Generally you should not install this package for new cells or for
 cells using Kerberos v5.
@@ -375,11 +334,7 @@ Requires: %{name} = %{version}
 BuildRequires: krb5-devel
 
 %description krb5
-The AFS distributed filesystem.  AFS is a distributed filesystem
-allowing cross-platform sharing of files among multiple computers.
-Facilities are provided for access control, authentication, backup and
-administrative management.
-
+%{common_description}
 This package provides compatibility programs so you can use krb5
 to authenticate to AFS services, instead of using AFS's homegrown
 krb4 lookalike services.
@@ -404,6 +359,7 @@ BuildRequires:    gcc
 BuildRequires:    make
 
 %description -n kmod-%{name}
+%{common_description}
 This package provides the OpenAFS kernel modules built for the Linux
 kernel %{kernel_version}.
 
