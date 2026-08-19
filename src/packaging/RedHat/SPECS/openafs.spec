@@ -399,7 +399,9 @@ Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{package_release}.%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//' | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
-BuildRequires:    elfutils-devel
+BuildRequires:    elfutils-libelf-devel
+BuildRequires:    gcc
+BuildRequires:    make
 
 %description -n kmod-%{name}
 This package provides the OpenAFS kernel modules built for the Linux
