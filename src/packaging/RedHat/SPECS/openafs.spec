@@ -85,20 +85,20 @@ Source99: openafs-compat.macros
 #
 %if %{with modules}
 
-%if ! %{defined kernvers}
-%global kernvers %(uname -r)
+%if ! %{defined kernel_version}
+%global kernel_version %(uname -r)
 %endif
 
-%global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
+%global kverrel %(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
 
 # The kernel modules installation path.
 %if ! %{defined kmodulesdir}
-%global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
+%global kmodulesdir %{_prefix}/lib/modules/%{kernel_version}
 %endif
 
 # The path to the kernel headers for the target kernel version.
 %if ! %{defined ksrcdir}
-%global ksrcdir %{_usrsrc}/kernels/%{kernvers}
+%global ksrcdir %{_usrsrc}/kernels/%{kernel_version}
 %endif
 
 %if ! %{defined kernel_epoch} && 0%{?amzn} >= 2023
@@ -162,7 +162,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "source_date_epoch 1712832000"  Specify the build timestamp. The default
                                           is the current system time.
 
- --define "kernvers 3.19.3-100.fc20.i686" Specify the specific kernel version
+ --define "kernel_version 3.19.3-100.fc20.i686" Specify the specific kernel version
                                   to build modules against. The default is
                                   to build against the currently-running
                                   kernel.
@@ -405,7 +405,7 @@ BuildRequires:    elfutils-devel
 
 %description -n kmod-%{name}
 This package provides the OpenAFS kernel modules built for the Linux
-kernel %{kernvers}.
+kernel %{kernel_version}.
 
 %endif
 
@@ -577,7 +577,7 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_v
 
 mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
-    src/libafs/MODLOAD-%{kernvers}/openafs.ko \
+    src/libafs/MODLOAD-%{kernel_version}/openafs.ko \
     %{buildroot}%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
@@ -703,10 +703,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 # kmod-openafs scriptlets
 %if %{with modules}
 %post -n kmod-%{name}
-/usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
+/usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
 
 %postun -n kmod-%{name}
-/usr/sbin/depmod -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
+/usr/sbin/depmod -aF /boot/System.map-%{kernel_version} %{kernel_version} &> /dev/null || :
 %endif
 
 #-----------------------------------------------------------------------------
