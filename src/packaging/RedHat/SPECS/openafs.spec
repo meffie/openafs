@@ -661,7 +661,9 @@ ln -sf %{_sbindir}/fms          %{afswsdir}/etc/fms
 ln -sf %{_sbindir}/fstrace      %{afswsdir}/etc/fstrace
 ln -sf %{_sbindir}/read_tape    %{afswsdir}/etc/read_tape
 ln -sf %{_sbindir}/rxdebug      %{afswsdir}/etc/rxdebug
+%if %{kauth_support}
 ln -sf %{_sbindir}/uss          %{afswsdir}/etc/uss
+%endif
 ln -sf %{_sbindir}/vos          %{afswsdir}/etc/vos
 ln -sf %{_sbindir}/vsys         %{afswsdir}/etc/vsys
 
@@ -755,7 +757,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/rxstat_get_version
 %{_sbindir}/rxstat_query_peer
 %{_sbindir}/rxstat_query_process
+%if %{kauth_support}
 %{_sbindir}/uss
+%endif
 %{_sbindir}/vos
 %{_sbindir}/vsys
 %{_libdir}/libafshcrypto.so.*
@@ -784,8 +788,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/afsmonitor.5.*
 %doc %{_mandir}/man5/butc.5.*
 %doc %{_mandir}/man5/butc_logs.5.*
+%if %{kauth_support}
 %doc %{_mandir}/man5/uss.5.*
 %doc %{_mandir}/man5/uss_bulk.5.*
+%endif
 %doc %{_mandir}/man8/backup.8.*
 %doc %{_mandir}/man8/backup_*.8.*
 %doc %{_mandir}/man8/bos.8.*
@@ -795,8 +801,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/fstrace.8.*
 %doc %{_mandir}/man8/fstrace_*.8.*
 %doc %{_mandir}/man8/read_tape.8.*
+%if %{kauth_support}
 %doc %{_mandir}/man8/uss.8.*
 %doc %{_mandir}/man8/uss_*.8.*
+%endif
 # Exclude obsolete or unused files.
 %exclude %{_bindir}/livesys
 %exclude %{_sbindir}/rmtsysd
@@ -819,6 +827,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_bindir}/pagsh.krb
 %exclude %{_mandir}/man5/AuthLog.5.*
 %exclude %{_mandir}/man5/AuthLog.dir.5.*
+%exclude %{_sbindir}/uss
+%exclude %{_mandir}/man5/uss.5.*
+%exclude %{_mandir}/man5/uss_bulk.5.*
+%exclude %{_mandir}/man8/uss.8.*
+%exclude %{_mandir}/man8/uss_*.8.*
 %endif
 %if ! %{krb5support}
 %exclude %{_mandir}/man8/akeyconvert.*
@@ -1020,7 +1033,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/etc/fstrace
 %ghost %{afswsdir}/etc/read_tape
 %ghost %{afswsdir}/etc/rxdebug
+%if %{kauth_support}
 %ghost %{afswsdir}/etc/uss
+%endif
 %ghost %{afswsdir}/etc/vos
 %ghost %{afswsdir}/etc/vsys
 
