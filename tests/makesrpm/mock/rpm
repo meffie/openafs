@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+#
+# Mock rpm for makesrpm.pl testing.
+#
+
+set -x
+
+echo "mock/rpm: $@" >&2
+
+if [[ "$1" == "--eval" && "$2" == "%{_topdir}" ]]; then
+    if [[ -n "$RPM_EVAL_FAIL" ]]; then
+        echo "mock/rpm: simulating eval failure" >&2
+        exit 1
+    else
+        # Use a path inside the temp dir provided by pytest
+        echo "$PWD/mock_topdir"
+        exit 0
+    fi
+fi
+
+echo "mock/rpm: unexpected arguments" >&2
+exit 1
