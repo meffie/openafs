@@ -69,6 +69,11 @@
 %global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
 %endif
 
+# The path to the kernel headers for the target kernel version.
+%if ! %{defined ksrcdir}
+%global ksrcdir %{_usrsrc}/kernels/%{kernvers}
+%endif
+
 %if 0%{?amzn} >= 2023
 %global kernel_epoch 1:
 %else
@@ -418,35 +423,9 @@ cp -p %{SOURCE11} .
 %build
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
+%set_build_flags
 
-case %{_arch} in
-       x86_64)                         sysname=amd64_linux26        ;;
-       alpha*)                         sysname=alpha_linux_26       ;;
-       i386|i486|i586|i686|athlon)     sysname=i386_linux26         ;;
-       aarch64)                        sysname=arm64_linux26        ;;
-       *)                              sysname=%{_arch}_linux26     ;;
-esac
-
-config_opts="%{?_with_kauth:--enable-kauth} \
-        %{?_with_bitmap_later:--enable-bitmap-later} \
-        %{?_with_supergroups:--enable-supergroups} \
-        --enable-transarc-paths"
-
-# Configure AFS
-
-# The path to the kernel headers for the target kernel version.
-ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}
-
-CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
-
-%if %{krb5support}
-%if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
-%endif
-%endif
-
-./configure --with-afs-sysname=${sysname} \
+./configure \
        --prefix=%{_prefix} \
        --libdir=%{_libdir} \
        --bindir=%{_bindir} \
@@ -455,7 +434,8 @@ export KRB5_CONFIG
        --enable-debug \
        --with-linux-kernel-packaging \
 %if %{build_modules}
-       --with-linux-kernel-headers=${ksrc} \
+       --enable-kernel-module \
+       --with-linux-kernel-headers=%{ksrcdir} \
 %else
        --disable-kernel-module \
 %endif
@@ -463,26 +443,25 @@ export KRB5_CONFIG
        --with-krb5 \
 %endif
        --with-swig \
-       $config_opts \
-       || exit 1
-
-# Build the libafs tree
-make %{_smp_mflags} only_libafs_tree || exit 1
-
-%if %{krb5support}
-%if %{?krb5config:1}%{!?krb5config:0}
-KRB5_CONFIG="%{krb5config}"
-export KRB5_CONFIG
+%if %{kauth_support}
+       --enable-kauth \
 %endif
+%if 0%{?_with_supergroups}
+       --enable-supergroups \
+%endif
+       --enable-transarc-paths
+
+%if %{build_userspace} && %{build_modules}
+TARGET=all
+%elif %{build_userspace}
+TARGET=all_nolibafs
+%elif %{build_modules}
+TARGET=libafs
+%else
+%{error:At least one of build_userspace or build_modules must be enabled.}
 %endif
 
-%if %{build_userspace}
-make %{_smp_mflags} all_nolibafs
-%endif
-
-%if %{build_modules}
-make %{_smp_mflags} libafs
-%endif
+%make_build only_libafs_tree $TARGET V=0
 
 #-----------------------------------------------------------------------------
 # Install stage
