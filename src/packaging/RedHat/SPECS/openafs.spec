@@ -150,9 +150,10 @@ Source33: openafs-client-systemd-helper.sh
 Source34: openafs-LICENSE.Sun
 Source35: openafs-README
 Source37: openafs-server.service
-Source38: openafs.sysconfig
 Source39: openafs-ThisCell
 Source40: openafs-dkms.conf
+Source41: openafs-client.sysconfig
+Source42: openafs-server.sysconfig
 
 %description
 %{common_description}
@@ -429,9 +430,6 @@ rm -f %{buildroot}%{_prefix}/afs/bin/tokens.krb
 rm -f %{buildroot}%{_prefix}/afs/bin/udebug
 rm -f %{buildroot}%{_prefix}/afs/bin/vos
 
-# Relocate afsd to legacy path to match systemd files.
-mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
-
 # Relocate admin utilities to a modern path.
 %if %{with kauth}
 mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
@@ -460,11 +458,12 @@ mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 
 # Install client and server systemd files.
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+install -m 644 %{SOURCE41} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-client
+install -m 644 %{SOURCE42} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-server
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
-install -m 755 %{SOURCE33} %{buildroot}%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+install -m 755 %{SOURCE33} %{buildroot}%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 
 # Install server directories.
 mkdir -p %{buildroot}%{_prefix}/afs/etc
@@ -520,6 +519,27 @@ make check
 %if %{with userspace}
 
 # openafs scriptlets
+%post
+if [ $1 -ge 2 ]; then
+    # Migrate the sysconfig file on upgrade.
+    # The original file will be removed or renamed by rpm.
+    if [ -f %{_sysconfdir}/sysconfig/%{name} ]; then
+        . %{_sysconfdir}/sysconfig/%{name}
+        if [ ! -f %{_sysconfdir}/sysconfig/%{name}-client ]; then
+            cat >%{_sysconfdir}/sysconfig/%{name}-client <<__EOF__
+# OpenAFS Client Configuration
+AFSD_ARGS="${AFSD_ARGS}"
+__EOF__
+        fi
+        if [ ! -f %{_sysconfdir}/sysconfig/%{name}-server ]; then
+            cat >%{_sysconfdir}/sysconfig/%{name}-server <<__EOF__
+# OpenAFS Server Configuration
+BOSSERVER_ARGS="${BOSSERVER_ARGS}"
+__EOF__
+        fi
+    fi
+fi
+
 %preun
 if [ $1 = 0 ] ; then
     if [ -d /afs ]; then
@@ -639,7 +659,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{with userspace}
 
 %files
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %doc LICENSE
 %doc ChangeLog
 %doc RELNOTES-%{openafs_version}
@@ -759,6 +778,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc doc/pdf
 
 %files client
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-client
 %dir %{_prefix}/vice
 %dir %{_prefix}/vice/cache
 %dir %{_prefix}/vice/etc
@@ -770,12 +790,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/afsio
 %{_bindir}/cmdebug
 %{_bindir}/up
-%{_prefix}/vice/etc/afsd
+%{_sbindir}/afsd
 %{_prefix}/vice/etc/C/afszcm.cat
 %{_libdir}/libuafs.a
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
-%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 %doc %{_mandir}/man1/cmdebug.1.*
 %doc %{_mandir}/man1/up.1.*
 %doc %{_mandir}/man5/afs.5.*
@@ -788,6 +808,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/CellAlias.5.*
 
 %files server
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-server
 %dir %{_prefix}/afs
 %dir %{_prefix}/afs/bin
 %dir %{_prefix}/afs/etc
