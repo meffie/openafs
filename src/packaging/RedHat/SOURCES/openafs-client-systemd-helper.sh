@@ -7,6 +7,9 @@ set -e
 
 UMOUNT_TIMEOUT=30
 
+# Previous versions used a combined configuration for clients and servers. Read
+# the legacy name second in case it was updated by configuation tooling.
+[ -f /etc/sysconfig/openafs-client ] && . /etc/sysconfig/openafs-client
 [ -f /etc/sysconfig/openafs ] && . /etc/sysconfig/openafs
 
 case $1 in
