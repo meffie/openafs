@@ -7,58 +7,85 @@
 #
 #-----------------------------------------------------------------------------
 
-%define afsvers @PACKAGE_VERSION@
-%define pkgvers @LINUX_PKGVER@
-# for beta/rc releases make pkgrel 0.<tag>
-# for real releases make pkgrel 1 (or more for extra releases)
-%define pkgrel @LINUX_PKGREL@
+# Handle old macro names
+Source99: openafs-compat.macros
+%include %{_specdir}/../SOURCES/openafs-compat.macros
 
-# Disable using lto (link time optimization)
+#
+# Constants
+#
+
+# Disable link time optimization (lto).
 %global _lto_cflags %{nil}
+
+# Disable getting the source date epoch from the change log.
+%global source_date_epoch_from_changelog 0
 
 # Define the location to the legacy workstation directory.
 %global afswsdir /usr/afsws
 
-#
-# Disable setting the source_date_epoch from the top entry of the changelog and
-# instead use the current system time by default.
-#
-# Note: Downstream packagers which use this reference spec are encouraged
-#       to set source_date_epoch_from_changelog to 1 and update the changelog
-#       on each release to set the source_date_epoch.
-#
-%define source_date_epoch_from_changelog 0
-%{!?source_date_epoch: %global source_date_epoch %(date +%%s)}
-
-%{!?build_dkmspkg: %define build_dkmspkg 1}
+# Define the location of the PAM security module directory.
+%global pamdir /%{_lib}/security
 
 #
-# Determine presence of rpmbuild command line --define arguments and set
-# defaults if not present.
+# Version information
 #
-%define build_userspace_on_cmdline %{?build_userspace:1}%{!?build_userspace:0}
-%define build_modules_on_cmdline %{?build_modules:1}%{!?build_modules:0}
 
-%if !%{build_userspace_on_cmdline}
-%define build_userspace 1
+%if ! %{defined openafs_version}
+%global openafs_version %{nil}
 %endif
-%if !%{build_modules_on_cmdline}
-%define build_modules 1
+
+%if ! %{defined package_version}
+%global package_version %{openafs_version}
 %endif
+
+%if ! %{defined package_release}
+%global package_release 1
+%endif
+
+%if ! %{defined dkms_version}
+%global dkms_version %{package_version}-%{package_release}%{?dist}
+%endif
+
+%if ! %{defined source_date_epoch}
+%global source_date_epoch %(date +%%s)
+%endif
+
+#
+# Build conditionals
+#
+
+# Specify '--without dkms' if you do not want to build the dkms-openafs package.
+%bcond_without dkms
+
+# Specify '--without userspace' if you do not want to build the userspace packages.
+%bcond_without userspace
+
+# Specify '--without modules' if you do not want to build the kmod-openafs package.
+%bcond_without modules
 
 # Specify '--with kauth' if you want to build packages containing the legacy
 # kaserver and related programs.
-%define kauth_support %{?_with_kauth:1}%{!?_with_kauth:0}
+%bcond_with kauth
 
 # Specify '--without authlibs' if you do not want to build the openafs-authlibs
 # package.
-%define build_authlibs %{?_without_authlibs:0}%{!?_without_authlibs:1}
+%bcond_without authlibs
 
 # Specify '--without krb5' if you do not want to build the openafs-krb5 package
 # to distribute aklog, asetkey, and akeyconvert.
-%define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
+%bcond_without krb5
 
-%if %{?kernvers:0}%{!?kernvers:1}
+# Specify '--with supergroups' if you want to build the ptserver and pts with
+# the supergroups features and disk formats.
+%bcond_with supergroups
+
+#
+# Kernel module definitions
+#
+%if %{with modules}
+
+%if ! %{defined kernvers}
 %global kernvers %(uname -r)
 %endif
 
@@ -80,15 +107,13 @@
 %global kernel_epoch %nil
 %endif
 
-%define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
+%endif
 
-# Define the location of the PAM security module directory
-%define pamdir /%{_lib}/security
 
 Summary: OpenAFS distributed filesystem
 Name: openafs
-Version: %{pkgvers}
-Release: %{pkgrel}%{?dist}
+Version: %{package_version}
+Release: %{package_release}%{?dist}
 License: IBM Public License
 URL: https://www.openafs.org
 BuildRequires: pam-devel
@@ -100,19 +125,19 @@ BuildRequires: systemd-units
 BuildRequires: perl-devel
 BuildRequires: swig
 BuildRequires: perl(ExtUtils::Embed)
-%if %{krb5support}
+%if %{with krb5}
 BuildRequires: krb5-devel
 %endif
-%if %{build_modules}
+%if %{with modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
 %endif
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
-Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
-Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
+Source0: https://www.openafs.org/dl/openafs/%{openafs_version}/openafs-%{openafs_version}-src.tar.bz2
+Source10: https://www.openafs.org/dl/openafs/%{openafs_version}/RELNOTES-%{openafs_version}
+Source11: https://www.openafs.org/dl/openafs/%{openafs_version}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
 Source21: openafs-CellServDB.local
 Source30: openafs-cacheinfo
@@ -163,9 +188,9 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   need to change this ever.
 
 To a kernel module for your running kernel, just run:
-  rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
+  rpmbuild --rebuild --target=`uname -m` openafs-%{package_version}-%{package_release}%{?dist}.src.rpm
 
-%if %{build_userspace}
+%if %{with userspace}
 
 %package client
 Summary: OpenAFS Filesystem Client
@@ -205,7 +230,7 @@ administrative management.
 This package provides basic server support to host files in an AFS
 Cell.
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %package -n dkms-%{name}
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Provides:       %{name}-kernel = %{version}
@@ -226,7 +251,7 @@ This package provides the source code to allow DKMS to build an
 AFS kernel module.
 %endif
 
-%if %{build_authlibs}
+%if %{with authlibs}
 %package authlibs
 Summary: OpenAFS authentication shared libraries
 
@@ -243,7 +268,7 @@ authentication may link against them.
 %endif
 
 %package authlibs-devel
-%if %{build_authlibs}
+%if %{with authlibs}
 Requires: %{name}-authlibs = %{version}-%{release}
 %endif
 Requires: %{name}-devel = %{version}-%{release}
@@ -316,7 +341,7 @@ completely optional, and is only necessary to support legacy
 applications and scripts that hard-code the location of AFS client
 programs.
 
-%if %{kauth_support}
+%if %{with kauth}
 %package kauth-client
 Summary: OpenAFS Kauth Client support
 Requires: %{name}
@@ -347,7 +372,7 @@ service. Generally you should not install this package for new cells or for
 cells using Kerberos v5.
 %endif
 
-%if %{krb5support}
+%if %{with krb5}
 %package krb5
 Summary: OpenAFS programs to use with krb5
 Requires: %{name} = %{version}
@@ -366,7 +391,7 @@ krb4 lookalike services.
 
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 
 %package -n kmod-%{name}
 Summary:          OpenAFS kernel module
@@ -376,7 +401,7 @@ Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
-Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+Release:          %{package_release}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
@@ -395,14 +420,14 @@ kernel %{kernvers}.
 : @@@
 : @@@ kernel version:     %{kverrel}
 : @@@ PAM modules dir:    %{pamdir}
-: @@@ build userspace:    %{build_userspace}
-: @@@ build modules:      %{build_modules}
+: @@@ build userspace:    %{with userspace}
+: @@@ build modules:      %{with modules}
 : @@@ arch:               %{_arch}
 : @@@ target cpu:         %{_target_cpu}
 : @@@
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-%setup -q -n openafs-%{afsvers}
+%setup -q -n openafs-%{openafs_version}
 
 # Add the change log and release notes to source tree.
 cp -p %{SOURCE10} .
@@ -424,32 +449,32 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
        --disable-strip-binaries \
        --enable-debug \
        --with-linux-kernel-packaging \
-%if %{build_modules}
+%if %{with modules}
        --enable-kernel-module \
        --with-linux-kernel-headers=%{ksrcdir} \
 %else
        --disable-kernel-module \
 %endif
-%if %{krb5support}
+%if %{with krb5}
        --with-krb5 \
 %endif
        --with-swig \
-%if %{kauth_support}
+%if %{with kauth}
        --enable-kauth \
 %endif
-%if 0%{?_with_supergroups}
+%if %{with supergroups}
        --enable-supergroups \
 %endif
        --enable-transarc-paths
 
-%if %{build_userspace} && %{build_modules}
+%if %{with userspace} && %{with modules}
 TARGET=all
-%elif %{build_userspace}
+%elif %{with userspace}
 TARGET=all_nolibafs
-%elif %{build_modules}
+%elif %{with modules}
 TARGET=libafs
 %else
-%{error:At least one of build_userspace or build_modules must be enabled.}
+%{error:At least one of --with userspace or --with modules is required.}
 %endif
 
 %make_build only_libafs_tree $TARGET V=0
@@ -461,7 +486,7 @@ TARGET=libafs
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 
-%if %{build_userspace}
+%if %{with userspace}
 
 # Install userspace files
 make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
@@ -469,7 +494,7 @@ make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 # Exclude duplicated files.
 rm -f %{buildroot}%{_prefix}/afs/bin/bos
 rm -f %{buildroot}%{_prefix}/afs/bin/fs
-%if %{kauth_support}
+%if %{with kauth}
 rm -f %{buildroot}%{_prefix}/afs/bin/kas
 rm -f %{buildroot}%{_prefix}/afs/bin/klog
 rm -f %{buildroot}%{_prefix}/afs/bin/klog.krb
@@ -486,18 +511,18 @@ rm -f %{buildroot}%{_prefix}/afs/bin/vos
 mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
 
 # Relocate admin utilities to a modern path.
-%if %{kauth_support}
+%if %{with kauth}
 mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
 %endif
 mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
-%if %{krb5support}
+%if %{with krb5}
 mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
 mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
 %endif
 
-%if %{kauth_support}
+%if %{with kauth}
 # Relocate PAM files to the standard PAM module path.
 mkdir -p %{buildroot}%{pamdir}
 mv %{buildroot}%{_libdir}/pam_afs.krb.so %{buildroot}%{pamdir}
@@ -540,17 +565,17 @@ sed -e 's/@NAME@/%{name}/' \
     %{SOURCE40} > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf
 
 # Install the kernel module source tree.
-mkdir -p %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
+mkdir -p %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/src
-install -m 644 LICENSE %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{afsvers}/README
+    tar xf - -C %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
+install -m 644 LICENSE %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.IBM
+install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.Sun
+install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_version}/README
 
 %endif
 
 # Install kernel modules
-%if %{build_modules}
+%if %{with modules}
 
 mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
@@ -563,14 +588,14 @@ install -m 755 \
 # Check stage
 #-----------------------------------------------------------------------------
 %check
-%if %{build_userspace}
+%if %{with userspace}
 make check
 %endif
 
 #-----------------------------------------------------------------------------
 # Scriptlets
 #-----------------------------------------------------------------------------
-%if %{build_userspace}
+%if %{with userspace}
 
 # openafs scriptlets
 %preun
@@ -631,7 +656,7 @@ ln -sf %{_sbindir}/fms          %{afswsdir}/etc/fms
 ln -sf %{_sbindir}/fstrace      %{afswsdir}/etc/fstrace
 ln -sf %{_sbindir}/read_tape    %{afswsdir}/etc/read_tape
 ln -sf %{_sbindir}/rxdebug      %{afswsdir}/etc/rxdebug
-%if %{kauth_support}
+%if %{with kauth}
 ln -sf %{_sbindir}/uss          %{afswsdir}/etc/uss
 %endif
 ln -sf %{_sbindir}/vos          %{afswsdir}/etc/vos
@@ -645,7 +670,7 @@ if [ $1 = 0 ] ; then
 fi
 
 # openafs-kauth-client scriptlets
-%if %{kauth_support}
+%if %{with kauth}
 %post kauth-client
 # Create compatiblity links.
 mkdir -p %{afswsdir}/bin
@@ -666,7 +691,7 @@ fi
 %endif
 
 # dkms-openafs scriptlets
-%if %{build_dkmspkg}
+%if %{with dkms}
 %post -n dkms-%{name}
 dkms add -m %{name} -v %{dkms_version} --rpm_safe_upgrade
 dkms build -m %{name} -v %{dkms_version} --rpm_safe_upgrade
@@ -678,7 +703,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 
 # kmod-openafs scriptlets
-%if %{build_modules}
+%if %{with modules}
 %post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
 
@@ -689,13 +714,13 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 #-----------------------------------------------------------------------------
 # File lists
 #-----------------------------------------------------------------------------
-%if %{build_userspace}
+%if %{with userspace}
 
 %files
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %doc LICENSE
 %doc ChangeLog
-%doc RELNOTES-%{afsvers}
+%doc RELNOTES-%{openafs_version}
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -727,7 +752,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/rxstat_get_version
 %{_sbindir}/rxstat_query_peer
 %{_sbindir}/rxstat_query_process
-%if %{kauth_support}
+%if %{with kauth}
 %{_sbindir}/uss
 %endif
 %{_sbindir}/vos
@@ -758,7 +783,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/afsmonitor.5.*
 %doc %{_mandir}/man5/butc.5.*
 %doc %{_mandir}/man5/butc_logs.5.*
-%if %{kauth_support}
+%if %{with kauth}
 %doc %{_mandir}/man5/uss.5.*
 %doc %{_mandir}/man5/uss_bulk.5.*
 %endif
@@ -771,7 +796,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/fstrace.8.*
 %doc %{_mandir}/man8/fstrace_*.8.*
 %doc %{_mandir}/man8/read_tape.8.*
-%if %{kauth_support}
+%if %{with kauth}
 %doc %{_mandir}/man8/uss.8.*
 %doc %{_mandir}/man8/uss_*.8.*
 %endif
@@ -787,12 +812,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/aklog_dynamic_auth.8.*
 %exclude %{_mandir}/man8/rmtsysd.8.*
 %exclude %{_mandir}/man8/xfs_size_check.8.*
-%if ! %{build_authlibs}
+%if %{without authlibs}
 %exclude %{_libdir}/libafsauthent.so*
 %exclude %{_libdir}/libafsrpc.so*
 %exclude %{_libdir}/libkopenafs.so*
 %endif
-%if ! %{kauth_support}
+%if %{without kauth}
 %exclude %{_bindir}/tokens.krb
 %exclude %{_bindir}/pagsh.krb
 %exclude %{_mandir}/man5/AuthLog.5.*
@@ -803,7 +828,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/uss.8.*
 %exclude %{_mandir}/man8/uss_*.8.*
 %endif
-%if ! %{krb5support}
+%if %{without krb5}
 %exclude %{_mandir}/man8/akeyconvert.*
 %exclude %{_mandir}/man8/asetkey.*
 %endif
@@ -922,7 +947,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/volscan.8.*
 %doc %{_mandir}/man8/volserver.8.*
 
-%if %{build_authlibs}
+%if %{with authlibs}
 %files authlibs
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
@@ -937,7 +962,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libafsauthent_pic.a
 %{_libdir}/libafsrpc_pic.a
 %{_libdir}/libkopenafs.a
-%if %{build_authlibs}
+%if %{with authlibs}
 %{_libdir}/libafsauthent.so
 %{_libdir}/libafsrpc.so
 %{_libdir}/libkopenafs.so
@@ -971,16 +996,16 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/perl/ukernel.so
 %doc %{_mandir}/man3/AFS::ukernel.3.*
 
-%if %{build_dkmspkg}
+%if %{with dkms}
 %files -n dkms-%{name}
 %{_prefix}/src/%{name}-%{dkms_version}
 %endif
 
 %files kernel-source
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.IBM
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/LICENSE.Sun
-%doc %{_prefix}/src/%{name}-kernel-%{afsvers}/README
-%{_prefix}/src/%{name}-kernel-%{afsvers}/src
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.IBM
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/LICENSE.Sun
+%doc %{_prefix}/src/%{name}-kernel-%{openafs_version}/README
+%{_prefix}/src/%{name}-kernel-%{openafs_version}/src
 
 %files compat
 %ghost %{afswsdir}/bin/afsmonitor
@@ -1003,13 +1028,13 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/etc/fstrace
 %ghost %{afswsdir}/etc/read_tape
 %ghost %{afswsdir}/etc/rxdebug
-%if %{kauth_support}
+%if %{with kauth}
 %ghost %{afswsdir}/etc/uss
 %endif
 %ghost %{afswsdir}/etc/vos
 %ghost %{afswsdir}/etc/vsys
 
-%if %{kauth_support}
+%if %{with kauth}
 %files kauth-client
 %{_sbindir}/kas
 %{_bindir}/klog
@@ -1054,7 +1079,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/kdb.8.*
 %endif
 
-%if %{krb5support}
+%if %{with krb5}
 %files krb5
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
@@ -1067,7 +1092,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 %endif
 
-%if %{build_modules}
+%if %{with modules}
 
 %files -n kmod-%{name}
 %{kmodulesdir}/extra/%{name}/%{name}.ko

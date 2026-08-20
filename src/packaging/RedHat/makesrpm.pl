@@ -454,6 +454,10 @@ open(my $out_fh, '>', $spec_output)
   or die "$progname: Cannot open output spec file '$spec_output': $!";
 
 while (<$in_fh>) {
+    s/^\%global openafs_version.*/%global openafs_version $openafs_version/g;
+    s/^\%global package_version.*/%global package_version $package_version/g;
+    s/^\%global package_release.*/%global package_release $package_release/g;
+
     s/^\%define afsvers.*/%define afsvers $openafs_version/g;
     s/^\%define pkgvers.*/%define pkgvers $package_version/g;
     s/^\%define pkgrel.*/%define pkgrel $package_release/g;
@@ -487,7 +491,8 @@ if ($prepare_only) {
 open(my $rpmbuild, "-|",
      "rpmbuild", "-bs", "--nodeps",
      "--define", "dist %undefined",
-     "--define", "build_modules 0",
+     "--define", "build_modules 0",  # For old spec files.
+     "--without", "modules",
      "--define", "_topdir $abs_topdir",
      $spec_output)
     or die "$progname: Failed to start rpmbuild: $!\n";
