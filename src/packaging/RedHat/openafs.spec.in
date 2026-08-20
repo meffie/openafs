@@ -1,4 +1,11 @@
-# Openafs Spec
+#-----------------------------------------------------------------------------
+# OpenAFS spec file for RHEL and compatible distributions
+#
+# This spec file is used to build OpenAFS RPMs for Red Hat Enterprise Linux
+# (RHEL), and RHEL-compatible distributions such as Fedora, CentOS Stream,
+# AlmaLinux, Rocky Linux, Oracle Linux, and Amazon Linux.
+#
+#-----------------------------------------------------------------------------
 
 %define afsvers @PACKAGE_VERSION@
 %define pkgvers @LINUX_PKGVER@
@@ -55,13 +62,6 @@
 # to distribute aklog, asetkey, and akeyconvert.
 %define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
 
-# Specify '--with bootkernel' if you want to build the
-# kernel module for Red Hat BOOT Kernels on x86.
-%define bootkernelsupport %{?_with_bootkernel:1}%{!?_with_bootkernel:0}
-
-#
-# Definitions
-#
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7 || 0%{?amzn} >= 1
 %define depmod /usr/sbin/depmod
 %else
@@ -97,9 +97,8 @@ Name: openafs
 Version: %{pkgvers}
 Release: %{pkgrel}%{?dist}
 License: IBM Public License
-URL: http://www.openafs.org
+URL: https://www.openafs.org
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
-Packager: OpenAFS Gatekeepers <openafs-gatekeepers@openafs.org>
 Group: Networking/Filesystems
 BuildRequires: %{?kdepend:%{kdepend}, } pam-devel, ncurses-devel, make, flex, bison
 %if 0%{?fedora} >= 15 || 0%{?rhel} >= 7 || 0%{?amzn} >= 1
@@ -121,10 +120,10 @@ BuildRequires: elfutils-devel
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: http://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
+Source0: https://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
 %define srcdir openafs-%{afsvers}
-Source10: http://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
-Source11: http://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
+Source10: https://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
+Source11: https://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
 Source30: openafs-cacheinfo
 Source31: openafs-client.init
@@ -136,8 +135,6 @@ Source36: openafs-server.init
 Source37: openafs-server.service
 Source38: openafs.sysconfig
 Source39: openafs-ThisCell
-Source997: openafs-buildfedora.pl
-Source998: openafs-buildall.sh
 Source999: openafs-kmodtool
 
 %description
@@ -192,11 +189,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
 To a kernel module for your running kernel, just run:
   rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
 
-##############################################################################
-#
-# build the userspace side of things if so requested
-#
-##############################################################################
 %if %{build_userspace}
 
 %package client
@@ -412,23 +404,15 @@ krb4 lookalike services.
 
 %endif
 
-##############################################################################
-#
-# build the kernel modules if so requested
-#
-##############################################################################
 %if %{build_modules}
 
 %{expand:%(%{kmodtool} rpmtemplate %{kmod_name} %{kverrel} %{depmod} %{kvariants} 2>/dev/null)}
 
 %endif
 
-##############################################################################
-#
-# PREP
-#
-##############################################################################
-
+#-----------------------------------------------------------------------------
+# Preparation stage
+#-----------------------------------------------------------------------------
 %prep
 
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -443,14 +427,11 @@ krb4 lookalike services.
 : @@@
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# Install OpenAFS src
 %setup -q -n %{srcdir}
 
-##############################################################################
-#
-# building
-#
-##############################################################################
+#-----------------------------------------------------------------------------
+# Build stage
+#-----------------------------------------------------------------------------
 %build
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
@@ -462,15 +443,6 @@ case %{_arch} in
        aarch64)                        sysname=arm64_linux26        ;;
        *)                              sysname=%{_arch}_linux26     ;;
 esac
-
-%ifarch %{ix86}
-archlist="i386 i586 i686 athlon"
-%if %{bootkernelsupport}
-  archlist="${archlist} BOOT"
-%endif
-%else
-archlist=%{_arch}
-%endif
 
 config_opts="%{?_with_kauth:--enable-kauth} \
         %{?_with_bitmap_later:--enable-bitmap-later} \
@@ -598,12 +570,9 @@ do
 done
 %endif
 
-
-##############################################################################
-###
-### install
-###
-##############################################################################
+#-----------------------------------------------------------------------------
+# Install stage
+#-----------------------------------------------------------------------------
 %install
 
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
@@ -611,16 +580,9 @@ export DONT_GPRINTIFY=1 # Do not modify initscripts.
 
 [ $RPM_BUILD_ROOT != / ] && rm -rf $RPM_BUILD_ROOT
 
-##############################################################################
-###
-### Install userspace
-###
-##############################################################################
 %if %{build_userspace}
 
-#-----------------------------------------------------------------------------
 # Install userspace files
-#-----------------------------------------------------------------------------
 make %{_smp_mflags} install_nolibafs DESTDIR="$RPM_BUILD_ROOT"
 
 # Set the executable bit on libraries in libdir, so rpmbuild knows to
@@ -731,9 +693,7 @@ rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.dir.5
 rm -f $RPM_BUILD_ROOT%{_mandir}/man3/AFS::ukernel.3
 %endif
 
-#-----------------------------------------------------------------------------
 # Install client and server initscripts/systemd files
-#-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
 install -m 755 %{SOURCE38} $RPM_BUILD_ROOT/etc/sysconfig/openafs
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
@@ -748,15 +708,11 @@ install -m 644 %{SOURCE37} $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
 install -m 755 %{SOURCE33} $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
 %endif
 
-#-----------------------------------------------------------------------------
 # Install server directories.
-#-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/etc
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/logs
 
-#-----------------------------------------------------------------------------
 # Install client directories and config files.
-#-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/etc
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/cache
 chmod 700 $RPM_BUILD_ROOT%{_prefix}/vice/cache
@@ -764,9 +720,7 @@ install -p -m 644 %{SOURCE39} $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
 install -p -m 644 %{SOURCE20} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.dist
 install -p -m 644 %{SOURCE30} $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
 
-#-----------------------------------------------------------------------------
 # Install DKMS source.
-#-----------------------------------------------------------------------------
 install -d -m 755 $RPM_BUILD_ROOT%{_prefix}/src
 cp -a libafs_tree $RPM_BUILD_ROOT%{_prefix}/src/%{name}-%{dkms_version}
 
@@ -787,9 +741,7 @@ NO_WEAK_MODULES=yes
 
 EOF
 
-#-----------------------------------------------------------------------------
 # Install the kernel module source tree.
-#-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
 tar cf - -C libafs_tree . | \
     tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
@@ -797,9 +749,7 @@ install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/L
 install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
 install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
 
-#-----------------------------------------------------------------------------
 # Install documentation.
-#-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 tar cf - -C doc html pdf | \
     tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
@@ -808,11 +758,7 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 
 %endif
 
-##############################################################################
-###
-### Install modules
-###
-##############################################################################
+# Install kernel modules
 %if %{build_modules}
 
 for kvariant in %{kvariants}
@@ -843,21 +789,17 @@ do
 done
 %endif
 
-##############################################################################
-###
-### clean
-###
-##############################################################################
+#-----------------------------------------------------------------------------
+# Clean stage
+#-----------------------------------------------------------------------------
 %clean
 [ "$RPM_BUILD_ROOT" != "/" -a "x%{debugspec}" != "x1" ] && \
         rm -fr $RPM_BUILD_ROOT
 
 
-##############################################################################
-###
-### scripts
-###
-##############################################################################
+#-----------------------------------------------------------------------------
+# Scriptlets
+#-----------------------------------------------------------------------------
 %if %{build_userspace}
 
 %post client
@@ -1035,11 +977,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 /sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
 %endif
 
-##############################################################################
-###
-### file lists
-###
-##############################################################################
+#-----------------------------------------------------------------------------
+# File lists
+#-----------------------------------------------------------------------------
 %if %{build_userspace}
 
 %files
@@ -1398,11 +1338,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %endif
 %endif
 
-##############################################################################
-###
-### openafs.spec change log
-###
-##############################################################################
+#-----------------------------------------------------------------------------
+# Change log
+#-----------------------------------------------------------------------------
 %changelog
 * Mon Apr 27 2026  Michael Meffie <mmeffie@sinenomine.net>
 - Added Amazon Linux support
