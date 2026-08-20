@@ -464,7 +464,7 @@ install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
-install -m 755 %{SOURCE33} %{buildroot}%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+install -m 755 %{SOURCE33} %{buildroot}%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 
 # Install server directories.
 mkdir -p %{buildroot}%{_prefix}/afs/etc
@@ -775,7 +775,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libuafs.a
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
-%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 %doc %{_mandir}/man1/cmdebug.1.*
 %doc %{_mandir}/man1/up.1.*
 %doc %{_mandir}/man5/afs.5.*
