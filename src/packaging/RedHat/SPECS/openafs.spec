@@ -58,13 +58,16 @@
 # to distribute aklog, asetkey, and akeyconvert.
 %define krb5support %{?_without_krb5:0}%{!?_without_krb5:1}
 
-%define kmod_name openafs
-
 %if %{?kernvers:0}%{!?kernvers:1}
 %global kernvers %(uname -r)
 %endif
 
 %global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
+
+# The kernel modules installation path.
+%if ! %{defined kmodulesdir}
+%global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
+%endif
 
 %if 0%{?amzn} >= 2023
 %global kernel_epoch 1:
@@ -113,6 +116,7 @@ Source35: openafs-README
 Source37: openafs-server.service
 Source38: openafs.sysconfig
 Source39: openafs-ThisCell
+Source40: openafs-dkms.conf
 
 %description
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -132,10 +136,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
                                   to build modules against. The default is
                                   to build against the currently-running
                                   kernel.
- --define "kbase /lib/modules/"   The base location to look for kernel headers
- --define "kend /build"           The 'end' location to look for kernels
-                                  The build will define ksrvdir as
-                                  %%{kbase}<kernvers>%%{kend}
 
  --without authlibs               Disable authlibs package (default: with authlibs)
  --without krb5                   Disable krb5 support (default: with krb5)
@@ -151,7 +151,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "build_modules 1"       Request building of kernel modules
                                   You probably never need to specify these.
 
- --define "kmoddir /lib/modules"  This is the base location where modules
+ --define "kmodulesdir <path>"    This is the base location where modules
                                   will be installed.  You probably don't
                                   need to change this ever.
 
@@ -371,21 +371,21 @@ krb4 lookalike services.
 
 %if %{build_modules}
 
-%package -n kmod-%{kmod_name}
-Summary:          %{kmod_name} kernel module
+%package -n kmod-%{name}
+Summary:          %{name} kernel module
 Group:            System Environment/Kernel
-Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides:         %{name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
 Provides:         openafs-kernel = %{version}
 Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
-Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
+Requires:         %{name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
 BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
 BuildRequires:    elfutils-devel
 
-%description -n kmod-%{kmod_name}
-This package provides the %{kmod_name} kernel modules built for the Linux
+%description -n kmod-%{name}
+This package provides the %{name} kernel modules built for the Linux
 kernel %{kernvers}.
 
 %endif
@@ -407,6 +407,10 @@ kernel %{kernvers}.
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 %setup -q -n %{srcdir}
+
+# Add the change log and release notes to source tree.
+cp -p %{SOURCE10} .
+cp -p %{SOURCE11} .
 
 #-----------------------------------------------------------------------------
 # Build stage
@@ -490,179 +494,98 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %if %{build_userspace}
 
 # Install userspace files
-make %{_smp_mflags} install_nolibafs DESTDIR="$RPM_BUILD_ROOT"
-
-# Set the executable bit on libraries in libdir, so rpmbuild knows to
-# create "Provides" entries in the package metadata for the libraries
-chmod +x $RPM_BUILD_ROOT%{_libdir}/*.so*
+make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 
 # Exclude duplicated files.
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/bos
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/fs
+rm -f %{buildroot}%{_prefix}/afs/bin/bos
+rm -f %{buildroot}%{_prefix}/afs/bin/fs
 %if %{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kas
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/klog
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/klog.krb
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kpwvalid
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_sbindir}/kpwvalid
+rm -f %{buildroot}%{_prefix}/afs/bin/kas
+rm -f %{buildroot}%{_prefix}/afs/bin/klog
+rm -f %{buildroot}%{_prefix}/afs/bin/klog.krb
+rm -f %{buildroot}%{_prefix}/afs/bin/kpwvalid
+rm -f %{buildroot}%{_sbindir}/kpwvalid
 %endif
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/pts
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/udebug
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/vos
-
-# Exclude obsolete or unused files.
-rm -f $RPM_BUILD_ROOT%{_bindir}/dlog
-rm -f $RPM_BUILD_ROOT%{_bindir}/dpass
-rm -f $RPM_BUILD_ROOT%{_bindir}/install
-rm -f $RPM_BUILD_ROOT%{_bindir}/knfs
-rm -f $RPM_BUILD_ROOT%{_bindir}/livesys
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/kdb
-rm -f $RPM_BUILD_ROOT%{_sbindir}/rmtsysd
-%if !%{build_authlibs}
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsauthent.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libafsrpc.so*
-rm -f $RPM_BUILD_ROOT%{_libdir}/libkopenafs.so*
-%endif
-rm -f $RPM_BUILD_ROOT%{_sbindir}/afsd.fuse
-%if !%{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_prefix}/afs/bin/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/tokens.krb
-rm -f $RPM_BUILD_ROOT%{_bindir}/pagsh.krb
-%endif
+rm -f %{buildroot}%{_prefix}/afs/bin/pts
+rm -f %{buildroot}%{_prefix}/afs/bin/tokens
+rm -f %{buildroot}%{_prefix}/afs/bin/tokens.krb
+rm -f %{buildroot}%{_prefix}/afs/bin/udebug
+rm -f %{buildroot}%{_prefix}/afs/bin/vos
 
 # Relocate afsd to legacy path to match systemd files.
-mv $RPM_BUILD_ROOT%{_sbindir}/afsd $RPM_BUILD_ROOT%{_prefix}/vice/etc/afsd
+mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
 
 # Relocate admin utilities to a modern path.
 %if %{kauth_support}
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/kadb_check $RPM_BUILD_ROOT%{_sbindir}/kadb_check
+mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
 %endif
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/prdb_check $RPM_BUILD_ROOT%{_sbindir}/prdb_check
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_check $RPM_BUILD_ROOT%{_sbindir}/vldb_check
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/vldb_convert $RPM_BUILD_ROOT%{_sbindir}/vldb_convert
+mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
+mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
+mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
 %if %{krb5support}
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/akeyconvert $RPM_BUILD_ROOT%{_sbindir}/akeyconvert
-mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/asetkey $RPM_BUILD_ROOT%{_sbindir}/asetkey
+mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
+mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
 %endif
 
 %if %{kauth_support}
 # Relocate PAM files to the standard PAM module path.
-mkdir -p $RPM_BUILD_ROOT%{pamdir}
-mv $RPM_BUILD_ROOT%{_libdir}/pam_afs.krb.so $RPM_BUILD_ROOT%{pamdir}
-mv $RPM_BUILD_ROOT%{_libdir}/pam_afs.so $RPM_BUILD_ROOT%{pamdir}
-ln -sf pam_afs.so $RPM_BUILD_ROOT%{pamdir}/pam_afs.so.1
-ln -sf pam_afs.krb.so $RPM_BUILD_ROOT%{pamdir}/pam_afs.krb.so.1
+mkdir -p %{buildroot}%{pamdir}
+mv %{buildroot}%{_libdir}/pam_afs.krb.so %{buildroot}%{pamdir}
+mv %{buildroot}%{_libdir}/pam_afs.so %{buildroot}%{pamdir}
+ln -sf pam_afs.so %{buildroot}%{pamdir}/pam_afs.so.1
+ln -sf pam_afs.krb.so %{buildroot}%{pamdir}/pam_afs.krb.so.1
 
 # Rename kpasswd to avoid conflicting with krb5 kpasswd.
-mv $RPM_BUILD_ROOT%{_bindir}/kpasswd $RPM_BUILD_ROOT%{_bindir}/kapasswd
-mv $RPM_BUILD_ROOT%{_mandir}/man1/kpasswd.1 $RPM_BUILD_ROOT%{_mandir}/man1/kapasswd.1
+mv %{buildroot}%{_bindir}/kpasswd %{buildroot}%{_bindir}/kapasswd
+mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 %endif
 
-# Exclude obsolete or unused man pages.
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_ftpd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_inetd.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_login.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rcp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rlogind.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/afs_rsh.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dkload.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/knfs.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/runntp.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_list.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_make.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/symlink_remove.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dlog.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/dpass.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/livesys.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/afsd.fuse.8
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/rmtsysd.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/aklog_dynamic_auth.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/kdb.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/xfs_size_check.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/package_test.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/package.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/package.*
-%if !%{krb5support}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/akeyconvert.*
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/asetkey.*
-%endif
-%if !%{kauth_support}
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/pagsh.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man1/tokens.krb.1
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.5
-rm -f $RPM_BUILD_ROOT%{_mandir}/man5/AuthLog.dir.5
-%endif
 
 # Install client and server systemd files.
-mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
-install -m 755 %{SOURCE38} $RPM_BUILD_ROOT/etc/sysconfig/openafs
-mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-install -m 644 %{SOURCE32} $RPM_BUILD_ROOT%{_unitdir}/openafs-client.service
-install -m 644 %{SOURCE37} $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
-install -m 755 %{SOURCE33} $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
+install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/openafs
+mkdir -p %{buildroot}%{_unitdir}
+install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
+install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
+install -m 755 %{SOURCE33} %{buildroot}%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
 
 # Install server directories.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/etc
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/logs
+mkdir -p %{buildroot}%{_prefix}/afs/etc
+mkdir -p %{buildroot}%{_prefix}/afs/logs
 
 # Install client directories and config files.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/etc
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/cache
-chmod 700 $RPM_BUILD_ROOT%{_prefix}/vice/cache
-install -p -m 644 %{SOURCE39} $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
-install -p -m 644 %{SOURCE20} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.dist
-install -p -m 644 %{SOURCE21} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.local
-install -p -m 644 %{SOURCE30} $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
+mkdir -p %{buildroot}%{_prefix}/vice/etc
+mkdir -p %{buildroot}%{_prefix}/vice/cache
+chmod 700 %{buildroot}%{_prefix}/vice/cache
+install -p -m 644 %{SOURCE39} %{buildroot}%{_prefix}/vice/etc/ThisCell
+install -p -m 644 %{SOURCE20} %{buildroot}%{_prefix}/vice/etc/CellServDB.dist
+install -p -m 644 %{SOURCE21} %{buildroot}%{_prefix}/vice/etc/CellServDB.local
+install -p -m 644 %{SOURCE30} %{buildroot}%{_prefix}/vice/etc/cacheinfo
 
 # Install DKMS source.
-install -d -m 755 $RPM_BUILD_ROOT%{_prefix}/src
-cp -a libafs_tree $RPM_BUILD_ROOT%{_prefix}/src/%{name}-%{dkms_version}
-
-cat > $RPM_BUILD_ROOT%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf <<"EOF"
-
-PACKAGE_VERSION="%{dkms_version}"
-
-# Items below here should not have to change with each driver version.
-PACKAGE_NAME="%{name}"
-MAKE[0]='./configure --with-linux-kernel-headers=${kernel_source_dir} --with-linux-kernel-packaging && make && mv src/libafs/MODLOAD-*/openafs.ko .'
-CLEAN=true
-
-BUILT_MODULE_NAME[0]="$PACKAGE_NAME"
-DEST_MODULE_LOCATION[0]="/extra/$PACKAGE_NAME/"
-STRIP[0]=no
-AUTOINSTALL=yes
-NO_WEAK_MODULES=yes
-
-EOF
+install -d -m 755 %{buildroot}%{_prefix}/src
+cp -a libafs_tree %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}
+sed -e 's/@NAME@/%{name}/' \
+    -e 's/@PACKAGE_VERSION@/%{dkms_version}/' \
+    %{SOURCE40} > %{buildroot}%{_prefix}/src/%{name}-%{dkms_version}/dkms.conf
 
 # Install the kernel module source tree.
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
+mkdir -p %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
 tar cf - -C libafs_tree . | \
-    tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
-install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
-
-# Install documentation.
-mkdir -p $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-tar cf - -C doc html pdf | \
-    tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
+    tar xf - -C %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/src
+install -m 644 LICENSE %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
+install -m 644 %{SOURCE34} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
+install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/openafs-kernel-%{afsvers}/README
 
 %endif
 
 # Install kernel modules
 %if %{build_modules}
 
-mkdir -p $RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
+mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
     src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}/openafs.ko \
-    $RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs/openafs.ko
+    %{buildroot}%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
 
@@ -784,10 +707,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 # kmod-openafs scriptlets
 %if %{build_modules}
-%post -n kmod-%{kmod_name}
+%post -n kmod-%{name}
 /usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
 
-%postun -n kmod-%{kmod_name}
+%postun -n kmod-%{name}
 /usr/sbin/depmod -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
 %endif
 
@@ -798,7 +721,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files
 %defattr(-,root,root)
-%config(noreplace) /etc/sysconfig/openafs
+%config(noreplace) %{_sysconfdir}/sysconfig/openafs
 %doc LICENSE
 %{_bindir}/afsmonitor
 %{_bindir}/bos
@@ -836,51 +759,76 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/vsys
 %{_libdir}/libafshcrypto.so.*
 %{_libdir}/librokenafs.so.*
-%{_mandir}/man1/afs.1.gz
-%{_mandir}/man1/afsmonitor.1.gz
-%{_mandir}/man1/fs.1.gz
-%{_mandir}/man1/fs_*.1.gz
-%{_mandir}/man1/pagsh.1.gz
-%{_mandir}/man1/pts.1.gz
-%{_mandir}/man1/pts_*.1.gz
-%{_mandir}/man1/restorevol.1.gz
-%{_mandir}/man1/rxdebug.1.gz
-%{_mandir}/man1/scout.1.gz
-%{_mandir}/man1/sys.1.gz
-%{_mandir}/man1/tokens.1.gz
-%{_mandir}/man1/translate_et.1.gz
-%{_mandir}/man1/udebug.1.gz
-%{_mandir}/man1/unlog.1.gz
-%{_mandir}/man1/vos.1.gz
-%{_mandir}/man1/vos_*.1.gz
-%{_mandir}/man1/xstat_cm_test.1.gz
-%{_mandir}/man1/xstat_fs_test.1.gz
-%{_mandir}/man5/CellServDB.5.gz
-%{_mandir}/man5/ThisCell.5.gz
-%{_mandir}/man5/afsmonitor.5.gz
-%{_mandir}/man5/butc.5.gz
-%{_mandir}/man5/butc_logs.5.gz
-%{_mandir}/man5/uss.5.gz
-%{_mandir}/man5/uss_bulk.5.gz
-%{_mandir}/man8/backup.8.gz
-%{_mandir}/man8/backup_*.8.gz
-%{_mandir}/man8/bos.8.gz
-%{_mandir}/man8/bos_*.8.gz
-%{_mandir}/man8/butc.8.gz
-%{_mandir}/man8/fms.8.gz
-%{_mandir}/man8/fstrace.8.gz
-%{_mandir}/man8/fstrace_*.8.gz
-%{_mandir}/man8/read_tape.8.gz
-%{_mandir}/man8/uss.8.gz
-%{_mandir}/man8/uss_*.8.gz
+%doc %{_mandir}/man1/afs.1.*
+%doc %{_mandir}/man1/afsmonitor.1.*
+%doc %{_mandir}/man1/fs.1.*
+%doc %{_mandir}/man1/fs_*.1.*
+%doc %{_mandir}/man1/pagsh.1.*
+%doc %{_mandir}/man1/pts.1.*
+%doc %{_mandir}/man1/pts_*.1.*
+%doc %{_mandir}/man1/restorevol.1.*
+%doc %{_mandir}/man1/rxdebug.1.*
+%doc %{_mandir}/man1/scout.1.*
+%doc %{_mandir}/man1/sys.1.*
+%doc %{_mandir}/man1/tokens.1.*
+%doc %{_mandir}/man1/translate_et.1.*
+%doc %{_mandir}/man1/udebug.1.*
+%doc %{_mandir}/man1/unlog.1.*
+%doc %{_mandir}/man1/vos.1.*
+%doc %{_mandir}/man1/vos_*.1.*
+%doc %{_mandir}/man1/xstat_cm_test.1.*
+%doc %{_mandir}/man1/xstat_fs_test.1.*
+%doc %{_mandir}/man5/CellServDB.5.*
+%doc %{_mandir}/man5/ThisCell.5.*
+%doc %{_mandir}/man5/afsmonitor.5.*
+%doc %{_mandir}/man5/butc.5.*
+%doc %{_mandir}/man5/butc_logs.5.*
+%doc %{_mandir}/man5/uss.5.*
+%doc %{_mandir}/man5/uss_bulk.5.*
+%doc %{_mandir}/man8/backup.8.*
+%doc %{_mandir}/man8/backup_*.8.*
+%doc %{_mandir}/man8/bos.8.*
+%doc %{_mandir}/man8/bos_*.8.*
+%doc %{_mandir}/man8/butc.8.*
+%doc %{_mandir}/man8/fms.8.*
+%doc %{_mandir}/man8/fstrace.8.*
+%doc %{_mandir}/man8/fstrace_*.8.*
+%doc %{_mandir}/man8/read_tape.8.*
+%doc %{_mandir}/man8/uss.8.*
+%doc %{_mandir}/man8/uss_*.8.*
+# Exclude obsolete or unused files.
+%exclude %{_bindir}/livesys
+%exclude %{_sbindir}/rmtsysd
+%exclude %{_mandir}/man1/dlog.1.*
+%exclude %{_mandir}/man1/livesys.1.*
+%exclude %{_mandir}/man1/symlink.1.*
+%exclude %{_mandir}/man1/symlink_list.1.*
+%exclude %{_mandir}/man1/symlink_make.1.*
+%exclude %{_mandir}/man1/symlink_remove.1.*
+%exclude %{_mandir}/man8/aklog_dynamic_auth.8.*
+%exclude %{_mandir}/man8/rmtsysd.8.*
+%exclude %{_mandir}/man8/xfs_size_check.8.*
+%if ! %{build_authlibs}
+%exclude %{_libdir}/libafsauthent.so*
+%exclude %{_libdir}/libafsrpc.so*
+%exclude %{_libdir}/libkopenafs.so*
+%endif
+%if ! %{kauth_support}
+%exclude %{_bindir}/tokens.krb
+%exclude %{_bindir}/pagsh.krb
+%exclude %{_mandir}/man5/AuthLog.5.*
+%exclude %{_mandir}/man5/AuthLog.dir.5.*
+%endif
+%if ! %{krb5support}
+%exclude %{_mandir}/man8/akeyconvert.*
+%exclude %{_mandir}/man8/asetkey.*
+%endif
 
 %files docs
 %defattr(-,root,root)
-%docdir %{_docdir}/openafs-%{afsvers}
-%dir %{_docdir}/openafs-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/ChangeLog
-%{_docdir}/openafs-%{afsvers}/RELNOTES-%{afsvers}
-%{_docdir}/openafs-%{afsvers}/pdf
+%doc ChangeLog
+%doc RELNOTES-%{afsvers}
+%doc doc/pdf
 
 %files client
 %defattr(-,root,root)
@@ -901,16 +849,16 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
 %{_prefix}/vice/etc/openafs-client-systemd-helper.sh
-%{_mandir}/man1/cmdebug.1.gz
-%{_mandir}/man1/up.1.gz
-%{_mandir}/man5/afs.5.gz
-%{_mandir}/man5/afs_cache.5.gz
-%{_mandir}/man5/afs_volume_header.5.gz
-%{_mandir}/man5/afszcm.cat.5.gz
-%{_mandir}/man5/cacheinfo.5.gz
-%{_mandir}/man8/afsd.8.gz
-%{_mandir}/man8/vsys.8.gz
-%{_mandir}/man5/CellAlias.5.gz
+%doc %{_mandir}/man1/cmdebug.1.*
+%doc %{_mandir}/man1/up.1.*
+%doc %{_mandir}/man5/afs.5.*
+%doc %{_mandir}/man5/afs_cache.5.*
+%doc %{_mandir}/man5/afs_volume_header.5.*
+%doc %{_mandir}/man5/afszcm.cat.5.*
+%doc %{_mandir}/man5/cacheinfo.5.*
+%doc %{_mandir}/man8/afsd.8.*
+%doc %{_mandir}/man8/vsys.8.*
+%doc %{_mandir}/man5/CellAlias.5.*
 
 %files server
 %defattr(-,root,root)
@@ -944,56 +892,56 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_sbindir}/vldb_convert
 %{_sbindir}/voldump
 %{_unitdir}/openafs-server.service
-%{_mandir}/man5/BackupLog.5.gz
-%{_mandir}/man5/BosConfig.5.gz
-%{_mandir}/man5/BosLog.5.gz
-%{_mandir}/man5/FORCESALVAGE.5.gz
-%{_mandir}/man5/FileLog.5.gz
-%{_mandir}/man5/KeyFile.5.gz
-%{_mandir}/man5/KeyFileExt.5.gz
-%{_mandir}/man5/NetInfo.5.gz
-%{_mandir}/man5/NetRestrict.5.gz
-%{_mandir}/man5/NoAuth.5.gz
-%{_mandir}/man5/PtLog.5.gz
-%{_mandir}/man5/SALVAGE.fs.5.gz
-%{_mandir}/man5/SalvageLog.5.gz
-%{_mandir}/man5/sysid.5.gz
-%{_mandir}/man5/UserList.5.gz
-%{_mandir}/man5/VLLog.5.gz
-%{_mandir}/man5/VolserLog.5.gz
-%{_mandir}/man5/bdb.DB0.5.gz
-%{_mandir}/man5/fms.log.5.gz
-%{_mandir}/man5/krb.conf.5.gz
-%{_mandir}/man5/krb.excl.5.gz
-%{_mandir}/man5/prdb.DB0.5.gz
-%{_mandir}/man5/salvage.lock.5.gz
-%{_mandir}/man5/tapeconfig.5.gz
-%{_mandir}/man5/vldb.DB0.5.gz
-%{_mandir}/man8/bosserver.8.gz
-%{_mandir}/man8/buserver.8.gz
-%{_mandir}/man8/fileserver.8.gz
-%{_mandir}/man8/dafileserver.8.gz
-%{_mandir}/man8/dafssync-debug.8.gz
-%{_mandir}/man8/dafssync-debug_*.8.gz
-%{_mandir}/man8/dasalvager.8.gz
-%{_mandir}/man8/davolserver.8.gz
-%{_mandir}/man8/fssync-debug.8.gz
-%{_mandir}/man8/fssync-debug_*.8.gz
-%{_mandir}/man8/prdb_check.8.gz
-%{_mandir}/man8/ptserver.8.gz
-%{_mandir}/man8/pt_util.8.gz
-%{_mandir}/man8/salvager.8.gz
-%{_mandir}/man8/salvageserver.8.gz
-%{_mandir}/man8/state_analyzer.8.gz
-%{_mandir}/man8/upclient.8.gz
-%{_mandir}/man8/upserver.8.gz
-%{_mandir}/man8/vldb_check.8.gz
-%{_mandir}/man8/vldb_convert.8.gz
-%{_mandir}/man8/vlserver.8.gz
-%{_mandir}/man8/voldump.8.gz
-%{_mandir}/man8/volinfo.8.gz
-%{_mandir}/man8/volscan.8.gz
-%{_mandir}/man8/volserver.8.gz
+%doc %{_mandir}/man5/BackupLog.5.*
+%doc %{_mandir}/man5/BosConfig.5.*
+%doc %{_mandir}/man5/BosLog.5.*
+%doc %{_mandir}/man5/FORCESALVAGE.5.*
+%doc %{_mandir}/man5/FileLog.5.*
+%doc %{_mandir}/man5/KeyFile.5.*
+%doc %{_mandir}/man5/KeyFileExt.5.*
+%doc %{_mandir}/man5/NetInfo.5.*
+%doc %{_mandir}/man5/NetRestrict.5.*
+%doc %{_mandir}/man5/NoAuth.5.*
+%doc %{_mandir}/man5/PtLog.5.*
+%doc %{_mandir}/man5/SALVAGE.fs.5.*
+%doc %{_mandir}/man5/SalvageLog.5.*
+%doc %{_mandir}/man5/sysid.5.*
+%doc %{_mandir}/man5/UserList.5.*
+%doc %{_mandir}/man5/VLLog.5.*
+%doc %{_mandir}/man5/VolserLog.5.*
+%doc %{_mandir}/man5/bdb.DB0.5.*
+%doc %{_mandir}/man5/fms.log.5.*
+%doc %{_mandir}/man5/krb.conf.5.*
+%doc %{_mandir}/man5/krb.excl.5.*
+%doc %{_mandir}/man5/prdb.DB0.5.*
+%doc %{_mandir}/man5/salvage.lock.5.*
+%doc %{_mandir}/man5/tapeconfig.5.*
+%doc %{_mandir}/man5/vldb.DB0.5.*
+%doc %{_mandir}/man8/bosserver.8.*
+%doc %{_mandir}/man8/buserver.8.*
+%doc %{_mandir}/man8/fileserver.8.*
+%doc %{_mandir}/man8/dafileserver.8.*
+%doc %{_mandir}/man8/dafssync-debug.8.*
+%doc %{_mandir}/man8/dafssync-debug_*.8.*
+%doc %{_mandir}/man8/dasalvager.8.*
+%doc %{_mandir}/man8/davolserver.8.*
+%doc %{_mandir}/man8/fssync-debug.8.*
+%doc %{_mandir}/man8/fssync-debug_*.8.*
+%doc %{_mandir}/man8/prdb_check.8.*
+%doc %{_mandir}/man8/ptserver.8.*
+%doc %{_mandir}/man8/pt_util.8.*
+%doc %{_mandir}/man8/salvager.8.*
+%doc %{_mandir}/man8/salvageserver.8.*
+%doc %{_mandir}/man8/state_analyzer.8.*
+%doc %{_mandir}/man8/upclient.8.*
+%doc %{_mandir}/man8/upserver.8.*
+%doc %{_mandir}/man8/vldb_check.8.*
+%doc %{_mandir}/man8/vldb_convert.8.*
+%doc %{_mandir}/man8/vlserver.8.*
+%doc %{_mandir}/man8/voldump.8.*
+%doc %{_mandir}/man8/volinfo.8.*
+%doc %{_mandir}/man8/volscan.8.*
+%doc %{_mandir}/man8/volserver.8.*
 
 %if %{build_authlibs}
 %files authlibs
@@ -1041,11 +989,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/librxkad.a
 %{_libdir}/librxstat.a
 %{_libdir}/libubik.a
-%{_mandir}/man1/rxgen.1.gz
-%{_mandir}/man1/afs_compile_et.1.gz
+%doc %{_mandir}/man1/rxgen.1.*
+%doc %{_mandir}/man1/afs_compile_et.1.*
 %{_libdir}/perl/AFS/ukernel.pm
 %{_libdir}/perl/ukernel.so
-%{_mandir}/man3/AFS::ukernel.3.gz
+%doc %{_mandir}/man3/AFS::ukernel.3.*
 
 %if %{build_dkmspkg}
 %files -n dkms-%{name}
@@ -1055,9 +1003,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files kernel-source
 %defattr(-,root,root)
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-%{_prefix}/src/openafs-kernel-%{afsvers}/README
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
+%doc %{_prefix}/src/openafs-kernel-%{afsvers}/README
 %{_prefix}/src/openafs-kernel-%{afsvers}/src
 
 %files compat
@@ -1106,27 +1054,31 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %ghost %{afswsdir}/bin/pagsh.krb
 %ghost %{afswsdir}/bin/tokens.krb
 %ghost %{afswsdir}/etc/kas
-%{_mandir}/man1/kapasswd.1.gz
-%{_mandir}/man1/klog.1.gz
-%{_mandir}/man1/klog.krb.1.gz
-%{_mandir}/man1/pagsh.krb.1.gz
-%{_mandir}/man1/tokens.krb.1.gz
-%{_mandir}/man8/kpwvalid.8.gz
-%{_mandir}/man8/kas.8.gz
-%{_mandir}/man8/kas_*.8.gz
+%doc %{_mandir}/man1/kapasswd.1.*
+%doc %{_mandir}/man1/klog.1.*
+%doc %{_mandir}/man1/klog.krb.1.*
+%doc %{_mandir}/man1/pagsh.krb.1.*
+%doc %{_mandir}/man1/tokens.krb.1.*
+%doc %{_mandir}/man8/kpwvalid.8.*
+%doc %{_mandir}/man8/kas.8.*
+%doc %{_mandir}/man8/kas_*.8.*
+%exclude %{_bindir}/knfs
+%exclude %{_mandir}/man1/knfs.1.*
 
 %files kauth-server
 %defattr(-,root,root)
 %{_prefix}/afs/bin/kaserver
 %{_prefix}/afs/bin/ka-forwarder
 %{_sbindir}/kadb_check
-%{_mandir}/man5/AuthLog.5.gz
-%{_mandir}/man5/AuthLog.dir.5.gz
-%{_mandir}/man5/kaserver.DB0.5.gz
-%{_mandir}/man5/kaserverauxdb.5.gz
-%{_mandir}/man8/kadb_check.8.gz
-%{_mandir}/man8/ka-forwarder.8.gz
-%{_mandir}/man8/kaserver.8.gz
+%doc %{_mandir}/man5/AuthLog.5.*
+%doc %{_mandir}/man5/AuthLog.dir.5.*
+%doc %{_mandir}/man5/kaserver.DB0.5.*
+%doc %{_mandir}/man5/kaserverauxdb.5.*
+%doc %{_mandir}/man8/kadb_check.8.*
+%doc %{_mandir}/man8/ka-forwarder.8.*
+%doc %{_mandir}/man8/kaserver.8.*
+%exclude %{_prefix}/afs/bin/kdb
+%exclude %{_mandir}/man8/kdb.8.*
 %endif
 
 %if %{krb5support}
@@ -1136,18 +1088,18 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/klog.krb5
 %{_sbindir}/akeyconvert
 %{_sbindir}/asetkey
-%{_mandir}/man1/aklog.1.gz
-%{_mandir}/man1/klog.krb5.1.gz
-%{_mandir}/man8/akeyconvert.8.gz
-%{_mandir}/man8/asetkey.8.gz
+%doc %{_mandir}/man1/aklog.1.*
+%doc %{_mandir}/man1/klog.krb5.1.*
+%doc %{_mandir}/man8/akeyconvert.8.*
+%doc %{_mandir}/man8/asetkey.8.*
 %endif
 %endif
 
 %if %{build_modules}
 
-%files -n kmod-%{kmod_name}
+%files -n kmod-%{name}
 %defattr(644,root,root,755)
-/lib/modules/%{kernvers}/extra/%{kmod_name}/
+%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
 
