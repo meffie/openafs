@@ -21,7 +21,6 @@
 #   --without modules                     Do not the build kernel module package (default: --with modules)
 #   --without dkms                        Do not build the DKMS package (default: --with dkms)
 #   --without authlibs                    Disable authlibs package (default: with authlibs)
-#   --without krb5                        Disable krb5 support (default: with krb5)
 #   --with supergroups                    Enable supergroup support (default: --without supergroup)
 #   --with kauth                          Build the obsolete kauth packages (default: --without kauth)
 #
@@ -87,7 +86,6 @@ administrative management.
 %bcond_without modules
 %bcond_with    kauth
 %bcond_without authlibs
-%bcond_without krb5
 %bcond_with    supergroups
 
 #
@@ -129,9 +127,7 @@ BuildRequires: systemd-units
 BuildRequires: perl-devel
 BuildRequires: swig
 BuildRequires: perl(ExtUtils::Embed)
-%if %{with krb5}
 BuildRequires: krb5-devel
-%endif
 %if %{with modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
@@ -297,7 +293,6 @@ service. Generally you should not install this package for new cells or for
 cells using Kerberos v5.
 %endif
 
-%if %{with krb5}
 %package krb5
 Summary: OpenAFS programs to use with krb5
 Requires: %{name} = %{version}
@@ -307,7 +302,6 @@ BuildRequires: krb5-devel
 %{common_description}
 This package provides compatibility programs so you can use a
 Kerberos realm to authenticate to AFS services.
-%endif
 
 %endif
 
@@ -378,9 +372,7 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %else
        --disable-kernel-module \
 %endif
-%if %{with krb5}
        --with-krb5 \
-%endif
        --with-swig \
 %if %{with kauth}
        --enable-kauth \
@@ -437,10 +429,8 @@ mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
 mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
 mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
-%if %{with krb5}
 mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
 mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
-%endif
 
 %if %{with kauth}
 # Relocate PAM files to the standard PAM module path.
@@ -769,10 +759,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/uss.8.*
 %exclude %{_mandir}/man8/uss_*.8.*
 %endif
-%if %{without krb5}
-%exclude %{_mandir}/man8/akeyconvert.*
-%exclude %{_mandir}/man8/asetkey.*
-%endif
 
 %files docs
 %doc doc/pdf
@@ -1022,7 +1008,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/kdb.8.*
 %endif
 
-%if %{with krb5}
 %files krb5
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
@@ -1032,7 +1017,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man1/klog.krb5.1.*
 %doc %{_mandir}/man8/akeyconvert.8.*
 %doc %{_mandir}/man8/asetkey.8.*
-%endif
 %endif
 
 %if %{with modules}
