@@ -553,9 +553,6 @@ rm -f $RPM_BUILD_ROOT%{_bindir}/tokens.krb
 rm -f $RPM_BUILD_ROOT%{_bindir}/pagsh.krb
 %endif
 
-# Relocate afsd to legacy path to match init scripts.
-mv $RPM_BUILD_ROOT%{_sbindir}/afsd $RPM_BUILD_ROOT%{_prefix}/vice/etc/afsd
-
 # Relocate admin utilities to a modern path.
 %if %{kauth_support}
 mv $RPM_BUILD_ROOT%{_prefix}/afs/bin/kadb_check $RPM_BUILD_ROOT%{_sbindir}/kadb_check
@@ -956,7 +953,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/afsio
 %{_bindir}/cmdebug
 %{_bindir}/up
-%{_prefix}/vice/etc/afsd
+%{_sbindir}/afsd
 %{_prefix}/vice/etc/C/afszcm.cat
 %{_libdir}/libuafs.a
 %{_libdir}/libuafs_pic.a

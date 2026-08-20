@@ -429,9 +429,6 @@ rm -f %{buildroot}%{_prefix}/afs/bin/tokens.krb
 rm -f %{buildroot}%{_prefix}/afs/bin/udebug
 rm -f %{buildroot}%{_prefix}/afs/bin/vos
 
-# Relocate afsd to legacy path to match systemd files.
-mv %{buildroot}%{_sbindir}/afsd %{buildroot}%{_prefix}/vice/etc/afsd
-
 # Relocate admin utilities to a modern path.
 %if %{with kauth}
 mv %{buildroot}%{_prefix}/afs/bin/kadb_check %{buildroot}%{_sbindir}/kadb_check
@@ -770,7 +767,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/afsio
 %{_bindir}/cmdebug
 %{_bindir}/up
-%{_prefix}/vice/etc/afsd
+%{_sbindir}/afsd
 %{_prefix}/vice/etc/C/afszcm.cat
 %{_libdir}/libuafs.a
 %{_libdir}/libuafs_pic.a
