@@ -85,26 +85,22 @@ Source99: openafs-compat.macros
 #
 %if %{with modules}
 
-%if ! %{defined kernvers}
-%global kernvers %(uname -r)
+%if ! %{defined kernel_version}
+%global kernel_version %(uname -r)
 %endif
-
-%global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
 
 # The kernel modules installation path.
 %if ! %{defined kmodulesdir}
-%global kmodulesdir %{_prefix}/lib/modules/%{kernvers}
+%global kmodulesdir %{_prefix}/lib/modules/%{kernel_version}
 %endif
 
 # The path to the kernel headers for the target kernel version.
 %if ! %{defined ksrcdir}
-%global ksrcdir %{_usrsrc}/kernels/%{kernvers}
+%global ksrcdir %{_usrsrc}/kernels/%{kernel_version}
 %endif
 
-%if 0%{?amzn} >= 2023
-%global kernel_epoch 1:
-%else
-%global kernel_epoch %nil
+%if ! %{defined kernel_epoch} && 0%{?amzn} >= 2023
+%global kernel_epoch 1
 %endif
 
 %endif
@@ -164,7 +160,7 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "source_date_epoch 1712832000"  Specify the build timestamp. The default
                                           is the current system time.
 
- --define "kernvers 3.19.3-100.fc20.i686" Specify the specific kernel version
+ --define "kernel_version 3.19.3-100.fc20.i686" Specify the specific kernel version
                                   to build modules against. The default is
                                   to build against the currently-running
                                   kernel.
@@ -397,17 +393,19 @@ krb4 lookalike services.
 Summary:          OpenAFS kernel module
 Provides:         %{name}-kmod = %{version}-%{release}
 Provides:         %{name}-kernel = %{version}
-Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+Requires:         kernel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
-Release:          %{package_release}.%(echo %{kverrel} | tr - _)
-BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
-BuildRequires:    elfutils-devel
+Release:          %{package_release}.%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//' | tr - _)
+BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
+BuildRequires:    elfutils-libelf-devel
+BuildRequires:    gcc
+BuildRequires:    make
 
 %description -n kmod-%{name}
 This package provides the OpenAFS kernel modules built for the Linux
-kernel %{kernvers}.
+kernel %{kernel_version}.
 
 %endif
 
@@ -418,7 +416,7 @@ kernel %{kernvers}.
 
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 : @@@
-: @@@ kernel version:     %{kverrel}
+: @@@ kernel version:     %{kernel_version}
 : @@@ PAM modules dir:    %{pamdir}
 : @@@ build userspace:    %{with userspace}
 : @@@ build modules:      %{with modules}
@@ -579,7 +577,7 @@ install -m 644 %{SOURCE35} %{buildroot}%{_prefix}/src/%{name}-kernel-%{openafs_v
 
 mkdir -p %{buildroot}%{kmodulesdir}/extra/%{name}
 install -m 755 \
-    src/libafs/MODLOAD-%{kernvers}/openafs.ko \
+    src/libafs/MODLOAD-%{kernel_version}/openafs.ko \
     %{buildroot}%{kmodulesdir}/extra/%{name}/%{name}.ko
 
 %endif
@@ -705,10 +703,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 # kmod-openafs scriptlets
 %if %{with modules}
 %post -n kmod-%{name}
-/usr/sbin/depmod -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
+/usr/sbin/depmod -aeF /boot/System.map-%{kernel_version} %{kernel_version} > /dev/null || :
 
 %postun -n kmod-%{name}
-/usr/sbin/depmod -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
+/usr/sbin/depmod -aF /boot/System.map-%{kernel_version} %{kernel_version} &> /dev/null || :
 %endif
 
 #-----------------------------------------------------------------------------
