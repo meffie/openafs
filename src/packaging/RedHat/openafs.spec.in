@@ -68,20 +68,22 @@
 %define depmod /sbin/depmod
 %endif
 
-%define kmodtool bash %{_sourcedir}/openafs-kmodtool
-
 %define kmod_name openafs
-%define kverrel %(%{kmodtool} verrel %{?kernvers} 2>/dev/null)
 
-%define upvar ""
-%{!?kvariants: %define kvariants %{?upvar}}
+%if %{?kernvers:0}%{!?kernvers:1}
+%global kernvers %(uname -r)
+%endif
 
-%if %{?ksrcdir:1}%{!?ksrcdir:0}
-  if ( -d %{_usrsrc}/kernels/%{kverrel}-%{_target_cpu}) ; then
-    %define ksrcdir %{_usrsrc}/kernels/%{kverrel}-%{_target_cpu}}
-  else
-    %define ksrcdir %{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}}
-  fi
+%global kverrel %(echo %{kernvers} | sed 's/\.%{_target_cpu}$//')
+
+%if 0%{?amzn} >= 2023
+%global kernel_epoch 1:
+%else
+%global kernel_epoch %nil
+%endif
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%global _find_debuginfo_opts %{?_find_debuginfo_opts} -p '.*openafs\.ko.*' -o kmod-debuginfo.list
 %endif
 
 %define dkms_version %{pkgvers}-%{pkgrel}%{?dist}
@@ -100,7 +102,7 @@ License: IBM Public License
 URL: https://www.openafs.org
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Group: Networking/Filesystems
-BuildRequires: %{?kdepend:%{kdepend}, } pam-devel, ncurses-devel, make, flex, bison
+BuildRequires: pam-devel, ncurses-devel, make, flex, bison
 %if 0%{?fedora} >= 15 || 0%{?rhel} >= 7 || 0%{?amzn} >= 1
 BuildRequires: systemd-units
 %endif
@@ -135,7 +137,6 @@ Source36: openafs-server.init
 Source37: openafs-server.service
 Source38: openafs.sysconfig
 Source39: openafs-ThisCell
-Source999: openafs-kmodtool
 
 %description
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -177,14 +178,6 @@ The OpenAFS SRPM can be rebuilt with the following options:
  --define "kmoddir /lib/modules"  This is the base location where modules
                                   will be installed.  You probably don't
                                   need to change this ever.
-
- --define "kvariants <variants>"  When building Fedora style kernel modules,
-                                  this defines the set of kernel variants
-                                  to build.
-                                  <variants> is a space seperated list which
-                                  may contain one or more of
-                                  '' (for the generic kernel), smp, PAE, xen
-                                  or kdump
 
 To a kernel module for your running kernel, just run:
   rpmbuild --rebuild --target=`uname -m` openafs-%{pkgvers}-%{pkgrel}%{?dist}.src.rpm
@@ -406,7 +399,39 @@ krb4 lookalike services.
 
 %if %{build_modules}
 
-%{expand:%(%{kmodtool} rpmtemplate %{kmod_name} %{kverrel} %{depmod} %{kvariants} 2>/dev/null)}
+%package -n kmod-%{kmod_name}
+Summary:          %{kmod_name} kernel module
+Group:            System Environment/Kernel
+%if ! (0%{?fedora} >= 27 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023)
+Provides:         kernel-modules = %{kernel_epoch}%{kernvers}
+%endif
+Provides:         %{kmod_name}-kmod = %{?epoch:%{epoch}:}%{version}-%{release}
+Provides:         openafs-kernel = %{version}
+Requires:         kernel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+Requires:         %{kmod_name}-kmod-common >= %{?epoch:%{epoch}:}%{version}
+Requires(post):   %{depmod}
+Requires(postun): %{depmod}
+Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+BuildRequires:    kernel-devel-%{_target_cpu} = %{kernel_epoch}%{kverrel}
+%if 0%{?rhel} >= 8 || 0%{?amzn} >= 2023
+BuildRequires: elfutils-devel
+%endif
+
+%description -n kmod-%{kmod_name}
+This package provides the %{kmod_name} kernel modules built for the Linux
+kernel %{kernvers} for the %{_target_cpu} family of processors.
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%package -n kmod-%{kmod_name}-debuginfo
+Summary:          Debug information for %{kmod_name} kernel modules
+Group:            Development/Debug
+Release:          %{pkgrel}.%(echo %{kverrel} | tr - _)
+AutoReqProv:      no
+
+%description   -n kmod-%{kmod_name}-debuginfo
+This package provides debug information for the %{kmod_name} kernel modules
+built for the Linux kernel %{kernvers} for the %{_target_cpu} family of processors.
+%endif
 
 %endif
 
@@ -418,7 +443,6 @@ krb4 lookalike services.
 : @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 : @@@
 : @@@ kernel version:     %{kverrel}
-: @@@ kernel variations:  %{kvariants}
 : @@@ PAM modules dir:    %{pamdir}
 : @@@ build userspace:    %{build_userspace}
 : @@@ build modules:      %{build_modules}
@@ -451,25 +475,8 @@ config_opts="%{?_with_kauth:--enable-kauth} \
 
 # Configure AFS
 
-# If we're using Fedora kmods, work out which is the best kernel module to
-# use for the userland configuration step. If no variants have been specified,
-# then use the standard kernel. If variants are specified, use the standard kernel
-# if it's listed, otherwise pick the first listed kernel.
-ksrc=""
-for kvariant in %{kvariants} ; do
-  if [ -z "${kvariant}" -o -z "$ksrc" ] ; then
-    if [ -d %{_usrsrc}/kernels/%{kverrel}${kvariant:+-$kvariant}-%{_target_cpu} ] ; then
-      ksrc=%{_usrsrc}/kernels/%{kverrel}${kvariant:+-$kvariant}-%{_target_cpu}
-    elif [ -d %{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:++$kvariant} ] ; then
-      ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:++$kvariant}
-    else
-      ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:+.$kvariant}
-    fi
-  fi
-done
-if [ -z "$ksrc" ] ; then
-ksrc=%{ksrcdir}
-fi
+# The path to the kernel headers for the target kernel version.
+ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}
 
 CFLAGS="$RPM_OPT_FLAGS"; export CFLAGS
 
@@ -514,60 +521,12 @@ export KRB5_CONFIG
 %endif
 %endif
 
-# Configure each of our kernel modules
-
-%if %{build_modules}
-for kvariant in %{kvariants} ; do
-  if [ -n "${kvariant}" ] ; then
-
-    if [ -d %{_usrsrc}/kernels/%{kverrel}${kvariant:+-$kvariant}-%{_target_cpu} ] ; then
-      ksrc=%{_usrsrc}/kernels/%{kverrel}${kvariant:+-$kvariant}-%{_target_cpu}
-
-    elif [ -d %{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:++$kvariant} ] ; then
-      # Fedora 20 started putting kernel sources in e.g.
-      # 3.12.5-302.fc20.i686+PAE, instead of:
-      # 3.12.5-302.fc20.i686.PAE
-      ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:++$kvariant}
-
-    else
-      ksrc=%{_usrsrc}/kernels/%{kverrel}.%{_target_cpu}${kvariant:+.$kvariant}
-    fi
-
-    cp -R libafs_tree _kmod_build_${kvariant}
-    pushd _kmod_build_${kvariant}
-    ./configure --with-afs-sysname=${sysname} \
-        --prefix=%{_prefix} \
-        --libdir=%{_libdir} \
-        --bindir=%{_bindir} \
-        --sbindir=%{_sbindir} \
-        --with-linux-kernel-packaging \
-        --with-linux-kernel-headers=${ksrc} \
-%if %{krb5support}
-        --with-krb5 \
-%endif
-        $config_opts \
-        || exit 1
-    popd
-  fi
-done
-%endif
-
 %if %{build_userspace}
-# Build the user-space AFS stuff
 make %{_smp_mflags} all_nolibafs
 %endif
 
 %if %{build_modules}
-for kvariant in %{kvariants}
-do
-  if [ -n "${kvariant}" ] ; then
-    pushd _kmod_build_$kvariant;
-    make %{_smp_mflags} all
-    popd
-  else
-    make %{_smp_mflags} libafs
-  fi
-done
+make %{_smp_mflags} libafs
 %endif
 
 #-----------------------------------------------------------------------------
@@ -702,7 +661,6 @@ install -m 755 %{SOURCE31} $RPM_BUILD_ROOT%{initdir}/openafs-client
 install -m 755 %{SOURCE36} $RPM_BUILD_ROOT%{initdir}/openafs-server
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/modules
 install -m 644 %{SOURCE32} $RPM_BUILD_ROOT%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
 install -m 755 %{SOURCE33} $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
@@ -730,7 +688,7 @@ PACKAGE_VERSION="%{dkms_version}"
 
 # Items below here should not have to change with each driver version.
 PACKAGE_NAME="%{name}"
-MAKE[0]='./configure --with-linux-kernel-headers=${kernel_source_dir} --with-linux-kernel-packaging && make && case "${kernelver_array[0]}${kernelver[0]}" in 2.4.*) mv src/libafs/MODLOAD-*/libafs-* openafs.o ;; *) mv src/libafs/MODLOAD-*/openafs.ko . ;; esac'
+MAKE[0]='./configure --with-linux-kernel-headers=${kernel_source_dir} --with-linux-kernel-packaging && make && mv src/libafs/MODLOAD-*/openafs.ko .'
 CLEAN=true
 
 BUILT_MODULE_NAME[0]="$PACKAGE_NAME"
@@ -761,32 +719,11 @@ install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 # Install kernel modules
 %if %{build_modules}
 
-for kvariant in %{kvariants}
-do
-  if [ -n "$kvariant" ] ; then
-    if [ -d _kmod_build_$kvariant/src/libafs/MODLOAD-%{kverrel}${kvariant} ] ; then
-      srcdir=_kmod_build_$kvariant/src/libafs/MODLOAD-%{kverrel}${kvariant}
-      dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}${kvariant}/extra/openafs
-    elif [ -d _kmod_build_$kvariant/src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}+${kvariant} ] ; then
-      srcdir=_kmod_build_$kvariant/src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}+${kvariant}
-      dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}+${kvariant}/extra/openafs
-    else
-      srcdir=_kmod_build_$kvariant/src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}.${kvariant}
-      dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}.${kvariant}/extra/openafs
-    fi
-  else
-    if [ -d src/libafs/MODLOAD-%{kverrel} ] ; then
-      srcdir=src/libafs/MODLOAD-%{kverrel}
-      dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}/extra/openafs
-    else
-      srcdir=src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}
-      dstdir=$RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
-    fi
-  fi
+mkdir -p $RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs
+install -m 755 \
+    src/libafs/MODLOAD-%{kverrel}.%{_target_cpu}/openafs.ko \
+    $RPM_BUILD_ROOT/lib/modules/%{kverrel}.%{_target_cpu}/extra/openafs/openafs.ko
 
-  mkdir -p ${dstdir}
-  install -m 755 ${srcdir}/openafs.ko ${dstdir}/openafs.ko
-done
 %endif
 
 #-----------------------------------------------------------------------------
@@ -975,6 +912,14 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 # Run this because the SysV package being removed won't do it
 /sbin/chkconfig --del openafs-server >/dev/null 2>&1 || :
+%endif
+
+%if %{build_modules}
+%post -n kmod-%{kmod_name}
+%{depmod} -aeF /boot/System.map-%{kernvers} %{kernvers} > /dev/null || :
+
+%postun -n kmod-%{kmod_name}
+%{depmod} -aF /boot/System.map-%{kernvers} %{kernvers} &> /dev/null || :
 %endif
 
 #-----------------------------------------------------------------------------
@@ -1336,6 +1281,20 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/akeyconvert.8.gz
 %{_mandir}/man8/asetkey.8.gz
 %endif
+%endif
+
+%if %{build_modules}
+
+%files -n kmod-%{kmod_name}
+%defattr(644,root,root,755)
+/lib/modules/%{kernvers}/extra/%{kmod_name}/
+
+%if ! ( 0%{?fedora} >= 28 || 0%{?rhel} >= 8 || 0%{?amzn} >= 2023 )
+%files -n kmod-%{kmod_name}-debuginfo
+%defattr(-,root,root)
+kmod-debuginfo.list
+%endif
+
 %endif
 
 #-----------------------------------------------------------------------------
