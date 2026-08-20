@@ -9,6 +9,9 @@
 # Disable using lto (link time optimization)
 %global _lto_cflags %{nil}
 
+# Define the location to the legacy workstation directory.
+%global afswsdir /usr/afsws
+
 #
 # Disable setting the source_date_epoch from the top entry of the changelog and
 # instead use the current system time by default.
@@ -120,12 +123,19 @@ ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
 Source0: http://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
 %define srcdir openafs-%{afsvers}
-
 Source10: http://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
 Source11: http://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
-
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
-
+Source30: openafs-cacheinfo
+Source31: openafs-client.init
+Source32: openafs-client.service
+Source33: openafs-client-systemd-helper.sh
+Source34: openafs-LICENSE.Sun
+Source35: openafs-README
+Source36: openafs-server.init
+Source37: openafs-server.service
+Source38: openafs.sysconfig
+Source39: openafs-ThisCell
 Source997: openafs-buildfedora.pl
 Source998: openafs-buildall.sh
 Source999: openafs-kmodtool
@@ -238,10 +248,10 @@ Cell.
 Summary:        DKMS-ready kernel source for AFS distributed filesystem
 Group:          Development/Kernel
 Provides:       openafs-kernel = %{version}
-Provides: %{name}-kmod = %{version}
+Provides:       %{name}-kmod = %{version}
 Requires(pre):  dkms, make, flex
 Requires(post): dkms
-Requires:	%{name}-kmod-common = %{version}
+Requires:       %{name}-kmod-common = %{version}
 
 %description -n dkms-%{name}
 The AFS distributed filesystem.  AFS is a distributed filesystem
@@ -335,7 +345,7 @@ module.
 
 %package compat
 Summary: OpenAFS client compatibility symlinks
-Requires: openafs = %{version}, openafs-client = %{version}
+Requires: openafs = %{version}
 Group: Networking/Filesystems
 
 %description compat
@@ -344,7 +354,7 @@ allowing cross-platform sharing of files among multiple computers.
 Facilities are provided for access control, authentication, backup and
 administrative management.
 
-This package provides compatibility symlinks in /usr/afsws.  It is
+This package provides compatibility symlinks in %{afswsdir}.  It is
 completely optional, and is only necessary to support legacy
 applications and scripts that hard-code the location of AFS client
 programs.
@@ -463,9 +473,9 @@ archlist=%{_arch}
 %endif
 
 config_opts="%{?_with_kauth:--enable-kauth} \
-	%{?_with_bitmap_later:--enable-bitmap-later} \
-	%{?_with_supergroups:--enable-supergroups} \
-	--enable-transarc-paths"
+        %{?_with_bitmap_later:--enable-bitmap-later} \
+        %{?_with_supergroups:--enable-supergroups} \
+        --enable-transarc-paths"
 
 # Configure AFS
 
@@ -503,7 +513,6 @@ export KRB5_CONFIG
        --libdir=%{_libdir} \
        --bindir=%{_bindir} \
        --sbindir=%{_sbindir} \
-       --docdir=%{_docdir}/openafs-%{afsvers} \
        --disable-strip-binaries \
        --enable-debug \
        --with-linux-kernel-packaging \
@@ -513,12 +522,12 @@ export KRB5_CONFIG
        --disable-kernel-module \
 %endif
 %if %{krb5support}
-	--with-krb5 \
+       --with-krb5 \
 %endif
 %if 0%{?fedora} >= 15 || 0%{?rhel} >= 6 || 0%{?amzn} >= 1
-    --with-swig \
+       --with-swig \
 %else
-    --without-swig \
+       --without-swig \
 %endif
        $config_opts \
        || exit 1
@@ -555,17 +564,17 @@ for kvariant in %{kvariants} ; do
     cp -R libafs_tree _kmod_build_${kvariant}
     pushd _kmod_build_${kvariant}
     ./configure --with-afs-sysname=${sysname} \
-  	--prefix=%{_prefix} \
-	--libdir=%{_libdir} \
-	--bindir=%{_bindir} \
-	--sbindir=%{_sbindir} \
+        --prefix=%{_prefix} \
+        --libdir=%{_libdir} \
+        --bindir=%{_bindir} \
+        --sbindir=%{_sbindir} \
         --with-linux-kernel-packaging \
-	--with-linux-kernel-headers=${ksrc} \
+        --with-linux-kernel-headers=${ksrc} \
 %if %{krb5support}
-	--with-krb5 \
+        --with-krb5 \
 %endif
-	$config_opts \
-	|| exit 1
+        $config_opts \
+        || exit 1
     popd
   fi
 done
@@ -726,17 +735,17 @@ rm -f $RPM_BUILD_ROOT%{_mandir}/man3/AFS::ukernel.3
 # Install client and server initscripts/systemd files
 #-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT/etc/sysconfig
-install -m 755 src/packaging/RedHat/openafs.sysconfig $RPM_BUILD_ROOT/etc/sysconfig/openafs
+install -m 755 %{SOURCE38} $RPM_BUILD_ROOT/etc/sysconfig/openafs
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
 mkdir -p $RPM_BUILD_ROOT%{initdir}
-install -m 755 src/packaging/RedHat/openafs-client.init $RPM_BUILD_ROOT%{initdir}/openafs-client
-install -m 755 src/packaging/RedHat/openafs-server.init $RPM_BUILD_ROOT%{initdir}/openafs-server
+install -m 755 %{SOURCE31} $RPM_BUILD_ROOT%{initdir}/openafs-client
+install -m 755 %{SOURCE36} $RPM_BUILD_ROOT%{initdir}/openafs-server
 %else
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/sysconfig/modules
-install -m 644 src/packaging/RedHat/openafs-client.service $RPM_BUILD_ROOT%{_unitdir}/openafs-client.service
-install -m 644 src/packaging/RedHat/openafs-server.service $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
-install -m 755 src/packaging/RedHat/openafs-client-systemd-helper.sh $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
+install -m 644 %{SOURCE32} $RPM_BUILD_ROOT%{_unitdir}/openafs-client.service
+install -m 644 %{SOURCE37} $RPM_BUILD_ROOT%{_unitdir}/openafs-server.service
+install -m 755 %{SOURCE33} $RPM_BUILD_ROOT%{_prefix}/vice/etc/openafs-client-systemd-helper.sh
 %endif
 
 #-----------------------------------------------------------------------------
@@ -751,9 +760,9 @@ mkdir -p $RPM_BUILD_ROOT%{_prefix}/afs/logs
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/etc
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/vice/cache
 chmod 700 $RPM_BUILD_ROOT%{_prefix}/vice/cache
-install -p -m 644 src/packaging/RedHat/openafs-ThisCell $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
+install -p -m 644 %{SOURCE39} $RPM_BUILD_ROOT%{_prefix}/vice/etc/ThisCell
 install -p -m 644 %{SOURCE20} $RPM_BUILD_ROOT%{_prefix}/vice/etc/CellServDB.dist
-install -p -m 644 src/packaging/RedHat/openafs-cacheinfo $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
+install -p -m 644 %{SOURCE30} $RPM_BUILD_ROOT%{_prefix}/vice/etc/cacheinfo
 
 #-----------------------------------------------------------------------------
 # Install DKMS source.
@@ -783,10 +792,10 @@ EOF
 #-----------------------------------------------------------------------------
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
 tar cf - -C libafs_tree . | \
-	tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
+    tar xf - -C $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/src
 install -m 644 LICENSE $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.IBM
-install -m 644 src/packaging/RedHat/openafs-LICENSE.Sun $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
-install -m 644 src/packaging/RedHat/openafs-README $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
+install -m 644 %{SOURCE34} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/LICENSE.Sun
+install -m 644 %{SOURCE35} $RPM_BUILD_ROOT%{_prefix}/src/openafs-kernel-%{afsvers}/README
 
 #-----------------------------------------------------------------------------
 # Install documentation.
@@ -796,45 +805,6 @@ tar cf - -C doc html pdf | \
     tar xf - -C $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
 install -m 644 %{SOURCE11} $RPM_BUILD_ROOT/$RPM_DOC_DIR/openafs-%{afsvers}
-
-#-----------------------------------------------------------------------------
-# Install compatiblity links.
-#-----------------------------------------------------------------------------
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afsws/bin
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/afsws/etc
-ln -sf %{_prefix}/bin/afsmonitor    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/afsmonitor
-ln -sf %{_prefix}/bin/bos           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/bos
-ln -sf %{_prefix}/bin/fs            $RPM_BUILD_ROOT%{_prefix}/afsws/bin/fs
-%if %{kauth_support}
-ln -sf %{_prefix}/bin/kapasswd      $RPM_BUILD_ROOT%{_prefix}/afsws/bin/kapasswd
-ln -sf %{_prefix}/bin/klog          $RPM_BUILD_ROOT%{_prefix}/afsws/bin/klog
-ln -sf %{_prefix}/bin/klog.krb      $RPM_BUILD_ROOT%{_prefix}/afsws/bin/klog.krb
-ln -sf %{_prefix}/bin/pagsh.krb     $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pagsh.krb
-ln -sf %{_prefix}/bin/tokens.krb    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/tokens.krb
-%endif
-ln -sf %{_prefix}/bin/pagsh         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pagsh
-ln -sf %{_prefix}/bin/pts           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/pts
-ln -sf %{_prefix}/bin/restorevol    $RPM_BUILD_ROOT%{_prefix}/afsws/bin/restorevol
-ln -sf %{_prefix}/bin/scout         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/scout
-ln -sf %{_prefix}/bin/sys           $RPM_BUILD_ROOT%{_prefix}/afsws/bin/sys
-ln -sf %{_prefix}/bin/tokens        $RPM_BUILD_ROOT%{_prefix}/afsws/bin/tokens
-ln -sf %{_prefix}/bin/translate_et  $RPM_BUILD_ROOT%{_prefix}/afsws/bin/translate_et
-ln -sf %{_prefix}/bin/xstat_cm_test $RPM_BUILD_ROOT%{_prefix}/afsws/bin/xstat_cm_test
-ln -sf %{_prefix}/bin/xstat_fs_test $RPM_BUILD_ROOT%{_prefix}/afsws/bin/xstat_fs_test
-ln -sf %{_prefix}/bin/udebug        $RPM_BUILD_ROOT%{_prefix}/afsws/bin/udebug
-ln -sf %{_prefix}/bin/unlog         $RPM_BUILD_ROOT%{_prefix}/afsws/bin/unlog
-ln -sf %{_prefix}/sbin/backup       $RPM_BUILD_ROOT%{_prefix}/afsws/etc/backup
-ln -sf %{_prefix}/sbin/butc         $RPM_BUILD_ROOT%{_prefix}/afsws/etc/butc
-ln -sf %{_prefix}/sbin/fms          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/fms
-ln -sf %{_prefix}/sbin/fstrace      $RPM_BUILD_ROOT%{_prefix}/afsws/etc/fstrace
-%if %{kauth_support}
-ln -sf %{_prefix}/sbin/kas          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/kas
-%endif
-ln -sf %{_prefix}/sbin/read_tape    $RPM_BUILD_ROOT%{_prefix}/afsws/etc/read_tape
-ln -sf %{_prefix}/sbin/rxdebug      $RPM_BUILD_ROOT%{_prefix}/afsws/etc/rxdebug
-ln -sf %{_prefix}/sbin/uss          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/uss
-ln -sf %{_prefix}/sbin/vos          $RPM_BUILD_ROOT%{_prefix}/afsws/etc/vos
-ln -sf %{_prefix}/sbin/vsys         $RPM_BUILD_ROOT%{_prefix}/afsws/etc/vsys
 
 %endif
 
@@ -880,7 +850,7 @@ done
 ##############################################################################
 %clean
 [ "$RPM_BUILD_ROOT" != "/" -a "x%{debugspec}" != "x1" ] && \
-	rm -fr $RPM_BUILD_ROOT
+        rm -fr $RPM_BUILD_ROOT
 
 
 ##############################################################################
@@ -889,11 +859,6 @@ done
 ###
 ##############################################################################
 %if %{build_userspace}
-
-%pre compat
-if [ -e %{_prefix}/afsws ]; then
-        /bin/rm -fr %{_prefix}/afsws
-fi
 
 %post client
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
@@ -905,10 +870,10 @@ if [ $1 -eq 1 ] ; then
 fi
 %endif
 if [ ! -d /afs ]; then
-	mkdir /afs
-	chown root.root /afs
-	chmod 0755 /afs
-	[ -x /sbin/restorecon ] && /sbin/restorecon /afs
+    mkdir /afs
+    chown root:root /afs
+    chmod 0755 /afs
+    [ -x /sbin/restorecon ] && /sbin/restorecon /afs
 fi
 
 # Create the CellServDB
@@ -925,13 +890,68 @@ fi
 #on an upgrade, don't enable if we were disabled
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
 if [ $1 = 1 ] ; then
-  chkconfig --add openafs-server
+    chkconfig --add openafs-server
 fi
 %{initdir}/openafs-server condrestart
 %else
 if [ $1 -eq 1 ] ; then
     # Initial installation
     /bin/systemctl daemon-reload >/dev/null 2>&1 || :
+fi
+%endif
+
+%post compat
+# Create compatiblity links.
+mkdir -p %{afswsdir}/bin
+mkdir -p %{afswsdir}/etc
+ln -sf %{_bindir}/afsmonitor    %{afswsdir}/bin/afsmonitor
+ln -sf %{_bindir}/bos           %{afswsdir}/bin/bos
+ln -sf %{_bindir}/fs            %{afswsdir}/bin/fs
+ln -sf %{_bindir}/pagsh         %{afswsdir}/bin/pagsh
+ln -sf %{_bindir}/pts           %{afswsdir}/bin/pts
+ln -sf %{_bindir}/restorevol    %{afswsdir}/bin/restorevol
+ln -sf %{_bindir}/scout         %{afswsdir}/bin/scout
+ln -sf %{_bindir}/sys           %{afswsdir}/bin/sys
+ln -sf %{_bindir}/tokens        %{afswsdir}/bin/tokens
+ln -sf %{_bindir}/translate_et  %{afswsdir}/bin/translate_et
+ln -sf %{_bindir}/xstat_cm_test %{afswsdir}/bin/xstat_cm_test
+ln -sf %{_bindir}/xstat_fs_test %{afswsdir}/bin/xstat_fs_test
+ln -sf %{_bindir}/udebug        %{afswsdir}/bin/udebug
+ln -sf %{_bindir}/unlog         %{afswsdir}/bin/unlog
+ln -sf %{_sbindir}/backup       %{afswsdir}/etc/backup
+ln -sf %{_sbindir}/butc         %{afswsdir}/etc/butc
+ln -sf %{_sbindir}/fms          %{afswsdir}/etc/fms
+ln -sf %{_sbindir}/fstrace      %{afswsdir}/etc/fstrace
+ln -sf %{_sbindir}/read_tape    %{afswsdir}/etc/read_tape
+ln -sf %{_sbindir}/rxdebug      %{afswsdir}/etc/rxdebug
+ln -sf %{_sbindir}/uss          %{afswsdir}/etc/uss
+ln -sf %{_sbindir}/vos          %{afswsdir}/etc/vos
+ln -sf %{_sbindir}/vsys         %{afswsdir}/etc/vsys
+
+%postun compat
+if [ $1 = 0 ] ; then
+    rmdir %{afswsdir}/bin >/dev/null 2>/dev/null || :
+    rmdir %{afswsdir}/etc >/dev/null 2>/dev/null || :
+    rmdir %{afswsdir} >/dev/null 2>/dev/null || :
+fi
+
+%if %{kauth_support}
+%post kauth-client
+# Create compatiblity links.
+mkdir -p %{afswsdir}/bin
+mkdir -p %{afswsdir}/etc
+ln -sf %{_bindir}/kapasswd      %{afswsdir}/bin/kapasswd
+ln -sf %{_bindir}/klog          %{afswsdir}/bin/klog
+ln -sf %{_bindir}/klog.krb      %{afswsdir}/bin/klog.krb
+ln -sf %{_sbindir}/kas          %{afswsdir}/etc/kas
+ln -sf %{_bindir}/pagsh.krb     %{afswsdir}/bin/pagsh.krb
+ln -sf %{_bindir}/tokens.krb    %{afswsdir}/bin/tokens.krb
+
+%postun kauth-client
+if [ $1 = 0 ] ; then
+    rmdir %{afswsdir}/bin >/dev/null 2>/dev/null || :
+    rmdir %{afswsdir}/etc >/dev/null 2>/dev/null || :
+    rmdir %{afswsdir} >/dev/null 2>/dev/null || :
 fi
 %endif
 
@@ -945,34 +965,34 @@ fi
 
 %preun
 if [ $1 = 0 ] ; then
-	[ -d /afs ] && rmdir /afs
-	:
+    [ -d /afs ] && rmdir /afs
+    :
 fi
 
 %preun client
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
 if [ $1 = 0 ] ; then
-        %{initdir}/openafs-client stop
-        chkconfig --del openafs-client
+    %{initdir}/openafs-client stop
+    chkconfig --del openafs-client
 fi
 %else
 if [ $1 -eq 0 ] ; then
-    	# Package removal, not upgrade
-    	/bin/systemctl --no-reload disable openafs-client.service > /dev/null 2>&1 || :
-    	/bin/systemctl stop openafs-client.service > /dev/null 2>&1 || :
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable openafs-client.service > /dev/null 2>&1 || :
+    /bin/systemctl stop openafs-client.service > /dev/null 2>&1 || :
 fi
 %endif
 
 %preun server
 %if 0%{?fedora} < 15 && 0%{?rhel} < 7 && 0%{?amzn} < 1
 if [ $1 = 0 ] ; then
-        %{initdir}/openafs-server stop
-        chkconfig --del openafs-server
+    %{initdir}/openafs-server stop
+    chkconfig --del openafs-server
 fi
 %else
 if [ $1 -eq 0 ] ; then
-    	/bin/systemctl --no-reload disable openafs-server.service > /dev/null 2>&1 || :
-    	/bin/systemctl stop openafs-server.service > /dev/null 2>&1 || :
+    /bin/systemctl --no-reload disable openafs-server.service > /dev/null 2>&1 || :
+    /bin/systemctl stop openafs-server.service > /dev/null 2>&1 || :
 fi
 %endif
 
@@ -1025,7 +1045,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %files
 %defattr(-,root,root)
 %config(noreplace) /etc/sysconfig/openafs
-%doc %{_docdir}/openafs-%{afsvers}/LICENSE
+%doc LICENSE
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -1256,7 +1276,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/afs_compile_et
 %{_bindir}/rxgen
 %{_includedir}/afs
-%{_includedir}/afs/afs_lock.h
 %{_includedir}/lwp.h
 %{_includedir}/rx
 %{_includedir}/ubik.h
@@ -1298,33 +1317,29 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 
 %files compat
 %defattr(-,root,root)
-%{_prefix}/afsws/bin/afsmonitor
-%{_prefix}/afsws/bin/bos
-%{_prefix}/afsws/bin/fs
-%{_prefix}/afsws/bin/pagsh
-%{_prefix}/afsws/bin/pts
-%{_prefix}/afsws/bin/restorevol
-%{_prefix}/afsws/bin/scout
-%{_prefix}/afsws/bin/sys
-%{_prefix}/afsws/bin/tokens
-%{_prefix}/afsws/bin/translate_et
-%{_prefix}/afsws/bin/udebug
-%{_prefix}/afsws/bin/unlog
-%{_prefix}/afsws/bin/xstat_cm_test
-%{_prefix}/afsws/bin/xstat_fs_test
-%{_prefix}/afsws/etc/backup
-%{_prefix}/afsws/etc/butc
-%{_prefix}/afsws/etc/fms
-%{_prefix}/afsws/etc/fstrace
-%{_prefix}/afsws/etc/read_tape
-%{_prefix}/afsws/etc/rxdebug
-%{_prefix}/afsws/etc/uss
-%{_prefix}/afsws/etc/vos
-%{_prefix}/afsws/etc/vsys
-%if %{kauth_support}
-%{_prefix}/afsws/bin/pagsh.krb
-%{_prefix}/afsws/bin/tokens.krb
-%endif
+%ghost %{afswsdir}/bin/afsmonitor
+%ghost %{afswsdir}/bin/bos
+%ghost %{afswsdir}/bin/fs
+%ghost %{afswsdir}/bin/pagsh
+%ghost %{afswsdir}/bin/pts
+%ghost %{afswsdir}/bin/restorevol
+%ghost %{afswsdir}/bin/scout
+%ghost %{afswsdir}/bin/sys
+%ghost %{afswsdir}/bin/tokens
+%ghost %{afswsdir}/bin/translate_et
+%ghost %{afswsdir}/bin/udebug
+%ghost %{afswsdir}/bin/unlog
+%ghost %{afswsdir}/bin/xstat_cm_test
+%ghost %{afswsdir}/bin/xstat_fs_test
+%ghost %{afswsdir}/etc/backup
+%ghost %{afswsdir}/etc/butc
+%ghost %{afswsdir}/etc/fms
+%ghost %{afswsdir}/etc/fstrace
+%ghost %{afswsdir}/etc/read_tape
+%ghost %{afswsdir}/etc/rxdebug
+%ghost %{afswsdir}/etc/uss
+%ghost %{afswsdir}/etc/vos
+%ghost %{afswsdir}/etc/vsys
 
 %if %{kauth_support}
 %files kauth-client
@@ -1340,10 +1355,12 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_bindir}/kpwvalid
 %{_bindir}/pagsh.krb
 %{_bindir}/tokens.krb
-%{_prefix}/afsws/bin/kapasswd
-%{_prefix}/afsws/bin/klog
-%{_prefix}/afsws/bin/klog.krb
-%{_prefix}/afsws/etc/kas
+%ghost %{afswsdir}/bin/kapasswd
+%ghost %{afswsdir}/bin/klog
+%ghost %{afswsdir}/bin/klog.krb
+%ghost %{afswsdir}/bin/pagsh.krb
+%ghost %{afswsdir}/bin/tokens.krb
+%ghost %{afswsdir}/etc/kas
 %{_mandir}/man1/kapasswd.1.gz
 %{_mandir}/man1/klog.1.gz
 %{_mandir}/man1/klog.krb.1.gz
@@ -1514,7 +1531,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 * Thu Sep 22 2005  Derek Atkins <warlord@MIT.EDU>
 - update kversis script, add 'kvers' operation
 - fix bug that 2.6 smp/hugemem kernels don't provide
-  kernel-foo = %{kernvers} with 'smp', 'hugemem', etc.
+  a kernel version with 'smp', 'hugemem', etc.
 - add patch to remove res_search from the afs-krb5 configure
 
 * Thu Sep 15 2005  Derek Atkins <warlord@MIT.EDU> 1.4.0rc4-1
