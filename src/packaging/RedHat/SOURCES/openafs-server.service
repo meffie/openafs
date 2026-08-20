@@ -3,6 +3,9 @@ Description=OpenAFS Server Service
 After=syslog.target network.target
 
 [Service]
+# Previous versions used a combined configuration for clients and servers. Read
+# the legacy name second in case it was updated by configuation tooling.
+EnvironmentFile=-/etc/sysconfig/openafs-server
 EnvironmentFile=-/etc/sysconfig/openafs
 ExecStart=/usr/afs/bin/bosserver -nofork $BOSSERVER_ARGS
 ExecStop=/usr/bin/bos shutdown localhost -wait -localauth

@@ -164,9 +164,11 @@ Source33: openafs-client-systemd-helper.sh
 Source34: openafs-LICENSE.Sun
 Source35: openafs-README
 Source37: openafs-server.service
-Source38: openafs.sysconfig
 Source39: openafs-ThisCell
 Source40: openafs-dkms.conf
+Source41: openafs-client.sysconfig
+Source42: openafs-server.sysconfig
+Source43: openafs-migrate-sysconfig.sh
 
 %description
 %{common_description}
@@ -477,7 +479,9 @@ mv %{buildroot}%{_mandir}/man1/kpasswd.1 %{buildroot}%{_mandir}/man1/kapasswd.1
 
 # Install client and server systemd files.
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
-install -m 755 %{SOURCE38} %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+install -m 644 %{SOURCE41} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-client
+install -m 644 %{SOURCE42} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-server
+install -m 755 %{SOURCE43} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-sysconfig.sh
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
@@ -537,6 +541,12 @@ make check
 %if %{with userspace}
 
 # openafs scriptlets
+%post
+if [ $1 -ge 2 ]; then
+    # Migrate the sysconfig file on upgrade.
+    /bin/sh %{_libexecdir}/%{name}/openafs-migrate-sysconfig.sh || :
+fi
+
 %preun
 if [ $1 = 0 ] ; then
     if [ -d /afs ]; then
@@ -656,10 +666,11 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %if %{with userspace}
 
 %files
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+%dir %{_libexecdir}/%{name}
 %doc LICENSE
 %doc ChangeLog
 %doc RELNOTES-%{openafs_version}
+%{_libexecdir}/%{name}/openafs-migrate-sysconfig.sh
 %{_bindir}/afsmonitor
 %{_bindir}/bos
 %{_bindir}/fs
@@ -776,6 +787,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc doc/pdf
 
 %files client
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-client
 %dir %{_prefix}/vice
 %dir %{_prefix}/vice/cache
 %dir %{_prefix}/vice/etc
@@ -806,6 +818,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/CellAlias.5.*
 
 %files server
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-server
 %dir %{_prefix}/afs
 %dir %{_prefix}/afs/bin
 %dir %{_prefix}/afs/etc
