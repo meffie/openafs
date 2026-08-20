@@ -20,7 +20,6 @@
 #   --without userspace                   Do not build userspace packages (default: --with userspace)
 #   --without modules                     Do not the build kernel module package (default: --with modules)
 #   --without dkms                        Do not build the DKMS package (default: --with dkms)
-#   --without authlibs                    Disable authlibs package (default: with authlibs)
 #   --with supergroups                    Enable supergroup support (default: --without supergroup)
 #   --with kauth                          Build the obsolete kauth packages (default: --without kauth)
 #
@@ -85,7 +84,6 @@ administrative management.
 %bcond_without userspace
 %bcond_without modules
 %bcond_with    kauth
-%bcond_without authlibs
 %bcond_with    supergroups
 
 #
@@ -205,7 +203,6 @@ This package provides the source code to allow DKMS to build an
 OpenAFS kernel module.
 %endif
 
-%if %{with authlibs}
 %package authlibs
 Summary: OpenAFS authentication shared libraries
 
@@ -215,12 +212,9 @@ This package provides a shared version of libafsrpc and libafsauthent.
 None of the programs included with OpenAFS currently use these shared
 libraries; however, third-party software that wishes to perform AFS
 authentication may link against them.
-%endif
 
 %package authlibs-devel
-%if %{with authlibs}
 Requires: %{name}-authlibs = %{version}-%{release}
-%endif
 Requires: %{name}-devel = %{version}-%{release}
 Summary: OpenAFS shared library development
 
@@ -743,11 +737,6 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %exclude %{_mandir}/man8/aklog_dynamic_auth.8.*
 %exclude %{_mandir}/man8/rmtsysd.8.*
 %exclude %{_mandir}/man8/xfs_size_check.8.*
-%if %{without authlibs}
-%exclude %{_libdir}/libafsauthent.so*
-%exclude %{_libdir}/libafsrpc.so*
-%exclude %{_libdir}/libkopenafs.so*
-%endif
 %if %{without kauth}
 %exclude %{_bindir}/tokens.krb
 %exclude %{_bindir}/pagsh.krb
@@ -876,12 +865,10 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/volscan.8.*
 %doc %{_mandir}/man8/volserver.8.*
 
-%if %{with authlibs}
 %files authlibs
 %{_libdir}/libafsauthent.so.*
 %{_libdir}/libafsrpc.so.*
 %{_libdir}/libkopenafs.so.*
-%endif
 
 %files authlibs-devel
 %{_includedir}/kopenafs.h
@@ -891,11 +878,9 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libafsauthent_pic.a
 %{_libdir}/libafsrpc_pic.a
 %{_libdir}/libkopenafs.a
-%if %{with authlibs}
 %{_libdir}/libafsauthent.so
 %{_libdir}/libafsrpc.so
 %{_libdir}/libkopenafs.so
-%endif
 
 %files devel
 %{_bindir}/afs_compile_et
