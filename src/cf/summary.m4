@@ -126,6 +126,31 @@ Generate documents
   doxygen diagrams       : ${summary_doxygen_graphs}
   man pages, roff format : ${summary_man_pages}
   man pages, html format : ${summary_man_pages_html}
+
+Paths
+  datarootdir      : ${datarootdir}
+  exec_prefix      : ${exec_prefix}
+  prefix           : ${prefix}
+  bindir           : ${bindir}
+  datadir          : ${datadir}
+  libdir           : ${libdir}
+  libexecdir       : ${libexecdir}
+  localstatedir    : ${localstatedir}
+  sbindir          : ${sbindir}
+  sysconfdir       : ${sysconfdir}
+  afsconfdir       : ${afsconfdir}
+  viceetcdir       : ${viceetcdir}
+  afskerneldir     : ${afskerneldir}
+  afssrvbindir     : ${afssrvbindir}
+  afssrvsbindir    : ${afssrvsbindir}
+  afssrvlibexecdir : ${afssrvlibexecdir}
+  afsdbdir         : ${afsdbdir}
+  afslogsdir       : ${afslogsdir}
+  afslocaldir      : ${afslocaldir}
+  afsbackupdir     : ${afsbackupdir}
+  afsbosconfigdir  : ${afsbosconfigdir}
+  afsdatadir       : ${afsdatadir}
+
 ${summary_kernel_module_section}
 ***************************************************************
   ])
