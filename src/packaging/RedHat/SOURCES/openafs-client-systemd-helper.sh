@@ -24,8 +24,8 @@ case $1 in
 	    echo AFS client appears to be running -- skipping startup
 	    exit 0
 	fi
-	sed -n 'w/usr/vice/etc/CellServDB' /usr/vice/etc/CellServDB.local /usr/vice/etc/CellServDB.dist
-	chmod 0644 /usr/vice/etc/CellServDB
+	sed -n 'w/etc/openafs/CellServDB' /etc/openafs/CellServDB.local /etc/openafs/CellServDB.dist
+	chmod 0644 /etc/openafs/CellServDB
 
 	# If the kernel module is already initialized from a previous client
 	# run, it must be unloaded and loaded again. So if the module is

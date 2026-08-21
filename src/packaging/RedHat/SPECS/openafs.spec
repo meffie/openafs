@@ -336,27 +336,22 @@ cp -p %{SOURCE11} .
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %set_build_flags
 
-./configure \
-       --prefix=%{_prefix} \
-       --libdir=%{_libdir} \
-       --bindir=%{_bindir} \
-       --sbindir=%{_sbindir} \
-       --disable-strip-binaries \
-       --enable-debug \
-       --with-linux-kernel-packaging \
+%configure \
+    --disable-strip-binaries \
+    --enable-debug \
+    --with-krb5 \
+    --with-swig \
+    --disable-kauth \
+    --with-linux-kernel-packaging \
 %if %{with modules}
-       --enable-kernel-module \
-       --with-linux-kernel-headers=%{ksrcdir} \
+    --enable-kernel-module \
+    --with-linux-kernel-headers=%{ksrcdir} \
 %else
-       --disable-kernel-module \
+    --disable-kernel-module \
 %endif
-       --with-krb5 \
-       --with-swig \
-       --disable-kauth \
 %if %{with supergroups}
-       --enable-supergroups \
+    --enable-supergroups
 %endif
-       --enable-transarc-paths
 
 %if %{with userspace}
 %if %{with modules}
@@ -386,22 +381,6 @@ export SOURCE_DATE_EPOCH=%{source_date_epoch}
 # Install userspace files
 make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 
-# Exclude duplicated files.
-rm -f %{buildroot}%{_prefix}/afs/bin/bos
-rm -f %{buildroot}%{_prefix}/afs/bin/fs
-rm -f %{buildroot}%{_prefix}/afs/bin/pts
-rm -f %{buildroot}%{_prefix}/afs/bin/tokens
-rm -f %{buildroot}%{_prefix}/afs/bin/tokens.krb
-rm -f %{buildroot}%{_prefix}/afs/bin/udebug
-rm -f %{buildroot}%{_prefix}/afs/bin/vos
-
-# Relocate admin utilities to a modern path.
-mv %{buildroot}%{_prefix}/afs/bin/prdb_check %{buildroot}%{_sbindir}/prdb_check
-mv %{buildroot}%{_prefix}/afs/bin/vldb_check %{buildroot}%{_sbindir}/vldb_check
-mv %{buildroot}%{_prefix}/afs/bin/vldb_convert %{buildroot}%{_sbindir}/vldb_convert
-mv %{buildroot}%{_prefix}/afs/bin/akeyconvert %{buildroot}%{_sbindir}/akeyconvert
-mv %{buildroot}%{_prefix}/afs/bin/asetkey %{buildroot}%{_sbindir}/asetkey
-
 # Install client and server systemd files.
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 install -m 644 %{SOURCE41} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-client
@@ -413,17 +392,20 @@ install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
 install -m 755 %{SOURCE33} %{buildroot}%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 
 # Install server directories.
-mkdir -p %{buildroot}%{_prefix}/afs/etc
-mkdir -p %{buildroot}%{_prefix}/afs/logs
+mkdir -p %{buildroot}%{_sysconfdir}/openafs/server
+mkdir -p %{buildroot}%{_localstatedir}/openafs/logs
+mkdir -p %{buildroot}%{_localstatedir}/openafs/db
+chmod 700 %{buildroot}%{_localstatedir}/openafs
+chmod 700 %{buildroot}%{_localstatedir}/openafs/db
 
 # Install client directories and config files.
-mkdir -p %{buildroot}%{_prefix}/vice/etc
-mkdir -p %{buildroot}%{_prefix}/vice/cache
-chmod 700 %{buildroot}%{_prefix}/vice/cache
-install -p -m 644 %{SOURCE39} %{buildroot}%{_prefix}/vice/etc/ThisCell
-install -p -m 644 %{SOURCE20} %{buildroot}%{_prefix}/vice/etc/CellServDB.dist
-install -p -m 644 %{SOURCE21} %{buildroot}%{_prefix}/vice/etc/CellServDB.local
-install -p -m 644 %{SOURCE30} %{buildroot}%{_prefix}/vice/etc/cacheinfo
+mkdir -p %{buildroot}%{_sysconfdir}/openafs
+install -p -m 644 %{SOURCE39} %{buildroot}%{_sysconfdir}/openafs/ThisCell
+install -p -m 644 %{SOURCE20} %{buildroot}%{_sysconfdir}/openafs/CellServDB.dist
+install -p -m 644 %{SOURCE21} %{buildroot}%{_sysconfdir}/openafs/CellServDB.local
+install -p -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/openafs/cacheinfo
+mkdir -p %{buildroot}%{_localstatedir}/cache/openafs
+chmod 700 %{buildroot}%{_localstatedir}/cache/openafs
 
 # Install DKMS source.
 install -d -m 755 %{buildroot}%{_prefix}/src
@@ -666,21 +648,21 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc doc/pdf
 
 %files client
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-client
-%dir %{_prefix}/vice
-%dir %{_prefix}/vice/cache
-%dir %{_prefix}/vice/etc
-%dir %{_prefix}/vice/etc/C
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/C
 %dir %{_libexecdir}/%{name}
-%{_prefix}/vice/etc/CellServDB.dist
-%config(noreplace) %{_prefix}/vice/etc/CellServDB.local
-%config(noreplace) %{_prefix}/vice/etc/ThisCell
-%config(noreplace) %{_prefix}/vice/etc/cacheinfo
+%dir %{_localstatedir}/cache/openafs
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/cacheinfo
+%config(noreplace) %{_sysconfdir}/%{name}/CellServDB.dist
+%config(noreplace) %{_sysconfdir}/%{name}/CellServDB.local
+%config(noreplace) %{_sysconfdir}/%{name}/ThisCell
+%config(noreplace) %{_sysconfdir}/sysconfig/%{name}-client
 %{_bindir}/afsio
 %{_bindir}/cmdebug
 %{_bindir}/up
 %{_sbindir}/afsd
-%{_prefix}/vice/etc/C/afszcm.cat
+%{_datadir}/%{name}/C/afszcm.cat
 %{_libdir}/libuafs.a
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
@@ -697,32 +679,34 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man5/CellAlias.5.*
 
 %files server
+%dir %{_libexecdir}/%{name}
+%dir %{_localstatedir}/%{name}
+%dir %{_localstatedir}/%{name}/db
+%dir %{_localstatedir}/%{name}/logs
+%dir %{_sysconfdir}/%{name}
+%dir %{_sysconfdir}/%{name}/server
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}-server
-%dir %{_prefix}/afs
-%dir %{_prefix}/afs/bin
-%dir %{_prefix}/afs/etc
-%dir %{_prefix}/afs/logs
-%{_prefix}/afs/bin/bosserver
-%{_prefix}/afs/bin/bos_util
-%{_prefix}/afs/bin/buserver
-%{_prefix}/afs/bin/dafileserver
-%{_prefix}/afs/bin/dafssync-debug
-%{_prefix}/afs/bin/dasalvager
-%{_prefix}/afs/bin/davolserver
-%{_prefix}/afs/bin/fileserver
-%{_prefix}/afs/bin/fssync-debug
-%{_prefix}/afs/bin/pt_util
-%{_prefix}/afs/bin/ptserver
-%{_prefix}/afs/bin/salvager
-%{_prefix}/afs/bin/salvageserver
-%{_prefix}/afs/bin/salvsync-debug
-%{_prefix}/afs/bin/state_analyzer
-%{_prefix}/afs/bin/upclient
-%{_prefix}/afs/bin/upserver
-%{_prefix}/afs/bin/vlserver
-%{_prefix}/afs/bin/volinfo
-%{_prefix}/afs/bin/volscan
-%{_prefix}/afs/bin/volserver
+%{_sbindir}/bosserver
+%{_sbindir}/bos_util
+%{_libexecdir}/%{name}/buserver
+%{_libexecdir}/%{name}/dafileserver
+%{_libexecdir}/%{name}/dasalvager
+%{_libexecdir}/%{name}/davolserver
+%{_libexecdir}/%{name}/fileserver
+%{_libexecdir}/%{name}/ptserver
+%{_libexecdir}/%{name}/salvager
+%{_libexecdir}/%{name}/salvageserver
+%{_libexecdir}/%{name}/upclient
+%{_libexecdir}/%{name}/upserver
+%{_libexecdir}/%{name}/vlserver
+%{_libexecdir}/%{name}/volserver
+%{_sbindir}/dafssync-debug
+%{_sbindir}/fssync-debug
+%{_sbindir}/pt_util
+%{_sbindir}/salvsync-debug
+%{_sbindir}/state_analyzer
+%{_sbindir}/volinfo
+%{_sbindir}/volscan
 %{_sbindir}/prdb_check
 %{_sbindir}/vldb_check
 %{_sbindir}/vldb_convert
@@ -862,8 +846,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %files krb5
 %{_bindir}/aklog
 %{_bindir}/klog.krb5
-%{_sbindir}/akeyconvert
-%{_sbindir}/asetkey
+%{_bindir}/akeyconvert
+%{_bindir}/asetkey
 %doc %{_mandir}/man1/aklog.1.*
 %doc %{_mandir}/man1/klog.krb5.1.*
 %doc %{_mandir}/man8/akeyconvert.8.*

@@ -7,7 +7,7 @@ After=syslog.target network.target
 # the legacy name second in case it was updated by configuation tooling.
 EnvironmentFile=-/etc/sysconfig/openafs-server
 EnvironmentFile=-/etc/sysconfig/openafs
-ExecStart=/usr/afs/bin/bosserver -nofork $BOSSERVER_ARGS
+ExecStart=/usr/sbin/bosserver -nofork $BOSSERVER_ARGS
 ExecStop=/usr/bin/bos shutdown localhost -wait -localauth
 
 [Install]
