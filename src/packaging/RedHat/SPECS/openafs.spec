@@ -59,6 +59,9 @@ administrative management.
 # Define the location to the legacy workstation directory.
 %global afswsdir /usr/afsws
 
+# Define the location to the legacy installation directory.
+%global afsbindir /usr/afs/bin
+
 #
 # Version information
 #
@@ -154,6 +157,8 @@ Source40: openafs-dkms.conf
 Source41: openafs-client.sysconfig
 Source42: openafs-server.sysconfig
 Source43: openafs-migrate-sysconfig.sh
+Source44: openafs-migrate-client-paths.sh
+Source45: openafs-migrate-server-paths.sh
 
 %description
 %{common_description}
@@ -385,27 +390,31 @@ make %{_smp_mflags} install_nolibafs DESTDIR="%{buildroot}"
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 install -m 644 %{SOURCE41} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-client
 install -m 644 %{SOURCE42} %{buildroot}%{_sysconfdir}/sysconfig/%{name}-server
-install -m 755 %{SOURCE43} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-sysconfig.sh
 mkdir -p %{buildroot}%{_unitdir}
 install -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openafs-client.service
 install -m 644 %{SOURCE37} %{buildroot}%{_unitdir}/openafs-server.service
 install -m 755 %{SOURCE33} %{buildroot}%{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
 
+# Install data migration scripts.
+install -m 755 %{SOURCE43} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-sysconfig.sh
+install -m 755 %{SOURCE44} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-client-paths.sh
+install -m 755 %{SOURCE45} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-server-paths.sh
+
 # Install server directories.
-mkdir -p %{buildroot}%{_sysconfdir}/openafs/server
-mkdir -p %{buildroot}%{_localstatedir}/openafs/logs
-mkdir -p %{buildroot}%{_localstatedir}/openafs/db
-chmod 700 %{buildroot}%{_localstatedir}/openafs
-chmod 700 %{buildroot}%{_localstatedir}/openafs/db
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}/server
+mkdir -p %{buildroot}%{_localstatedir}/%{name}/logs
+mkdir -p %{buildroot}%{_localstatedir}/%{name}/db
+chmod 700 %{buildroot}%{_localstatedir}/%{name}
+chmod 700 %{buildroot}%{_localstatedir}/%{name}/db
 
 # Install client directories and config files.
-mkdir -p %{buildroot}%{_sysconfdir}/openafs
-install -p -m 644 %{SOURCE39} %{buildroot}%{_sysconfdir}/openafs/ThisCell
-install -p -m 644 %{SOURCE20} %{buildroot}%{_sysconfdir}/openafs/CellServDB.dist
-install -p -m 644 %{SOURCE21} %{buildroot}%{_sysconfdir}/openafs/CellServDB.local
-install -p -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/openafs/cacheinfo
-mkdir -p %{buildroot}%{_localstatedir}/cache/openafs
-chmod 700 %{buildroot}%{_localstatedir}/cache/openafs
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}
+install -p -m 644 %{SOURCE39} %{buildroot}%{_sysconfdir}/%{name}/ThisCell
+install -p -m 644 %{SOURCE20} %{buildroot}%{_sysconfdir}/%{name}/CellServDB.dist
+install -p -m 644 %{SOURCE21} %{buildroot}%{_sysconfdir}/%{name}/CellServDB.local
+install -p -m 644 %{SOURCE30} %{buildroot}%{_sysconfdir}/%{name}/cacheinfo
+mkdir -p %{buildroot}%{_localstatedir}/cache/%{name}
+chmod 700 %{buildroot}%{_localstatedir}/cache/%{name}
 
 # Install DKMS source.
 install -d -m 755 %{buildroot}%{_prefix}/src
@@ -463,6 +472,10 @@ fi
 
 # openafs-client scriptlets
 %post client
+if [ $1 -ge 2 ]; then
+    # Migrate from the Transarc installation paths on upgrade.
+    /bin/sh %{_libexecdir}/%{name}/openafs-migrate-client-paths.sh || :
+fi
 if [ ! -d /afs ]; then
     mkdir /afs
     chown root:root /afs
@@ -478,7 +491,34 @@ fi
 %systemd_postun openafs-client.service
 
 # openafs-server scriptlets
+%pre server
+if [ $1 -ge 2 ]; then
+    # Ensure servers are stopped on upgrade to do Transarc to FHS
+    # path migration.
+    /usr/bin/systemctl stop openafs-server.service || :
+fi
+
 %post server
+if [ $1 -ge 2 ]; then
+    # Migrate from the Transarc installation paths on upgrade.
+    /bin/sh %{_libexecdir}/%{name}/openafs-migrate-server-paths.sh || :
+fi
+# Create compat symlinks
+mkdir -p %{afsbindir}
+ln -sf %{_sbindir}/bosserver %{afsbindir}/bosserver
+ln -sf %{_libexecdir}/%{name}/buserver %{afsbindir}/buserver
+ln -sf %{_libexecdir}/%{name}/dafileserver %{afsbindir}/dafileserver
+ln -sf %{_libexecdir}/%{name}/dasalvager %{afsbindir}/dasalvager
+ln -sf %{_libexecdir}/%{name}/davolserver %{afsbindir}/davolserver
+ln -sf %{_libexecdir}/%{name}/fileserver %{afsbindir}/fileserver
+ln -sf %{_libexecdir}/%{name}/ptserver %{afsbindir}/ptserver
+ln -sf %{_libexecdir}/%{name}/salvager %{afsbindir}/salvager
+ln -sf %{_libexecdir}/%{name}/salvageserver %{afsbindir}/salvageserver
+ln -sf %{_libexecdir}/%{name}/upclient %{afsbindir}/upclient
+ln -sf %{_libexecdir}/%{name}/upserver %{afsbindir}/upserver
+ln -sf %{_libexecdir}/%{name}/vlserver %{afsbindir}/vlserver
+ln -sf %{_libexecdir}/%{name}/volserver %{afsbindir}/volserver
+# Run the systemd post scriptlet for the server.
 %systemd_post openafs-server.service
 
 %preun server
@@ -667,6 +707,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libdir}/libuafs_pic.a
 %{_unitdir}/openafs-client.service
 %{_libexecdir}/%{name}/openafs-client-systemd-helper.sh
+%{_libexecdir}/%{name}/openafs-migrate-client-paths.sh
 %doc %{_mandir}/man1/cmdebug.1.*
 %doc %{_mandir}/man1/up.1.*
 %doc %{_mandir}/man5/afs.5.*
@@ -693,6 +734,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libexecdir}/%{name}/dasalvager
 %{_libexecdir}/%{name}/davolserver
 %{_libexecdir}/%{name}/fileserver
+%{_libexecdir}/%{name}/openafs-migrate-server-paths.sh
 %{_libexecdir}/%{name}/ptserver
 %{_libexecdir}/%{name}/salvager
 %{_libexecdir}/%{name}/salvageserver
@@ -762,6 +804,20 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %doc %{_mandir}/man8/volinfo.8.*
 %doc %{_mandir}/man8/volscan.8.*
 %doc %{_mandir}/man8/volserver.8.*
+# Compat symlinks
+%ghost %{afsbindir}/bosserver
+%ghost %{afsbindir}/buserver
+%ghost %{afsbindir}/dafileserver
+%ghost %{afsbindir}/dasalvager
+%ghost %{afsbindir}/davolserver
+%ghost %{afsbindir}/fileserver
+%ghost %{afsbindir}/ptserver
+%ghost %{afsbindir}/salvager
+%ghost %{afsbindir}/salvageserver
+%ghost %{afsbindir}/upclient
+%ghost %{afsbindir}/upserver
+%ghost %{afsbindir}/vlserver
+%ghost %{afsbindir}/volserver
 
 %files authlibs
 %{_libdir}/libafsauthent.so.*
