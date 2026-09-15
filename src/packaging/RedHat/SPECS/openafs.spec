@@ -159,6 +159,8 @@ Source42: openafs-server.sysconfig
 Source43: openafs-migrate-sysconfig.sh
 Source44: openafs-migrate-client-paths.sh
 Source45: openafs-migrate-server-paths.sh
+Source46: openafs-selinux.cil
+Source47: openafs-selinux-relabel.sh
 
 %description
 %{common_description}
@@ -400,6 +402,11 @@ install -m 755 %{SOURCE43} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-sy
 install -m 755 %{SOURCE44} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-client-paths.sh
 install -m 755 %{SOURCE45} %{buildroot}%{_libexecdir}/%{name}/openafs-migrate-server-paths.sh
 
+# Install SELinux policy supplement and setup script for the server.
+install -m 755 %{SOURCE47} %{buildroot}%{_libexecdir}/%{name}/openafs-selinux-relabel.sh
+mkdir -p %{buildroot}%{_datadir}/%{name}/selinux
+install -m 644 %{SOURCE46} %{buildroot}%{_datadir}/%{name}/selinux/openafs-selinux.cil
+
 # Install server directories.
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}/server
 mkdir -p %{buildroot}%{_localstatedir}/%{name}/logs
@@ -518,10 +525,20 @@ ln -sf %{_libexecdir}/%{name}/upclient %{afsbindir}/upclient
 ln -sf %{_libexecdir}/%{name}/upserver %{afsbindir}/upserver
 ln -sf %{_libexecdir}/%{name}/vlserver %{afsbindir}/vlserver
 ln -sf %{_libexecdir}/%{name}/volserver %{afsbindir}/volserver
+[ -x /sbin/restorecon ] && /sbin/restorecon -R %{afsbindir}
+# Register SELinux file contexts and policy for the FHS server paths.
+/bin/sh %{_libexecdir}/%{name}/openafs-selinux-relabel.sh install \
+    %{_datadir}/%{name}/selinux/openafs-selinux.cil || :
 # Run the systemd post scriptlet for the server.
 %systemd_post openafs-server.service
 
 %preun server
+if [ $1 = 0 ]; then
+    # Final removal: drop the SELinux customizations added on install,
+    # while the script installed by this package still exists on disk.
+    /bin/sh %{_libexecdir}/%{name}/openafs-selinux-relabel.sh remove \
+        %{_datadir}/%{name}/selinux/openafs-selinux.cil || :
+fi
 %systemd_preun openafs-server.service
 
 %postun server
@@ -726,6 +743,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %dir %{_localstatedir}/%{name}/logs
 %dir %{_sysconfdir}/%{name}
 %dir %{_sysconfdir}/%{name}/server
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/selinux
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}-server
 %{_sbindir}/bosserver
 %{_sbindir}/bos_util
@@ -735,6 +754,8 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %{_libexecdir}/%{name}/davolserver
 %{_libexecdir}/%{name}/fileserver
 %{_libexecdir}/%{name}/openafs-migrate-server-paths.sh
+%{_libexecdir}/%{name}/openafs-selinux-relabel.sh
+%{_datadir}/%{name}/selinux/openafs-selinux.cil
 %{_libexecdir}/%{name}/ptserver
 %{_libexecdir}/%{name}/salvager
 %{_libexecdir}/%{name}/salvageserver

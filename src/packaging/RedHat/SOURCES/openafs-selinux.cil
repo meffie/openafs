@@ -1,0 +1,29 @@
+; SELinux policy supplement for the openafs-server package.
+;
+; RHEL-family selinux-policy-targeted ships a legacy "afs" module written
+; for the classic Transarc-style paths (/usr/afs/bin/fileserver, etc).
+; That module already defines afs_fsserver_t for the demand-attach
+; fileserver group (dafileserver, dasalvager, davolserver, salvageserver),
+; but it predates the fssync/salvsync IPC sockets those processes use to
+; coordinate with each other, so it never grants afs_fsserver_t access to
+; them.  These rules close that gap.  The accompanying fcontext
+; registrations (see openafs-selinux-relabel.sh) label our FHS paths with
+; the module's existing types; this file only adds the handful of allow
+; rules the module is missing for those existing types.
+
+; fssync.sock and salvsync.sock live in the server's local state
+; directory (/var/openafs), labeled afs_config_t.  dafileserver,
+; dasalvager, davolserver, and salvageserver all bind, connect to,
+; and clean up these sockets.
+(allow afs_fsserver_t afs_config_t (sock_file (create unlink write getattr read open setattr)))
+(allow afs_fsserver_t afs_config_t (dir (add_name remove_name write search)))
+
+; dafileserver connects to the salvageserver's SALVSYNC listener; both
+; run in afs_fsserver_t.
+(allow afs_fsserver_t afs_fsserver_t (unix_stream_socket (connectto)))
+
+; dafileserver mmaps and rewrites fsstate.dat (afs_config_t) as root,
+; bypassing normal DAC checks the way the classic fileserver does.
+(allow afs_fsserver_t self (capability (dac_override)))
+(allow afs_fsserver_t afs_config_t (file (map)))
+(allow afs_fsserver_t afs_files_t (file (map)))
