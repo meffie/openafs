@@ -173,6 +173,10 @@ OpenAFS packages but are not necessarily tied to a client or server.
 Summary: OpenAFS Filesystem Client
 Requires: %{name} = %{version}
 Requires: binutils
+Requires: filesystem
+%if ! 0%{?amzn}
+Requires: filesystem-afs
+%endif
 Requires: systemd-units
 Requires(post): systemd-units
 Requires(post): systemd-sysv
@@ -489,6 +493,9 @@ if [ $1 -ge 2 ]; then
     /bin/sh %{_libexecdir}/%{name}/openafs-migrate-client-paths.sh || :
 fi
 if [ ! -d /afs ]; then
+    # The /afs directory is owned by the filesystem package. As a fallback,
+    # ensure the /afs directory exists when the openafs-client package is
+    # installed.
     mkdir /afs
     chown root:root /afs
     chmod 0555 /afs
