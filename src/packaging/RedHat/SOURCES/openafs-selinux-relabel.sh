@@ -42,7 +42,7 @@ _fcontexts="
 /var/openafs/db(/.*)?			afs_dbdir_t
 /var/openafs/db/prdb\..*		afs_pt_db_t
 /var/openafs/db/vldb\..*		afs_vl_db_t
-/var/openafs/logs(/.*)?		afs_logfile_t
+/var/log/openafs(/.*)?			afs_logfile_t
 /vicep[a-z][a-z]?(/.*)?		afs_files_t
 "
 
@@ -55,7 +55,7 @@ install)
     /usr/sbin/semodule -i "$cil_module" || :
     /sbin/restorecon -R \
         /usr/libexec/openafs /usr/sbin/bosserver \
-        /etc/openafs /var/openafs /vicep* \
+        /etc/openafs /var/openafs /var/log/openafs /vicep* \
         >/dev/null 2>&1 || :
     ;;
 remove)

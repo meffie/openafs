@@ -343,6 +343,11 @@ cp -p %{SOURCE11} .
 export SOURCE_DATE_EPOCH=%{source_date_epoch}
 %set_build_flags
 
+# configure has no --with-afslogsdir option; afslogsdir is only settable
+# by pre-setting the shell/environment variable of the same name, which
+# the generated configure script honors via ${afslogsdir=...} defaulting.
+export afslogsdir="%{_localstatedir}/log/%{name}"
+
 %configure \
     --disable-strip-binaries \
     --enable-debug \
@@ -409,7 +414,7 @@ install -m 644 %{SOURCE46} %{buildroot}%{_datadir}/%{name}/selinux/openafs-selin
 
 # Install server directories.
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}/server
-mkdir -p %{buildroot}%{_localstatedir}/%{name}/logs
+mkdir -p %{buildroot}%{_localstatedir}/log/%{name}
 mkdir -p %{buildroot}%{_localstatedir}/%{name}/db
 chmod 700 %{buildroot}%{_localstatedir}/%{name}
 chmod 700 %{buildroot}%{_localstatedir}/%{name}/db
@@ -740,7 +745,7 @@ dkms remove -m %{name} -v %{dkms_version} --rpm_safe_upgrade --all ||:
 %dir %{_libexecdir}/%{name}
 %dir %{_localstatedir}/%{name}
 %dir %{_localstatedir}/%{name}/db
-%dir %{_localstatedir}/%{name}/logs
+%dir %{_localstatedir}/log/%{name}
 %dir %{_sysconfdir}/%{name}
 %dir %{_sysconfdir}/%{name}/server
 %dir %{_datadir}/%{name}

@@ -57,7 +57,7 @@ fi
 mkdir -p /etc/openafs/server
 mkdir -p /var/openafs/backup
 mkdir -p /var/openafs/db
-mkdir -p /var/openafs/logs
+mkdir -p /var/log/openafs
 
 _move_file  /usr/afs/backup/tapeconfig        /var/openafs/backup/tapeconfig
 _move_file  /usr/afs/db/prdb.DB0              /var/openafs/db/prdb.DB0
@@ -85,13 +85,12 @@ _move_file  /usr/afs/local/NetRestrict        /var/openafs/NetRestrict
 _move_file  /usr/afs/local/NoAuth             /var/openafs/NoAuth
 _move_file  /usr/afs/local/salvage.lock       /var/openafs/salvage.lock
 _move_file  /usr/afs/local/sysid              /var/openafs/sysid
-_move_file  /usr/afs/logs/AuthLog             /var/openafs/logs/AuthLog
-_move_file  /usr/afs/logs/AuthLog             /var/openafs/logs/AuthLog
-_move_file  /usr/afs/logs/BackupLog           /var/openafs/logs/BackupLog
-_move_file  /usr/afs/logs/BosLog              /var/openafs/logs/BosLog
-_move_file  /usr/afs/logs/FileLog             /var/openafs/logs/FileLog
-_move_file  /usr/afs/logs/PtLog               /var/openafs/logs/PtLog
-_move_file  /usr/afs/logs/SalsrvLog           /var/openafs/logs/SalsrvLog
-_move_file  /usr/afs/logs/SalvageLog          /var/openafs/logs/SalvageLog
-_move_file  /usr/afs/logs/VLLog               /var/openafs/logs/VLLog
-_move_file  /usr/afs/logs/VolserLog           /var/openafs/logs/VolserLog
+_move_file  /usr/afs/logs/AuthLog             /var/log/openafs/AuthLog
+_move_file  /usr/afs/logs/BackupLog           /var/log/openafs/BackupLog
+_move_file  /usr/afs/logs/BosLog              /var/log/openafs/BosLog
+_move_file  /usr/afs/logs/FileLog             /var/log/openafs/FileLog
+_move_file  /usr/afs/logs/PtLog               /var/log/openafs/PtLog
+_move_file  /usr/afs/logs/SalsrvLog           /var/log/openafs/SalsrvLog
+_move_file  /usr/afs/logs/SalvageLog          /var/log/openafs/SalvageLog
+_move_file  /usr/afs/logs/VLLog               /var/log/openafs/VLLog
+_move_file  /usr/afs/logs/VolserLog           /var/log/openafs/VolserLog
