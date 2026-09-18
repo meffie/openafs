@@ -148,6 +148,10 @@ foreach my $file (@toCompress) {
         or die "Unable to create bzip file of '$file' : $!";
     push @toMD, "$file.bz2";
 
+    system("xz < $file > $file.xz") == 0
+        or die "Unable to create xz file of '$file' : $!";
+    push @toMD, "$file.xz";
+
     # Delete the uncompressed tar files.
     if ($file =~ /\.tar$/) {
       unlink($file);
@@ -236,8 +240,9 @@ make-release [options] <tag>
 make-release constructs an OpenAFS release from a local git clone. If run
 with just the standard arguments, it will extract the contents of the
 specified tag into the current directory, creating src and doc tarballs,
-gzipping and bzipping them, and generating digest files. It will also create a
-ChangeLog file, listing all of the changes in that release.
+compressing them with gzip, bzip2, and xz, and generating digest files. It
+will also create a ChangeLog file, listing all of the changes in that
+release.
 
 This standard behaviour may be modified by the following options
 
