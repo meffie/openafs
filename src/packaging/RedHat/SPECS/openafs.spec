@@ -9,6 +9,9 @@
 #
 #   --define "openafs_version <version>"  The version of the OpenAFS source archive
 #
+#   --define "srcball_ext <ext>"          The compression suffix of the source archive
+#                                         (Source0): gz, bz2, or xz. (default: xz)
+#
 #   --define "package_version <version>"  The RPM Version tag. (default: openafs_version)
 #
 #   --define "package_release <release>"  The RPM Release tag. (default: 1)
@@ -80,6 +83,14 @@ administrative management.
 %global dkms_version %{package_version}-%{package_release}%{?dist}
 %endif
 
+# The compression suffix of the upstream source archive (Source0).  Recent
+# releases are published as .tar.gz, .tar.bz2, and .tar.xz; xz gives the
+# smallest download.  Older releases may only have .gz/.bz2 available, so
+# override with e.g. --define "srcball_ext bz2" when building those.
+%if ! %{defined srcball_ext}
+%global srcball_ext xz
+%endif
+
 %if ! %{defined source_date_epoch}
 %global source_date_epoch %(date +%%s)
 %endif
@@ -131,11 +142,12 @@ BuildRequires: krb5-devel
 %if %{with modules}
 BuildRequires: kernel-devel
 BuildRequires: elfutils-devel
+BuildRequires: kernel-rpm-macros
 %endif
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: https://www.openafs.org/dl/openafs/%{openafs_version}/openafs-%{openafs_version}-src.tar.bz2
+Source0: https://www.openafs.org/dl/openafs/%{openafs_version}/openafs-%{openafs_version}-src.tar.%{srcball_ext}
 Source10: https://www.openafs.org/dl/openafs/%{openafs_version}/RELNOTES-%{openafs_version}
 Source11: https://www.openafs.org/dl/openafs/%{openafs_version}/ChangeLog
 Source20: https://www.central.org/dl/cellservdb/CellServDB.2025-08-16
