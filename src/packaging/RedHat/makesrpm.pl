@@ -42,6 +42,27 @@ my $omit_source = 0;
 my $ignore_dirty = 0;
 
 #
+# Get the compression suffix (e.g. ".tar.xz") of a source archive filename.
+#
+# Arguments:
+#   path - The path to the archive file.
+#
+# Returns:
+#   The ".tar.<ext>" suffix.
+#
+# Dies if the filename does not end in a recognized ".tar.<ext>" suffix.
+#
+sub archive_suffix {
+    my ($path) = @_;
+    my ($suffix) = $path =~ /(\.tar\.\w+)$/;
+    if (!defined($suffix)) {
+        die "$progname: Unable to determine the compression suffix of "
+          . "'$path'; expected a name ending in '.tar.<ext>'.\n";
+    }
+    return $suffix;
+}
+
+#
 # Create an empty file.
 #
 # Arguments:
@@ -260,7 +281,7 @@ if (!defined($srcball)) {
     if (!defined($tmpdir)) {
         $tmpdir = File::Temp::tempdir(CLEANUP => 1);
     }
-    run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards", "*/.version");
+    run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards", "*/.version");
     my ($dot_version) = glob("$tmpdir/openafs-*/.version");
     if (!defined($dot_version)) {
         die "$progname: Unable to find '.version' in '${srcball}'.\n";
@@ -324,7 +345,7 @@ if (!defined($packaging)) {
         if (!defined($tmpdir)) {
             $tmpdir = File::Temp::tempdir(CLEANUP => 1);
         }
-        run_command("tar", "-C", $tmpdir, "-xvjf", $srcball, "--wildcards",
+        run_command("tar", "-C", $tmpdir, "-xvf", $srcball, "--wildcards",
                     "*/src/packaging/RedHat");
         ($packaging) = glob("$tmpdir/openafs-*/src/packaging/RedHat");
         if (!defined($packaging)) {
@@ -380,15 +401,17 @@ if (!defined($srcball)) {
         chdir($cwd) or die "$progname: Failed to cd to '$cwd': $!";
     }
 } else {
+    my $srcball_ext = archive_suffix($srcball);
     File::Copy::copy($srcball,
-                     "$topdir/SOURCES/openafs-${openafs_version}-src.tar.bz2")
+                     "$topdir/SOURCES/openafs-${openafs_version}-src${srcball_ext}")
         or die "$progname: Unable to copy $srcball into position: $!\n";
 }
 
 # Copy the doc archive if specified.
 if (defined($docball)) {
+    my $docball_ext = archive_suffix($docball);
     File::Copy::copy($docball,
-                     "$topdir/SOURCES/openafs-${openafs_version}-doc.tar.bz2")
+                     "$topdir/SOURCES/openafs-${openafs_version}-doc${docball_ext}")
         or die "$progname: Unable to copy $docball into position: $!\n";
 }
 
