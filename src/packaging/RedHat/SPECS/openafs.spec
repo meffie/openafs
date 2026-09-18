@@ -17,8 +17,6 @@
 #
 #   --define "kernel_version <version>"   The kernel version (default: current running kernel)
 #
-#   --define "kenrel_epoch"               The kernel epoch number (default: platform dependent)
-#
 #   --define "ksrcdir <path>"             The path to the kernel headers (default:
 #                                         /usr/src/kernels/<kernel_version>)
 #
@@ -110,10 +108,6 @@ administrative management.
 
 %if ! %{defined ksrcdir}
 %global ksrcdir %{_usrsrc}/kernels/%{kernel_version}
-%endif
-
-%if ! %{defined kernel_epoch} && 0%{?amzn} >= 2023
-%global kernel_epoch 1
 %endif
 
 %endif
@@ -299,12 +293,18 @@ Kerberos realm to authenticate to AFS services.
 Summary:          OpenAFS kernel module
 Provides:         %{name}-kmod = %{version}-%{release}
 Provides:         %{name}-kernel = %{version}
-Requires:         kernel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
+# kernel-uname-r is the standard RHEL/Fedora capability (from the
+# "kernel-rpm-macros" package) for pinning a kmod to one exact kernel
+# build; it needs no epoch handling, unlike the plain kernel package's
+# own Version.  The openafs kernel module does deep VFS integration and
+# is not kABI-stable, so it is always built and required against one
+# exact kernel build -- there is no weak-modules support here, by design.
+Requires:         kernel-uname-r = %{kernel_version}
 Requires:         %{name}-kmod-common >= %{version}
 Requires(post):   /usr/sbin/depmod
 Requires(postun): /usr/sbin/depmod
 Release:          %{package_release}.%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//' | tr - _)
-BuildRequires:    kernel-devel-%{_target_cpu} = %{?kernel_epoch:%{kernel_epoch}:}%(echo %{kernel_version} | sed 's/\.%{_target_cpu}$//')
+BuildRequires:    kernel-devel-uname-r = %{kernel_version}
 BuildRequires:    elfutils-libelf-devel
 BuildRequires:    gcc
 BuildRequires:    make
