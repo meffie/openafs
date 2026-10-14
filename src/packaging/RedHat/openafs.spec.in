@@ -12,6 +12,11 @@
 # Define the location to the legacy workstation directory.
 %global afswsdir /usr/afsws
 
+# Define the source archive filename suffix.
+%if ! %{defined ztype}
+%global ztype bz2
+%endif
+
 #
 # Disable setting the source_date_epoch from the top entry of the changelog and
 # instead use the current system time by default.
@@ -121,7 +126,7 @@ BuildRequires: elfutils-devel
 
 ExclusiveArch: %{ix86} x86_64 ia64 s390 s390x sparc64 ppc ppc64 ppc64le aarch64
 
-Source0: http://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.bz2
+Source0: http://www.openafs.org/dl/openafs/%{afsvers}/openafs-%{afsvers}-src.tar.%{ztype}
 %define srcdir openafs-%{afsvers}
 Source10: http://www.openafs.org/dl/openafs/%{afsvers}/RELNOTES-%{afsvers}
 Source11: http://www.openafs.org/dl/openafs/%{afsvers}/ChangeLog
