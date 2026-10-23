@@ -183,22 +183,28 @@ if (defined $tagPoint) {
     warn "option --tagpoint '$tagPoint' is ignored.\n";
 }
 
-my $version;
-run(["git", "describe", "--abbrev=4", $tagName], stdout => \$version, quiet => 1);
-if (!$version) {
-    die "Failed to describe $tagName.\n";
-}
-my $suffix = $version;
-$suffix =~ s/openafs-[^-]*-//;
-$suffix =~ s/_/./g;
-my $name = "openafs-$suffix";
-
 # Get the top-level project directory.
 my $toplevel;
 run(["git", "rev-parse", "--show-toplevel"], stdout => \$toplevel, quiet => 1);
 if (!$toplevel) {
     die "Unable to find the git top-level directory.\n";
 }
+
+# Determine the version.
+my $version;
+if ($tagName eq "HEAD" && -f "$toplevel/.version") {
+    warn "Using $toplevel/.version to determine version.\n";
+}
+run(["$toplevel/build-tools/git-version", $toplevel, "UNKNOWN", $tagName],
+    stdout => \$version, quiet => 1);
+if (!$version or $version eq "UNKNOWN") {
+    die "Failed to determine version of $tagName.\n";
+}
+if ($version =~ s/-dirty$//) {
+    warn "Uncommitted changes found. These will not be included in the release.\n";
+}
+print "Version is $version\n";
+my $name = "openafs-$version";
 
 # Grab the tagged code into a temporary directory
 my $tempDir = File::Temp::tempdir(CLEANUP => 1);
@@ -223,7 +229,7 @@ if ($relnotes) {
     # with "OpenAFS ...", and then all the lines until the start of the next
     # release, which is the next line that starts with "OpenAFS ..."
     my $news = "$tempDir/$name/NEWS";
-    my $relnotes = "$outDir/RELNOTES-$suffix";
+    my $relnotes = "$outDir/RELNOTES-$version";
     open(my $in_fh, '<', $news) or die "Could not open file '$news' $!\n";
     open(my $out_fh, '>', $relnotes) or die "Could not open file '$relnotes' $!\n";
     my $in_release = 0;
@@ -361,6 +367,12 @@ I<commit>, creating the source and doc tarballs, compressing them, and generatin
 digest files. It will also create a ChangeLog file, listing all of the changes
 in that release, and optionally extract lines from the NEWS file to create
 release notes.
+
+The OpenAFS version of the release files is determined by the B<git-version>
+script, which runs B<git describe> to get the version string from B<git>. When
+the I<commit> is B<HEAD> (which is the default), B<git-version> will check for
+a B<.version> file in the top-level project directory, and if found, uses that
+instead of running B<git describe>.
 
 =head1 OPTIONS
 
