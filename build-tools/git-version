@@ -2,24 +2,36 @@
 
 srcdir=$1
 fallback=$2
+commit=$3
+
+if [ "x$srcdir" = "x" ]; then
+  echo "usage: git-version <srcdir> [<fallback> [<commit>]]" >&2
+  exit 1
+fi
 
 if [ "x$fallback" = "x" ]; then
   fallback=UNKNOWN
 fi
 
-if [ -f $srcdir/.version ] ; then
+if [ "x$commit" = "x" ]; then
+  commit=HEAD
+fi
+
+if [ -f $srcdir/.version ] && [ "x$commit" = "xHEAD" ] ; then
   git_version=`cat $srcdir/.version`
 else
   if git --version > /dev/null; then
-    cd $srcdir
-    git_version=`git describe --abbrev=4 HEAD 2>/dev/null`
+    cd $srcdir || exit 1
+    git_version=`git describe --abbrev=4 "$commit" 2>/dev/null`
     if [ $? = 0 ]; then
       # Is the working tree dirty?
-      if git diff-index --quiet --cached HEAD && \
-         git diff-files --quiet ; then
-	 :
-      else
-        git_version="$git_version-dirty"
+      if [ "x$commit" = "xHEAD" ] ; then
+        if git diff-index --quiet --cached HEAD && \
+           git diff-files --quiet ; then
+           :
+        else
+          git_version="$git_version-dirty"
+        fi
       fi
     else
       git_version=$fallback
