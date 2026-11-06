@@ -134,7 +134,44 @@ ListServers(void)
 }
 
 /*!
+ * Print the arguments of a FlushCPS() call.
+ *
+ * \param[in] server  file server address (network byte order)
+ * \param[in] port    file server port
+ * \param[in] vid     list of user ids
+ * \param[in] ipa     list of IPv4 addresses (network byte order)
+ */
+static void
+PrintFlushCPS(afs_uint32 server, int port, struct ViceIds *vid,
+	      struct IPAddrs *ipa)
+{
+    char hoststr[16];
+    int i;
+
+    printf("Calling FlushCPS() on %s:%d; ids=[",
+	   afs_inet_ntoa_r(server, hoststr), port);
+    for (i = 0; i < vid->ViceIds_len; i++) {
+	if (i > 0) {
+	    printf(", ");
+	}
+	printf("%ld", afs_printable_int32_ld(vid->ViceIds_val[i]));
+    }
+    printf("], ips=[");
+    for (i = 0; i < ipa->IPAddrs_len; i++) {
+	if (i > 0) {
+	    printf(", ");
+	}
+	printf("%s", afs_inet_ntoa_r(ipa->IPAddrs_val[i], hoststr));
+    }
+    printf("]\n");
+    fflush(stdout);
+}
+
+/*!
  * Call FlushCPS() on a file server.
+ *
+ * Print one line to stdout showing the file server, user ids, and IP
+ * addresses before the call.
  *
  * \param[in] server  file server address (network byte order)
  * \param[in] vid     list of user ids
@@ -158,6 +195,8 @@ FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa)
 		afs_inet_ntoa_r(server, hoststr));
 	return 1;
     }
+
+    PrintFlushCPS(server, port, vid, ipa);
 
     /*
      * Invalidate the file server CPS cache for the specified user ids
