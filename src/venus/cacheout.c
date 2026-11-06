@@ -7,7 +7,6 @@
  * directory or online at http://www.openafs.org/dl/license10.html
  */
 
-
 #include <afsconfig.h>
 #include <afs/param.h>
 
@@ -27,12 +26,8 @@
 #include <afs/afsutil.h>
 #include <afs/vldbint.h>
 
-/*
-File servers in NW byte order.
-*/
-
 static afs_int32 server_count = 0;
-static afs_int32 server_id[256];
+static afs_int32 server_id[256];	/* file servers in network byte order */
 
 static struct ubik_client *client;
 
@@ -46,7 +41,7 @@ static int scindex;
  * \retval 0	success
  *
  * \post    globals server_count and server_id[] are updated.
-*/
+ */
 static afs_int32
 ListServers(void)
 {
@@ -64,7 +59,7 @@ ListServers(void)
     memset(&addrs, 0, sizeof(addrs));
     code =
 	ubik_VL_GetAddrs(client, 0, 0, 0, &vlcb,
-		  &server_count, &addrs);
+			 &server_count, &addrs);
     if (code) {
 	printf("Fatal error: could not get list of file servers\n");
 	return 1;
@@ -73,7 +68,7 @@ ListServers(void)
     if (addrs.bulkaddrs_len < server_count) {
 	server_count = addrs.bulkaddrs_len;
     }
-    /* Record any legacy IPv4 entries first.. */
+    /* Record any legacy IPv4 entries first. */
     for (i = 0; i < server_count; ++i) {
 	ip = addrs.bulkaddrs_val[i];
 
@@ -123,9 +118,9 @@ ListServers(void)
 	    code = 0;	/* not an error */
 	    continue;
 	case VL_INDEXERANGE:
-	    /* We've reached The end of the server list. */
-	    server_count = server_ix;  /* adjust count of found MH entries */
-	    code = 0;   /* not an error */
+	    /* We've reached the end of the server list. */
+	    server_count = server_ix;	/* adjust count of found MH entries */
+	    code = 0;	/* not an error */
 	    goto done;
 	default:
 	    printf("Slot %d: Error %d getting multihomed addresses for server %d\n",
@@ -138,7 +133,13 @@ ListServers(void)
     return code;
 }
 
-
+/*!
+ * Invalidate the file server CPS cache for the given users and hosts.
+ *
+ * Call FlushCPS() on each file server listed in the VLDB. The users are
+ * given as AFS user ids (for example, from "pts examine") and the hosts
+ * as IP addresses (no wildcards).
+ */
 static int
 InvalidateCache(struct cmd_syndesc *as, void *arock)
 {
@@ -149,13 +150,10 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     afs_int32 port = 7000;
     char hoststr[16];
     int err = 0;
-
     afs_int32 spare1 = 0;
     afs_int32 spare2, spare3;
-
     afs_int32 id[256];
     afs_int32 ip[256];
-
     struct ViceIds vid;
     struct IPAddrs ipa;
 
@@ -163,16 +161,13 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     if (code)
 	return code;
 
-
-    /* make sure something there */
-
+    /* Require at least one user id or IP address. */
     if (!as->parms[0].items && !as->parms[1].items) {
 	printf("Use -help flag for list of optional argmuments\n");
 	return 1;
     }
 
-    /* get user ids */
-
+    /* Convert the -id arguments to user ids. */
     for (i = 0, u = as->parms[0].items; i < 255 && u; ++i, u = u->next) {
 	code = util_GetInt32(u->data, &id[i]);
 	if (code) {
@@ -185,8 +180,7 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     vid.ViceIds_len = i;
     vid.ViceIds_val = id;
 
-    /* get IP addresses, convert to NW byte order */
-
+    /* Convert the -ip arguments to IP addresses, in network byte order. */
     for (i = 0, u = as->parms[1].items; i < 255 && u; ++i, u = u->next)
 	ip[i] = inet_addr(u->data);
 
@@ -207,17 +201,11 @@ file server %s\n", afs_inet_ntoa_r(server_id[i], hoststr));
 	    continue;
 	}
 
-	/* invalidate the cache */
-
-	code = RXAFS_FlushCPS(conn, &vid, &ipa, spare1, &spare2, &spare3);
-
 	/*
-	 * May get spurious error codes in case server is
-	 * down or is reported by VLDB as a file server
-	 * even though it is not configured as such in the
-	 * cell.
+	 * Invalidate the file server CPS cache for the specified user ids
+	 * and host addresses.
 	 */
-
+	code = RXAFS_FlushCPS(conn, &vid, &ipa, spare1, &spare2, &spare3);
 	if (code) {
 	    printf("Informational: failed to invalidate \
 file server %s cache code = %ld\n", afs_inet_ntoa_r(server_id[i], hoststr),
@@ -230,6 +218,12 @@ file server %s cache code = %ld\n", afs_inet_ntoa_r(server_id[i], hoststr),
     return err;
 }
 
+/*!
+ * List the file servers in the cell.
+ *
+ * Print the number of file servers listed in the VLDB, followed by the
+ * host name of each one, or its address if the name cannot be found.
+ */
 static int
 GetServerList(struct cmd_syndesc *as, void *arock)
 {
@@ -249,15 +243,12 @@ GetServerList(struct cmd_syndesc *as, void *arock)
     return code;
 }
 
-/*
-User enters lists of:
-
-	1. AFS user ids - say from "pts exam username".
-	2. IP addresses - say from /etc/hosts (no wildcards).
-
-Command is executed in user's cell.
-*/
-
+/*!
+ * Set up the security object and the VL server connections before
+ * running a command.
+ *
+ * The command is run in the local cell, unless -cell is given.
+ */
 static int
 MyBeforeProc(struct cmd_syndesc *as, void *arock)
 {
@@ -278,7 +269,6 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	sclevel = rxkad_crypt;
     }
 
-    /* setup to talk to servers */
     code = rx_Init(0);
     if (code) {
 	printf("Warning: could not initialize network communication.\n");
@@ -311,7 +301,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	if (code || scindex == 0) {
 	    afsconf_Close(tdir);
 	    fprintf(stderr, "Could not get security object for -localauth (code: %d)\n",
-	            code);
+		    code);
 	    return -1;
 	}
 
@@ -329,8 +319,8 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	} else {
 	    scindex = 2;
 	    sc = rxkad_NewClientSecurityObject(sclevel, &ttoken.sessionKey,
-	                                       ttoken.kvno, ttoken.ticketLen,
-	                                       ttoken.ticket);
+					       ttoken.kvno, ttoken.ticketLen,
+					       ttoken.ticket);
 	}
     }
 
@@ -350,14 +340,13 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
     return 0;
 }
 
-
 int
 main(int argc, char **argv)
 {
     afs_int32 code = 0;
     struct cmd_syndesc *ts;
 
-#ifdef	AFS_AIX32_ENV
+#ifdef AFS_AIX32_ENV
     struct sigaction nsa;
 
     sigemptyset(&nsa.sa_mask);
@@ -367,7 +356,7 @@ main(int argc, char **argv)
 #endif
 
     /*
-     * Look in /usr/vice/etc (client side database).
+     * Connect to the VL servers before running each command.
      */
     cmd_SetBeforeProc(MyBeforeProc, NULL);
 
