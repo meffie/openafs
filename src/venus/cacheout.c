@@ -205,7 +205,7 @@ FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa,
 {
     afs_int32 code;
     struct rx_connection *conn;
-    afs_int32 port = 7000;
+    afs_int32 port = AFSCONF_FILEPORT;
     char hoststr[16];
     afs_int32 spare1 = 0;
     afs_int32 spare2, spare3;
