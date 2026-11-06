@@ -243,18 +243,18 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     struct ViceIds vid;
     struct IPAddrs ipa;
 
-    code = ListServers();
-    if (code != 0) {
-	return code;
-    }
-
     cmd_OptionAsList(as, OPT_id, &ids);
     cmd_OptionAsList(as, OPT_ip, &ips);
 
     /* Require at least one user id or IP address. */
     if (ids == NULL && ips == NULL) {
-	printf("Use -help flag for list of optional argmuments\n");
+	fprintf(stderr, "Must specify at least one -id or -ip.\n");
 	return 1;
+    }
+
+    code = ListServers();
+    if (code != 0) {
+	return code;
     }
 
     /* Convert the -id arguments to user ids. */
