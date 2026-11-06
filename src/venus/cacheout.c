@@ -199,8 +199,8 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 	}
 	conn = rx_NewConnection(server_id[i], htons(port), 1, sc, scindex);
 	if (conn == NULL) {
-	    printf("Informational: could not connect to \
-file server %s\n", afs_inet_ntoa_r(server_id[i], hoststr));
+	    fprintf(stderr, "Could not connect to file server %s\n",
+		    afs_inet_ntoa_r(server_id[i], hoststr));
 	    err = 1;
 	    continue;
 	}
@@ -211,9 +211,9 @@ file server %s\n", afs_inet_ntoa_r(server_id[i], hoststr));
 	 */
 	code = RXAFS_FlushCPS(conn, &vid, &ipa, spare1, &spare2, &spare3);
 	if (code != 0) {
-	    printf("Informational: failed to invalidate \
-file server %s cache code = %ld\n", afs_inet_ntoa_r(server_id[i], hoststr),
-	    afs_printable_int32_ld(code));
+	    fprintf(stderr, "Failed to invalidate file server %s cache; code %ld\n",
+		    afs_inet_ntoa_r(server_id[i], hoststr),
+		    afs_printable_int32_ld(code));
 	    err = 1;
 	}
 
