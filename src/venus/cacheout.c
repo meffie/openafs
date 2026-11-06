@@ -34,6 +34,15 @@ static struct ubik_client *client;
 static struct rx_securityClass *sc;
 static int scindex;
 
+enum optionsList {
+    OPT_id,
+    OPT_ip,
+    OPT_cell,
+    OPT_noauth,
+    OPT_localauth,
+    OPT_encrypt,
+};
+
 /*!
  * Obtain list of file servers as known to VLDB. These may
  * not actually be configured as file servers in the cell.
@@ -224,6 +233,8 @@ static int
 InvalidateCache(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 code = 0;
+    struct cmd_item *ids = NULL;
+    struct cmd_item *ips = NULL;
     struct cmd_item *u;
     int i;
     int err = 0;
@@ -237,15 +248,17 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 	return code;
     }
 
+    cmd_OptionAsList(as, OPT_id, &ids);
+    cmd_OptionAsList(as, OPT_ip, &ips);
+
     /* Require at least one user id or IP address. */
-    if (as->parms[0].items == NULL && as->parms[1].items == NULL) {
+    if (ids == NULL && ips == NULL) {
 	printf("Use -help flag for list of optional argmuments\n");
 	return 1;
     }
 
     /* Convert the -id arguments to user ids. */
-    for (i = 0, u = as->parms[0].items; i < 255 && u != NULL;
-	 ++i, u = u->next) {
+    for (i = 0, u = ids; i < 255 && u != NULL; ++i, u = u->next) {
 	code = util_GetInt32(u->data, &id[i]);
 	if (code != 0) {
 	    printf("Fatal error: bad conversion to long for %s\n", u->data);
@@ -258,8 +271,7 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     vid.ViceIds_val = id;
 
     /* Convert the -ip arguments to IP addresses, in network byte order. */
-    for (i = 0, u = as->parms[1].items; i < 255 && u != NULL;
-	 ++i, u = u->next) {
+    for (i = 0, u = ips; i < 255 && u != NULL; ++i, u = u->next) {
 	ip[i] = inet_addr(u->data);
     }
 
@@ -325,11 +337,11 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
     rxkad_level sclevel = rxkad_auth;
 
     sprintf(confdir, "%s", AFSDIR_CLIENT_ETC_DIRPATH);
-    if (as->parms[4].items != NULL) { /* -localauth */
+    if (cmd_OptionPresent(as, OPT_localauth)) {
 	sprintf(confdir, "%s", AFSDIR_SERVER_ETC_DIRPATH);
     }
 
-    if (as->parms[5].items != NULL) { /* -encrypt */
+    if (cmd_OptionPresent(as, OPT_encrypt)) {
 	sclevel = rxkad_crypt;
     }
 
@@ -348,16 +360,15 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	return 1;
     }
 
-    if (as->parms[2].items != NULL) {	/* if -cell specified */
-	tcell = as->parms[2].items->data;
-    }
+    cmd_OptionAsString(as, OPT_cell, &tcell);
     code = afsconf_GetCellInfo(tdir, tcell, AFSCONF_VLDBSERVICE, &info);
+    free(tcell);
     if (code != 0 || info.numServers > MAXSERVERS) {
 	printf("Warning: could not init cell info.\n");
 	return 1;
     }
 
-    if (as->parms[4].items != NULL) { /* -localauth */
+    if (cmd_OptionPresent(as, OPT_localauth)) {
 	if (sclevel == rxkad_crypt) {
 	    code = afsconf_ClientAuthSecure(tdir, &sc, &scindex);
 	} else {
@@ -370,7 +381,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	    return -1;
 	}
 
-    } else if (as->parms[3].items == NULL) { /* not -noauth */
+    } else if (!cmd_OptionPresent(as, OPT_noauth)) {
 	struct ktc_principal sname;
 	struct ktc_token ttoken;
 
@@ -428,18 +439,24 @@ main(int argc, char **argv)
 
     ts = cmd_CreateSyntax("initcmd", InvalidateCache, NULL, 0,
 			  "invalidate server ACL cache");
-    cmd_AddParm(ts, "-id", CMD_LIST, CMD_OPTIONAL, "user identifier");
-    cmd_AddParm(ts, "-ip", CMD_LIST, CMD_OPTIONAL, "IP address");
-    cmd_AddParm(ts, "-cell", CMD_SINGLE, CMD_OPTIONAL, "cell name");
-    cmd_AddParm(ts, "-noauth", CMD_FLAG, CMD_OPTIONAL, "don't authenticate");
-    cmd_AddParm(ts, "-localauth", CMD_FLAG, CMD_OPTIONAL, "user server tickets");
-    cmd_AddParm(ts, "-encrypt", CMD_FLAG, CMD_OPTIONAL, "encrypt commands");
+    cmd_AddParmAtOffset(ts, OPT_id, "-id", CMD_LIST, CMD_OPTIONAL,
+			"user identifier");
+    cmd_AddParmAtOffset(ts, OPT_ip, "-ip", CMD_LIST, CMD_OPTIONAL,
+			"IP address");
+    cmd_AddParmAtOffset(ts, OPT_cell, "-cell", CMD_SINGLE, CMD_OPTIONAL,
+			"cell name");
+    cmd_AddParmAtOffset(ts, OPT_noauth, "-noauth", CMD_FLAG, CMD_OPTIONAL,
+			"don't authenticate");
+    cmd_AddParmAtOffset(ts, OPT_localauth, "-localauth", CMD_FLAG,
+			CMD_OPTIONAL, "user server tickets");
+    cmd_AddParmAtOffset(ts, OPT_encrypt, "-encrypt", CMD_FLAG, CMD_OPTIONAL,
+			"encrypt commands");
     cmd_CreateAlias(ts, "ic");
 
     ts = cmd_CreateSyntax("listservers", GetServerList, NULL, 0,
 			  "list servers in the cell");
-    cmd_Seek(ts, 2);
-    cmd_AddParm(ts, "-cell", CMD_SINGLE, CMD_OPTIONAL, "cell name");
+    cmd_AddParmAtOffset(ts, OPT_cell, "-cell", CMD_SINGLE, CMD_OPTIONAL,
+			"cell name");
     cmd_CreateAlias(ts, "ls");
 
     code = cmd_Dispatch(argc, argv);
