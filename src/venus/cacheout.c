@@ -134,6 +134,47 @@ ListServers(void)
 }
 
 /*!
+ * Call FlushCPS() on a file server.
+ *
+ * \param[in] server  file server address (network byte order)
+ * \param[in] vid     list of user ids
+ * \param[in] ipa     list of IPv4 addresses (network byte order)
+ *
+ * \return 0 on success, 1 on connection failure, otherwise the RPC error code
+ */
+static int
+FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa)
+{
+    afs_int32 code;
+    struct rx_connection *conn;
+    afs_int32 port = 7000;
+    char hoststr[16];
+    afs_int32 spare1 = 0;
+    afs_int32 spare2, spare3;
+
+    conn = rx_NewConnection(server, htons(port), 1, sc, scindex);
+    if (conn == NULL) {
+	fprintf(stderr, "Could not connect to file server %s\n",
+		afs_inet_ntoa_r(server, hoststr));
+	return 1;
+    }
+
+    /*
+     * Invalidate the file server CPS cache for the specified user ids
+     * and host addresses.
+     */
+    code = RXAFS_FlushCPS(conn, vid, ipa, spare1, &spare2, &spare3);
+    if (code != 0) {
+	fprintf(stderr, "Failed to invalidate file server %s cache; code %ld\n",
+		afs_inet_ntoa_r(server, hoststr),
+		afs_printable_int32_ld(code));
+    }
+
+    rx_DestroyConnection(conn);
+    return code;
+}
+
+/*!
  * Invalidate the file server CPS cache for the given users and hosts.
  *
  * Call FlushCPS() on each file server listed in the VLDB. The users are
@@ -145,13 +186,8 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 {
     afs_int32 code = 0;
     struct cmd_item *u;
-    struct rx_connection *conn;
     int i;
-    afs_int32 port = 7000;
-    char hoststr[16];
     int err = 0;
-    afs_int32 spare1 = 0;
-    afs_int32 spare2, spare3;
     afs_int32 id[256];
     afs_int32 ip[256];
     struct ViceIds vid;
@@ -197,27 +233,10 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 	    err = 1;
 	    continue;
 	}
-	conn = rx_NewConnection(server_id[i], htons(port), 1, sc, scindex);
-	if (conn == NULL) {
-	    fprintf(stderr, "Could not connect to file server %s\n",
-		    afs_inet_ntoa_r(server_id[i], hoststr));
-	    err = 1;
-	    continue;
-	}
-
-	/*
-	 * Invalidate the file server CPS cache for the specified user ids
-	 * and host addresses.
-	 */
-	code = RXAFS_FlushCPS(conn, &vid, &ipa, spare1, &spare2, &spare3);
+	code = FlushCPS(server_id[i], &vid, &ipa);
 	if (code != 0) {
-	    fprintf(stderr, "Failed to invalidate file server %s cache; code %ld\n",
-		    afs_inet_ntoa_r(server_id[i], hoststr),
-		    afs_printable_int32_ld(code));
 	    err = 1;
 	}
-
-	rx_DestroyConnection(conn);
     }
     return err;
 }
