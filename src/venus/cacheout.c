@@ -158,8 +158,9 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     struct IPAddrs ipa;
 
     code = ListServers();
-    if (code)
+    if (code) {
 	return code;
+    }
 
     /* Require at least one user id or IP address. */
     if (!as->parms[0].items && !as->parms[1].items) {
@@ -181,8 +182,9 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     vid.ViceIds_val = id;
 
     /* Convert the -ip arguments to IP addresses, in network byte order. */
-    for (i = 0, u = as->parms[1].items; i < 255 && u; ++i, u = u->next)
+    for (i = 0, u = as->parms[1].items; i < 255 && u; ++i, u = u->next) {
 	ip[i] = inet_addr(u->data);
+    }
 
     ip[i] = 0;
     ipa.IPAddrs_len = i;
@@ -231,13 +233,15 @@ GetServerList(struct cmd_syndesc *as, void *arock)
     int i;
 
     code = ListServers();
-    if (code)
+    if (code) {
 	return (code);
+    }
 
     printf("There are %d file servers in the cell\n\n", server_count);
     fflush(stdout);
-    for (i = 0; i < server_count; ++i)
+    for (i = 0; i < server_count; ++i) {
 	printf("%s\n", hostutil_GetNameByINet(server_id[i]));
+    }
     fflush(stdout);
 
     return code;
@@ -284,8 +288,9 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	return 1;
     }
 
-    if (as->parms[2].items)	/* if -cell specified */
+    if (as->parms[2].items) {	/* if -cell specified */
 	tcell = as->parms[2].items->data;
+    }
     code = afsconf_GetCellInfo(tdir, tcell, AFSCONF_VLDBSERVICE, &info);
     if (code || info.numServers > MAXSERVERS) {
 	printf("Warning: could not init cell info.\n");
@@ -324,11 +329,12 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	}
     }
 
-    for (i = 0; i < info.numServers; ++i)
+    for (i = 0; i < info.numServers; ++i) {
 	serverconns[i] =
 	    rx_NewConnection(info.hostAddr[i].sin_addr.s_addr,
 			     info.hostAddr[i].sin_port, USER_SERVICE_ID, sc,
 			     scindex);
+    }
     for (; i < MAXSERVERS; ++i) {
 	serverconns[i] = (struct rx_connection *)0;
     }
