@@ -60,7 +60,7 @@ ListServers(void)
     code =
 	ubik_VL_GetAddrs(client, 0, 0, 0, &vlcb,
 			 &server_count, &addrs);
-    if (code) {
+    if (code != 0) {
 	printf("Fatal error: could not get list of file servers\n");
 	return 1;
     }
@@ -72,7 +72,7 @@ ListServers(void)
     for (i = 0; i < server_count; ++i) {
 	ip = addrs.bulkaddrs_val[i];
 
-	if (((ip & 0xff000000) == 0xff000000) && (ip & 0xffff)) {
+	if (((ip & 0xff000000) == 0xff000000) && ((ip & 0xffff) != 0)) {
 	    continue;	/* MH entries will be recorded later */
 	}
 	/* Record an IPv4 entry now. */
@@ -158,20 +158,21 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     struct IPAddrs ipa;
 
     code = ListServers();
-    if (code) {
+    if (code != 0) {
 	return code;
     }
 
     /* Require at least one user id or IP address. */
-    if (!as->parms[0].items && !as->parms[1].items) {
+    if (as->parms[0].items == NULL && as->parms[1].items == NULL) {
 	printf("Use -help flag for list of optional argmuments\n");
 	return 1;
     }
 
     /* Convert the -id arguments to user ids. */
-    for (i = 0, u = as->parms[0].items; i < 255 && u; ++i, u = u->next) {
+    for (i = 0, u = as->parms[0].items; i < 255 && u != NULL;
+	 ++i, u = u->next) {
 	code = util_GetInt32(u->data, &id[i]);
-	if (code) {
+	if (code != 0) {
 	    printf("Fatal error: bad conversion to long for %s\n", u->data);
 	    return code;
 	}
@@ -182,7 +183,8 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     vid.ViceIds_val = id;
 
     /* Convert the -ip arguments to IP addresses, in network byte order. */
-    for (i = 0, u = as->parms[1].items; i < 255 && u; ++i, u = u->next) {
+    for (i = 0, u = as->parms[1].items; i < 255 && u != NULL;
+	 ++i, u = u->next) {
 	ip[i] = inet_addr(u->data);
     }
 
@@ -191,12 +193,12 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     ipa.IPAddrs_val = ip;
 
     for (i = 0; i < server_count; ++i) {
-	if (!server_id[i]) {
+	if (server_id[i] == 0) {
 	    err = 1;
 	    continue;
 	}
 	conn = rx_NewConnection(server_id[i], htons(port), 1, sc, scindex);
-	if (!conn) {
+	if (conn == NULL) {
 	    printf("Informational: could not connect to \
 file server %s\n", afs_inet_ntoa_r(server_id[i], hoststr));
 	    err = 1;
@@ -208,7 +210,7 @@ file server %s\n", afs_inet_ntoa_r(server_id[i], hoststr));
 	 * and host addresses.
 	 */
 	code = RXAFS_FlushCPS(conn, &vid, &ipa, spare1, &spare2, &spare3);
-	if (code) {
+	if (code != 0) {
 	    printf("Informational: failed to invalidate \
 file server %s cache code = %ld\n", afs_inet_ntoa_r(server_id[i], hoststr),
 	    afs_printable_int32_ld(code));
@@ -233,7 +235,7 @@ GetServerList(struct cmd_syndesc *as, void *arock)
     int i;
 
     code = ListServers();
-    if (code) {
+    if (code != 0) {
 	return (code);
     }
 
@@ -265,16 +267,16 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
     rxkad_level sclevel = rxkad_auth;
 
     sprintf(confdir, "%s", AFSDIR_CLIENT_ETC_DIRPATH);
-    if (as->parms[4].items) { /* -localauth */
+    if (as->parms[4].items != NULL) { /* -localauth */
 	sprintf(confdir, "%s", AFSDIR_SERVER_ETC_DIRPATH);
     }
 
-    if (as->parms[5].items) { /* -encrypt */
+    if (as->parms[5].items != NULL) { /* -encrypt */
 	sclevel = rxkad_crypt;
     }
 
     code = rx_Init(0);
-    if (code) {
+    if (code != 0) {
 	printf("Warning: could not initialize network communication.\n");
 	return 1;
     }
@@ -283,34 +285,34 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
     scindex = 0;
 
     tdir = afsconf_Open(confdir);
-    if (!tdir) {
+    if (tdir == NULL) {
 	printf("Warning: could not get cell configuration.\n");
 	return 1;
     }
 
-    if (as->parms[2].items) {	/* if -cell specified */
+    if (as->parms[2].items != NULL) {	/* if -cell specified */
 	tcell = as->parms[2].items->data;
     }
     code = afsconf_GetCellInfo(tdir, tcell, AFSCONF_VLDBSERVICE, &info);
-    if (code || info.numServers > MAXSERVERS) {
+    if (code != 0 || info.numServers > MAXSERVERS) {
 	printf("Warning: could not init cell info.\n");
 	return 1;
     }
 
-    if (as->parms[4].items) { /* -localauth */
+    if (as->parms[4].items != NULL) { /* -localauth */
 	if (sclevel == rxkad_crypt) {
 	    code = afsconf_ClientAuthSecure(tdir, &sc, &scindex);
 	} else {
 	    code = afsconf_ClientAuth(tdir, &sc, &scindex);
 	}
-	if (code || scindex == 0) {
+	if (code != 0 || scindex == 0) {
 	    afsconf_Close(tdir);
 	    fprintf(stderr, "Could not get security object for -localauth (code: %d)\n",
 		    code);
 	    return -1;
 	}
 
-    } else if (!as->parms[3].items) { /* not -noauth */
+    } else if (as->parms[3].items == NULL) { /* not -noauth */
 	struct ktc_principal sname;
 	struct ktc_token ttoken;
 
@@ -319,7 +321,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	strcpy(sname.name, "afs");
 
 	code = ktc_GetToken(&sname, &ttoken, sizeof(ttoken), NULL);
-	if (code) {
+	if (code != 0) {
 	    fprintf(stderr, "Could not get afs tokens, running unauthenticated\n");
 	} else {
 	    scindex = 2;
@@ -339,7 +341,7 @@ MyBeforeProc(struct cmd_syndesc *as, void *arock)
 	serverconns[i] = (struct rx_connection *)0;
     }
     code = ubik_ClientInit(serverconns, &client);
-    if (code) {
+    if (code != 0) {
 	printf("Warning: could not initialize RPC interface.\n");
 	return 1;
     }
