@@ -41,6 +41,7 @@ enum optionsList {
     OPT_noauth,
     OPT_localauth,
     OPT_encrypt,
+    OPT_dryrun,
 };
 
 /*!
@@ -149,16 +150,24 @@ ListServers(void)
  * \param[in] port    file server port
  * \param[in] vid     list of user ids
  * \param[in] ipa     list of IPv4 addresses (network byte order)
+ * \param[in] dryrun  print a "[dryrun] " prefix
  */
 static void
 PrintFlushCPS(afs_uint32 server, int port, struct ViceIds *vid,
-	      struct IPAddrs *ipa)
+	      struct IPAddrs *ipa, int dryrun)
 {
     char hoststr[16];
+    const char *prefix;
     int i;
 
-    printf("Calling FlushCPS() on %s:%d; ids=[",
-	   afs_inet_ntoa_r(server, hoststr), port);
+    if (dryrun) {
+	prefix = "[dryrun] ";
+    } else {
+	prefix = "";
+    }
+
+    printf("%sCalling FlushCPS() on %s:%d; ids=[",
+	   prefix, afs_inet_ntoa_r(server, hoststr), port);
     for (i = 0; i < vid->ViceIds_len; i++) {
 	if (i > 0) {
 	    printf(", ");
@@ -180,16 +189,19 @@ PrintFlushCPS(afs_uint32 server, int port, struct ViceIds *vid,
  * Call FlushCPS() on a file server.
  *
  * Print one line to stdout showing the file server, user ids, and IP
- * addresses before the call.
+ * addresses before the call. For a dry run, print the line but do not
+ * make the call.
  *
  * \param[in] server  file server address (network byte order)
  * \param[in] vid     list of user ids
  * \param[in] ipa     list of IPv4 addresses (network byte order)
+ * \param[in] dryrun  print the call without making it
  *
  * \return 0 on success, 1 on connection failure, otherwise the RPC error code
  */
 static int
-FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa)
+FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa,
+	 int dryrun)
 {
     afs_int32 code;
     struct rx_connection *conn;
@@ -205,17 +217,21 @@ FlushCPS(afs_uint32 server, struct ViceIds *vid, struct IPAddrs *ipa)
 	return 1;
     }
 
-    PrintFlushCPS(server, port, vid, ipa);
+    PrintFlushCPS(server, port, vid, ipa, dryrun);
 
     /*
      * Invalidate the file server CPS cache for the specified user ids
-     * and host addresses.
+     * and host addresses, unless in dryrun mode.
      */
-    code = RXAFS_FlushCPS(conn, vid, ipa, spare1, &spare2, &spare3);
-    if (code != 0) {
-	fprintf(stderr, "Failed to invalidate file server %s cache; code %ld\n",
-		afs_inet_ntoa_r(server, hoststr),
-		afs_printable_int32_ld(code));
+    if (dryrun) {
+	code = 0;
+    } else {
+	code = RXAFS_FlushCPS(conn, vid, ipa, spare1, &spare2, &spare3);
+	if (code != 0) {
+	    fprintf(stderr, "Failed to invalidate file server %s cache; code %ld\n",
+		    afs_inet_ntoa_r(server, hoststr),
+		    afs_printable_int32_ld(code));
+	}
     }
 
     rx_DestroyConnection(conn);
@@ -235,6 +251,7 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
     afs_int32 code = 0;
     struct cmd_item *ids = NULL;
     struct cmd_item *ips = NULL;
+    int dryrun;
     struct cmd_item *u;
     int i;
     int err = 0;
@@ -245,6 +262,7 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 
     cmd_OptionAsList(as, OPT_id, &ids);
     cmd_OptionAsList(as, OPT_ip, &ips);
+    dryrun = cmd_OptionPresent(as, OPT_dryrun);
 
     /* Require at least one user id or IP address. */
     if (ids == NULL && ips == NULL) {
@@ -284,7 +302,7 @@ InvalidateCache(struct cmd_syndesc *as, void *arock)
 	    err = 1;
 	    continue;
 	}
-	code = FlushCPS(server_id[i], &vid, &ipa);
+	code = FlushCPS(server_id[i], &vid, &ipa, dryrun);
 	if (code != 0) {
 	    err = 1;
 	}
@@ -451,6 +469,8 @@ main(int argc, char **argv)
 			CMD_OPTIONAL, "user server tickets");
     cmd_AddParmAtOffset(ts, OPT_encrypt, "-encrypt", CMD_FLAG, CMD_OPTIONAL,
 			"encrypt commands");
+    cmd_AddParmAtOffset(ts, OPT_dryrun, "-dryrun", CMD_FLAG, CMD_OPTIONAL,
+			"list what would be done, don't do it");
     cmd_CreateAlias(ts, "ic");
 
     ts = cmd_CreateSyntax("listservers", GetServerList, NULL, 0,
